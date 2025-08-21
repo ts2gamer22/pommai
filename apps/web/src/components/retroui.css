@@ -1,0 +1,441 @@
+/* RetroUI Component Styles */
+
+/* Button Styles */
+.pixel-button {
+  @apply relative inline-block border-solid border-[5px] px-2 py-2 mx-3 my-2;
+  background-color: var(--button-custom-bg, var(--bg-button, #f0f0f0));
+  color: var(--button-custom-text, var(--text-button, #000000));
+  box-shadow: 2px 2px 0 2px
+      var(--button-custom-shadow, var(--shadow-button, #000000)),
+    -2px -2px 0 2px var(--button-custom-bg, var(--bg-button, #f0f0f0));
+  border-image-slice: 3;
+  border-image-width: 2;
+  border-image-repeat: stretch;
+  border-image-outset: 2;
+  border-color: var(--button-custom-border, var(--border-button, #000000));
+}
+
+.pixel-button:active {
+  transform: translateY(2px);
+  box-shadow: 2px 2px 0 2px var(--button-custom-bg, var(--bg-button, #f0f0f0)),
+    -2px -2px 0 2px var(--button-custom-bg, var(--bg-button, #f0f0f0));
+}
+
+/* Card Styles */
+.pixel-card {
+  @apply m-2 border-solid border-[5px] text-base p-4;
+  background-color: var(--card-custom-bg, var(--bg-card, white));
+  color: var(--card-custom-text, var(--text-card, black));
+  padding: 1px;
+  border-image-slice: 3;
+  border-image-width: 2;
+  border-image-repeat: stretch;
+  border-image-outset: 2;
+  box-shadow: 2px 2px 0 2px
+      var(--card-custom-shadow, var(--shadow-card, #000000)),
+    -2px -2px 0 2px var(--card-custom-bg, var(--bg-card, white));
+  border-color: var(--card-custom-border, var(--border-card, #000000));
+}
+
+/* Input Styles */
+.pixel-input-container {
+  @apply relative inline-block border-solid border-[5px];
+  background-color: var(--input-custom-bg, var(--bg-input, white));
+  color: var(--input-custom-text, var(--text-input, black));
+  border-image-slice: 3;
+  border-image-width: 2;
+  border-image-repeat: stretch;
+  border-image-outset: 2;
+  font-size: 16px;
+  box-shadow: 2px 2px 0 2px var(--input-custom-bg, var(--bg-input, white)),
+    -2px -2px 0 2px var(--input-custom-bg, var(--bg-input, white));
+  border-color: var(--input-custom-border, var(--border-input, black));
+}
+
+.pixel-input {
+  @apply bg-transparent px-2 py-1;
+  color: inherit;
+}
+
+.pixel-input:focus {
+  @apply outline-none;
+}
+
+.pixel-input-icon-button {
+  @apply p-1 mr-1;
+}
+
+.pixel-input-icon-button:active {
+  @apply top-[2px];
+}
+
+/* TextArea Styles */
+.pixel-textarea {
+  @apply w-full p-2 text-base min-h-[100px] resize outline-none;
+  background-color: var(--textarea-custom-bg, var(--bg-textarea, #f0f0f0));
+  color: var(--textarea-custom-text, var(--text-textarea, #000000));
+  border-style: solid;
+  box-shadow: 2px 2px 0 2px
+      var(--textarea-custom-bg, var(--bg-textarea, #f0f0f0)),
+    -2px -2px 0 2px var(--textarea-custom-bg, var(--bg-textarea, #f0f0f0));
+  border-width: 5px;
+  border-image-slice: 3;
+  border-image-width: 2;
+  border-image-repeat: stretch;
+  border-image-outset: 2;
+  border-color: var(--textarea-custom-border, var(--border-textarea, #000000));
+}
+
+.pixel-textarea:focus {
+  @apply outline-none;
+}
+
+/* ProgressBar Styles */
+.pixel-progressbar-container {
+  @apply relative w-full;
+  height: 30px;
+  padding: 2px;
+  border-style: solid;
+  border-width: 5px;
+  border-image-slice: 3;
+  border-image-width: 2;
+  border-image-repeat: stretch;
+  background-color: transparent;
+  border-color: var(
+    --progressbar-custom-border-color,
+    var(--border-progressbar, #000000)
+  );
+}
+
+.pixel-progressbar {
+  @apply h-full;
+  opacity: 50%;
+  background-color: var(
+    --progressbar-custom-color,
+    var(--color-progressbar, #000000)
+  );
+}
+
+/* Sizes */
+.pixel-progressbar-sm {
+  height: 20px;
+}
+
+.pixel-progressbar-md {
+  height: 30px;
+}
+
+.pixel-progressbar-lg {
+  height: 40px;
+}
+
+/* Popup Styles */
+.pixel-popup-overlay {
+  @apply fixed inset-0 flex justify-center items-center z-50;
+  background-color: var(--popup-overlay-bg, rgba(0, 0, 0, 0.5));
+}
+
+.pixel-popup {
+  @apply relative p-1;
+  background-color: var(--popup-base-bg, var(--bg-popup-base, white));
+  color: var(--popup-text, var(--text-popup, black));
+  border-style: solid;
+  border-width: 5px;
+  border-image-slice: 3;
+  border-image-width: 2;
+  border-image-repeat: stretch;
+  border-image-source: var(--popup-border-svg);
+  border-image-outset: 2;
+  box-shadow: 2px 2px 0 2px var(--popup-base-bg, var(--bg-popup-base, white)),
+    -2px -2px 0 2px var(--popup-base-bg, var(--bg-popup-base, white));
+}
+
+.pixel-popup-inner {
+  @apply p-4;
+  background-color: var(--popup-bg, var(--bg-popup, #f0f0f0));
+  color: var(--popup-text, var(--text-popup, black));
+  border-style: solid;
+  border-width: 5px;
+  border-image-slice: 3;
+  border-image-width: 2;
+  border-image-repeat: stretch;
+  border-image-source: var(--popup-border-svg);
+  border-image-outset: 2;
+  box-shadow: 2px 2px 0 2px var(--popup-bg, var(--bg-popup, #f0f0f0)),
+    -2px -2px 0 2px var(--popup-bg, var(--bg-popup, #f0f0f0));
+}
+
+.pixel-popup-title {
+  @apply text-2xl mb-4 text-center;
+}
+
+.pixel-popup-close-button {
+  @apply absolute top-1 right-2 bg-transparent border-none cursor-pointer text-lg;
+  color: var(--popup-text, var(--text-popup, black));
+}
+
+.pixel-popup-content {
+  /* Font styling */
+}
+
+/* Dropdown Styles */
+.dropdown-menu {
+  @apply relative inline-block text-base;
+}
+
+.dropdown-menu-trigger {
+  @apply flex items-center justify-between;
+}
+
+.dropdown-arrow {
+  @apply w-4 h-4 transition-transform duration-300 ease-in-out ml-2;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+.dropdown-menu-content {
+  @apply absolute z-10 border-solid border-[5px] left-0;
+  top: calc(100% + 16px);
+  background-color: var(
+    --dropdown-content-custom-bg,
+    var(--dropdown-custom-bg, var(--bg-dropdown, white))
+  );
+  color: var(
+    --dropdown-content-custom-text,
+    var(--dropdown-custom-text, var(--text-dropdown, black))
+  );
+  border-image-slice: 3;
+  border-image-width: 2;
+  border-image-repeat: stretch;
+  border-image-outset: 2;
+  box-shadow: 2px 2px 0 2px
+      var(
+        --dropdown-content-custom-shadow,
+        var(--dropdown-custom-shadow, var(--shadow-dropdown, #000000))
+      ),
+    -2px -2px 0 2px
+      var(
+        --dropdown-content-custom-bg,
+        var(--dropdown-custom-bg, var(--bg-dropdown, white))
+      );
+  border-color: var(
+    --dropdown-content-custom-border,
+    var(--dropdown-custom-border, var(--border-dropdown, #000000))
+  );
+}
+
+.dropdown-menu-label {
+  @apply font-bold;
+}
+
+.dropdown-menu-item {
+  @apply cursor-pointer hover:bg-gray-100;
+}
+
+.dropdown-menu-item:hover {
+  background-color: var(
+    --dropdown-content-custom-bg,
+    var(--dropdown-custom-bg, var(--bg-dropdown-hover, #e0e0e0))
+  );
+}
+
+.dropdown-menu-separator {
+  @apply h-px bg-gray-200 my-1;
+}
+
+/* Bubble Styles */
+.balloon {
+  border-radius: 4px;
+  position: relative;
+  display: inline-block;
+  padding: 1rem 1.5rem;
+  margin: 8px;
+  margin-bottom: 30px;
+  background-color: var(--bubble-bg-color, #ffffff);
+  color: var(--bubble-text-color, #000000);
+  cursor: pointer;
+}
+
+.balloon > :last-child {
+  margin-bottom: 0;
+}
+
+.balloon::before,
+.balloon::after {
+  position: absolute;
+  content: "";
+}
+
+.balloon.from-left::before,
+.balloon.from-left::after {
+  left: 2rem;
+}
+
+.balloon.from-left::before {
+  bottom: -14px;
+  width: 26px;
+  height: 10px;
+  background-color: var(--bubble-bg-color, #ffffff);
+  border-right: 4px solid var(--bubble-border-color, #000000);
+  border-left: 4px solid var(--bubble-border-color, #000000);
+}
+
+.balloon.from-left::after {
+  bottom: -18px;
+  width: 18px;
+  height: 4px;
+  margin-right: 8px;
+  background-color: var(--bubble-bg-color, #ffffff);
+  box-shadow: -4px 0 var(--bubble-border-color, #000000),
+    4px 0 var(--bubble-border-color, #000000),
+    -4px 4px var(--bubble-bg-color, #ffffff),
+    0 4px var(--bubble-border-color, #000000),
+    -8px 4px var(--bubble-border-color, #000000),
+    -4px 8px var(--bubble-border-color, #000000),
+    -8px 8px var(--bubble-border-color, #000000);
+}
+
+.balloon.from-right::before,
+.balloon.from-right::after {
+  right: 2rem;
+}
+
+.balloon.from-right::before {
+  bottom: -14px;
+  width: 26px;
+  height: 10px;
+  background-color: var(--bubble-bg-color, #ffffff);
+  border-right: 4px solid var(--bubble-border-color, #000000);
+  border-left: 4px solid var(--bubble-border-color, #000000);
+}
+
+.balloon.from-right::after {
+  bottom: -18px;
+  width: 18px;
+  height: 4px;
+  margin-left: 8px;
+  background-color: var(--bubble-bg-color, #ffffff);
+  box-shadow: -4px 0 var(--bubble-border-color, #000000),
+    4px 0 var(--bubble-border-color, #000000),
+    4px 4px var(--bubble-bg-color, #ffffff),
+    0 4px var(--bubble-border-color, #000000),
+    8px 4px var(--bubble-border-color, #000000),
+    4px 8px var(--bubble-border-color, #000000),
+    8px 8px var(--bubble-border-color, #000000);
+}
+
+.rounded-corners {
+  border-style: solid;
+  border-width: 4px;
+  border-image-slice: 3;
+  border-image-width: 3;
+  border-image-repeat: stretch;
+  border-image-source: var(--bubble-border-image);
+  border-image-outset: 2;
+}
+
+/* Checkbox and Radio Styles */
+.pixel-checkbox {
+  @apply h-5 w-5 border-[3px] border-black focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  @apply appearance-none relative bg-[var(--bg-input)] cursor-pointer;
+  @apply hover:shadow-[2px_2px_0_0_var(--shadow-button)];
+}
+
+.pixel-checkbox:checked::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background-color: black;
+}
+
+.pixel-radio {
+  @apply h-5 w-5 border-[3px] border-black focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  @apply appearance-none relative bg-[var(--bg-input)] cursor-pointer;
+  @apply hover:shadow-[2px_2px_0_0_var(--shadow-button)];
+}
+
+.pixel-radio:checked::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background-color: black;
+  border-radius: 50%;
+}
+
+/* Slider Thumb Active State */
+.pixel-slider-thumb:active {
+  transform: translateY(2px);
+}
+
+/* Accordion Styles */
+.accordion {
+  @apply w-full text-base;
+}
+
+.accordion-item {
+  @apply mb-5 border-solid border-[5px] overflow-hidden;
+  background-color: var(
+    --accordion-item-custom-bg,
+    var(--accordion-custom-bg, var(--bg-accordion, white))
+  );
+  color: var(
+    --accordion-item-custom-text,
+    var(--accordion-custom-text, var(--text-accordion, black))
+  );
+  border-image-slice: 3;
+  border-image-width: 2;
+  border-image-repeat: stretch;
+  border-image-outset: 2;
+  box-shadow: 2px 2px 0 2px
+      var(
+        --accordion-item-custom-shadow,
+        var(--accordion-custom-shadow, var(--shadow-accordion, #000000))
+      ),
+    -2px -2px 0 2px
+      var(
+        --accordion-item-custom-bg,
+        var(--accordion-custom-bg, var(--bg-accordion, white))
+      );
+}
+
+.accordion-trigger {
+  @apply w-full flex gap-4 items-center px-4 py-1 text-left cursor-pointer;
+  background-color: var(
+    --accordion-item-custom-bg,
+    var(--accordion-custom-bg, var(--bg-accordion, white))
+  );
+  color: var(
+    --accordion-item-custom-text,
+    var(--accordion-custom-text, var(--text-accordion, black))
+  );
+}
+
+.accordion-arrow {
+  @apply w-6 h-6 transition-transform duration-300 ease-in-out;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+.accordion-content {
+  @apply transition-all duration-300 ease-in-out overflow-hidden;
+  background-color: var(
+    --accordion-item-custom-bg,
+    var(--accordion-custom-bg, var(--bg-accordion, white))
+  );
+  color: var(
+    --accordion-item-custom-text,
+    var(--accordion-custom-text, var(--text-accordion, black))
+  );
+}
+
+.accordion-content-inner {
+  @apply p-4 text-sm border-t border-gray-200;
+}

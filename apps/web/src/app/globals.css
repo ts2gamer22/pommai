@@ -1,0 +1,161 @@
+@import "tailwindcss";
+@import '../components/retroui.css';
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  
+  /* RetroUI Theme Variables */
+  --bg-button: #fefcd0;
+  --text-button: #000000;
+  --shadow-button: #c381b5;
+  --border-button: #000000;
+  
+  --bg-card: #fefcd0;
+  --text-card: #000000;
+  --shadow-card: #c381b5;
+  --border-card: #000000;
+  
+  --bg-input: #fefcd0;
+  --text-input: #000000;
+  --border-input: #000000;
+  
+  --bg-textarea: #fefcd0;
+  --text-textarea: #000000;
+  --border-textarea: #000000;
+  
+  --color-progressbar: #c381b5;
+  --border-progressbar: #000000;
+  
+  --bg-popup-base: #fefcd0;
+  --bg-popup: #fefcd0;
+  --text-popup: #000000;
+  
+  --bg-dropdown: #fefcd0;
+  --text-dropdown: #000000;
+  --border-dropdown: #000000;
+  --shadow-dropdown: #c381b5;
+  
+  --bg-accordion: #fefcd0;
+  --text-accordion: #000000;
+  --shadow-accordion: #c381b5;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* Use RetroUI Minecraft font globally for consistency */
+  font-family: "Minecraft", Arial, Helvetica, sans-serif;
+}
+
+/* Ensure headings use the RetroUI font and consistent spacing */
+h1, h2, h3, h4, h5, h6, .retro-heading {
+  font-family: "Minecraft", Arial, Helvetica, sans-serif;
+  letter-spacing: 0.03em;
+}
+
+/* Pixel Select Styles */
+.pixel-select-trigger {
+  border-image-slice: 3;
+  border-image-width: 3px;
+  border-image-repeat: stretch;
+  border-image-source: url('data:image/svg+xml;utf8,<svg width="6" height="6" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="2" height="2" fill="%23333"/></svg>');
+  border-image-outset: 1;
+}
+
+.pixel-select-content {
+  border-image-slice: 3;
+  border-image-width: 3px;
+  border-image-repeat: stretch;
+  border-image-source: url('data:image/svg+xml;utf8,<svg width="6" height="6" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="2" height="2" fill="%23333"/></svg>');
+  border-image-outset: 1;
+  box-shadow: 3px 3px 0 0 var(--shadow-dropdown);
+}
+
+/* Pixelated images */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Mobile responsive utilities */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Pixel Radio and Checkbox styles */
+input[type="radio"]:checked::before,
+input[type="checkbox"]:checked::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background-color: black;
+  transform: scale(1);
+}
+
+/* Pixel border for cards and inputs */
+.pixel-border {
+  border: 5px solid black;
+  position: relative;
+}
+
+.pixel-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: 
+    linear-gradient(to right, black 1px, transparent 1px),
+    linear-gradient(to bottom, black 1px, transparent 1px);
+  background-size: 4px 4px;
+  pointer-events: none;
+}
+
+/* Smooth animations */
+@keyframes pixel-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.pixel-bounce {
+  animation: pixel-bounce 0.5s ease-in-out;
+}
+
+/* Tab improvements */
+.tab-pixel {
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-pixel::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: var(--shadow-button);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.tab-pixel[data-state="active"]::after {
+  transform: scaleX(1);
+}

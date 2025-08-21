@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd ../.. && pnpm turbo run build --filter=@pommai/web",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- apps/web packages",
+  "env": {
+    "NEXT_PUBLIC_CONVEX_URL": "@convex_url"
+  }
+}

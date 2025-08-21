@@ -1,0 +1,36 @@
+[Unit]
+Description=Pommai Smart Toy Client
+After=network.target sound.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+User=pommai
+Group=pommai
+WorkingDirectory=/home/pommai/pommai/apps/raspberry-pi
+Environment="PATH=/home/pommai/pommai/apps/raspberry-pi/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONPATH=/home/pommai/pommai/apps/raspberry-pi"
+ExecStartPre=/bin/sleep 10
+ExecStart=/home/pommai/pommai/apps/raspberry-pi/venv/bin/python /home/pommai/pommai/apps/raspberry-pi/src/pommai_client.py
+
+# Resource limits for Pi Zero 2W
+MemoryLimit=150M
+CPUQuota=50%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pommai
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/tmp /home/pommai/pommai/apps/raspberry-pi/logs
+
+[Install]
+WantedBy=multi-user.target

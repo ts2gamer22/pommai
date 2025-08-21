@@ -1,0 +1,46 @@
+# Core dependencies for Pommai Raspberry Pi Client
+# Tested on Raspberry Pi Zero 2W with Python 3.9+
+
+# WebSocket communication
+websockets==12.0
+
+# Audio processing
+pyaudio==0.2.14
+numpy==1.24.3
+
+# Opus audio codec
+# Note: pyopus might need manual installation
+# Alternative: opuslib==3.0.1
+pyopus==0.1.1
+
+# GPIO control for Raspberry Pi
+RPi.GPIO==0.7.1
+
+# Wake word detection
+vosk==0.3.45
+
+# Async file operations
+aiofiles==23.2.1
+aiosqlite==0.19.0
+
+# Environment configuration
+python-dotenv==1.0.0
+
+# HTTP client for file uploads
+requests==2.31.0
+
+# System monitoring (optional)
+psutil==5.9.8
+
+# Convex Python client
+convex==0.6.0
+
+# Additional audio processing (if needed)
+# scipy==1.10.1
+# soundfile==0.12.1
+
+# Development dependencies (optional)
+# pytest==7.4.3
+# pytest-asyncio==0.21.1
+# black==23.11.0
+# flake8==6.1.0
