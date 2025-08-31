@@ -34,10 +34,12 @@
 ### DietPi Installation
 ```bash
 # Download DietPi for Pi Zero 2W (32-bit mandatory)
-wget https://dietpi.com/downloads/images/DietPi_RPi-ARMv8-Bookworm.img.xz
+# Use the 32-bit ARMv7 image - NOT 64-bit!
+# Important: Pi Zero 2W has only 512MB RAM, 32-bit OS is required for memory efficiency
+wget https://dietpi.com/downloads/images/DietPi_RPi-ARMv7-Bookworm.img.xz
 
 # Flash to SD card using Balena Etcher or dd
-sudo dd if=DietPi_RPi-ARMv8-Bookworm.img of=/dev/sdX bs=4M status=progress
+sudo dd if=DietPi_RPi-ARMv7-Bookworm.img of=/dev/sdX bs=4M status=progress
 
 # Initial configuration
 # - Set GPU memory to 16MB (headless operation)
@@ -143,8 +145,8 @@ sudo apt install -y \
 ### Python Environment Setup
 ```bash
 # Create virtual environment
-python3 -m venv /opt/pommai/venv
-source /opt/pommai/venv/bin/activate
+python3 -m venv /home/pommai/app/venv
+source /home/pommai/app/venv/bin/activate
 
 # Upgrade pip
 pip install --upgrade pip setuptools wheel
@@ -164,10 +166,11 @@ pip install \
 ### Vosk Model Installation
 ```bash
 # Download small English model for wake word
-cd /opt/pommai
+mkdir -p /home/pommai/models
+cd /home/pommai/models
 wget https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
 unzip vosk-model-small-en-us-0.15.zip
-mv vosk-model-small-en-us-0.15 models/vosk-model-small-en-us
+rm vosk-model-small-en-us-0.15.zip
 ```
 
 ## Audio Configuration
@@ -222,31 +225,39 @@ sudo dietpi-drive_manager
 
 ### Directory Structure
 ```
-/opt/pommai/
-├── client/
-│   ├── pommai_client.py      # Main client script
-│   ├── config.py              # Configuration
-│   └── requirements.txt       # Python dependencies
+/home/pommai/
+├── app/
+│   ├── pommai_client_fastrtc.py  # Main FastRTC client entrypoint
+│   ├── fastrtc_connection.py     # FastRTC WebSocket handler
+│   ├── audio_stream_manager.py   # Audio capture/playback
+│   ├── led_controller.py         # LED patterns
+│   ├── button_handler.py         # GPIO button handling
+│   ├── wake_word_detector.py     # Wake word detection
+│   ├── conversation_cache.py     # Offline mode support
+│   ├── opus_audio_codec.py       # Audio compression
+│   ├── venv/                     # Python virtual environment
+│   ├── requirements.txt          # Python dependencies
+│   └── .env                      # Environment variables
 ├── models/
-│   └── vosk-model-small-en-us/  # Wake word model
-├── cache/
-│   ├── cache.db               # SQLite database
-│   └── audio/                 # Cached audio responses
-├── logs/
-│   └── pommai.log            # Application logs
-└── venv/                      # Python virtual environment
+│   └── vosk-model-small-en-us-0.15/  # Wake word model
+├── audio_responses/              # Offline audio files
+├── scripts/                      # Deployment/maintenance scripts
+│   ├── setup.sh                  # Initial setup script
+│   ├── update.sh                 # Update script
+│   └── diagnose.sh               # Diagnostic tool
+└── logs/                         # Application logs
 ```
 
 ## Environment Configuration
 
 ### Create .env file
 ```bash
-# /opt/pommai/client/.env
-CONVEX_URL=wss://your-app.convex.site/audio-stream
-DEVICE_ID=pommai-001
-POMMAI_USER_TOKEN=your_user_token_here
-POMMAI_TOY_ID=toy-abc123
-POMMAI_API_KEY=legacy_api_key
+# /home/pommai/app/.env
+# FastRTC Gateway (canonical variables)
+FASTRTC_GATEWAY_URL=wss://your-fastrtc-gateway.example.com/ws
+AUTH_TOKEN=your_auth_token_here
+DEVICE_ID=rpi-toy-001
+TOY_ID=default-toy
 
 # Audio settings
 SAMPLE_RATE=16000
@@ -254,11 +265,19 @@ CHUNK_SIZE=1024
 CHANNELS=1
 
 # Paths
-VOSK_MODEL_PATH=/opt/pommai/models/vosk-model-small-en-us
-CACHE_DB_PATH=/opt/pommai/cache/cache.db
+VOSK_MODEL_PATH=/home/pommai/models/vosk-model-small-en-us-0.15
+CACHE_DB_PATH=/tmp/pommai_cache.db
+AUDIO_RESPONSES_PATH=/home/pommai/audio_responses
 
-# Wake word
-WAKE_WORD=hey pommai
+# Features
+ENABLE_WAKE_WORD=false
+ENABLE_OFFLINE_MODE=true
+
+# Legacy variables (backward compatibility)
+# The client will automatically fallback to these if set:
+# CONVEX_URL → maps to FASTRTC_GATEWAY_URL
+# POMMAI_USER_TOKEN → maps to AUTH_TOKEN  
+# POMMAI_TOY_ID → maps to TOY_ID
 ```
 
 ## Systemd Service Setup
@@ -268,27 +287,32 @@ WAKE_WORD=hey pommai
 # /etc/systemd/system/pommai.service
 [Unit]
 Description=Pommai Smart Toy Client
-After=network-online.target
+After=network-online.target sound.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=pommai
 Group=pommai
-WorkingDirectory=/opt/pommai/client
-Environment="PATH=/opt/pommai/venv/bin"
-ExecStart=/opt/pommai/venv/bin/python /opt/pommai/client/pommai_client.py
+WorkingDirectory=/home/pommai/app
+Environment="PATH=/home/pommai/app/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONPATH=/home/pommai/app"
+ExecStart=/home/pommai/app/venv/bin/python /home/pommai/app/pommai_client_fastrtc.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
-# Security hardening
+# Security settings (relaxed for GPIO/I2C/SPI)
 NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/opt/pommai/cache /opt/pommai/logs
+PrivateTmp=false
+ProtectSystem=false
+ProtectHome=false
+ReadWritePaths=/home/pommai /tmp /var/log/pommai
+
+# Resource limits
+MemoryMax=200M
+CPUQuota=60%
 
 [Install]
 WantedBy=multi-user.target
@@ -297,12 +321,12 @@ WantedBy=multi-user.target
 ### Enable service
 ```bash
 # Create pommai user
-sudo useradd -r -s /bin/false pommai
-sudo usermod -a -G audio,gpio,i2c pommai
+sudo useradd -m -s /bin/bash pommai
+sudo usermod -a -G audio,gpio,i2c,spi pommai
 
 # Set permissions
-sudo chown -R pommai:pommai /opt/pommai
-sudo chmod +x /opt/pommai/client/pommai_client.py
+sudo chown -R pommai:pommai /home/pommai
+sudo chmod +x /home/pommai/app/pommai_client_fastrtc.py
 
 # Enable and start service
 sudo systemctl daemon-reload

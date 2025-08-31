@@ -3,17 +3,7 @@
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Popup, Button, Card } from '@pommai/ui';
 import { format } from 'date-fns';
 import { 
   X, 
@@ -45,27 +35,26 @@ export function ConversationDetails({
 
   if (!conversation) {
     return (
-      <Dialog open onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl h-[80vh]">
-          <DialogHeader>
-            <Skeleton className="h-8 w-64" />
-          </DialogHeader>
-          <div className="space-y-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-16 w-full" />
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <Popup
+        isOpen={true}
+        title="Loading Conversation..."
+        onClose={onClose}
+      >
+        <div className="space-y-4 p-6 max-w-3xl h-[80vh]">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="space-y-2">
+              <div className="h-4 w-24 bg-gray-300 border-2 border-black animate-pulse"></div>
+              <div className="h-16 w-full bg-gray-200 border-2 border-black animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+      </Popup>
     );
   }
 
   const handleExportTranscript = () => {
     const transcript = conversation.messages
-      .map(msg => `[${format(new Date(msg.timestamp), 'HH:mm:ss')}] ${msg.role === 'user' ? 'User' : conversation.toy?.name || 'Toy'}: ${msg.content}`)
+      .map((msg: any) => `[${format(new Date(msg.timestamp), 'HH:mm:ss')}] ${msg.role === 'user' ? 'User' : conversation.toy?.name || 'Toy'}: ${msg.content}`)
       .join('\n');
     
     const blob = new Blob([transcript], { type: 'text/plain' });
@@ -92,20 +81,27 @@ export function ConversationDetails({
   };
 
   const duration = conversation.endTime 
-    ? conversation.endTime - conversation.startTime 
-    : Date.now() - conversation.startTime;
+    ? Number(conversation.endTime) - Number(conversation.startTime)
+    : Date.now() - Number(conversation.startTime);
   const durationMinutes = Math.floor(duration / (60 * 1000));
 
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
-        <DialogHeader className="border-b pb-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <DialogTitle className="text-xl font-semibold">
-                Conversation with {conversation.toy?.name}
-              </DialogTitle>
-              <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+    <Popup
+      isOpen={true}
+      title={`💬 Conversation with ${conversation.toy?.name}`}
+      onClose={onClose}
+    >
+      <div className="flex flex-col h-full max-w-3xl min-h-[80vh]">
+        {/* Header with metadata */}
+        <Card
+          bg="#ffffff"
+          borderColor="black"
+          shadowColor="#c381b5"
+          className="p-4 mb-4"
+        >
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-4 text-sm font-bold text-gray-700 uppercase tracking-wide">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
                   {format(new Date(conversation.startTime), 'MMMM d, yyyy')}
@@ -123,19 +119,23 @@ export function ConversationDetails({
               </div>
             </div>
             <Button
-              variant="outline"
-              size="sm"
+              bg="#f0f0f0"
+              textColor="black"
+              borderColor="black"
+              shadow="#d0d0d0"
               onClick={handleExportTranscript}
+              className="py-2 px-3 font-bold uppercase tracking-wider hover-lift"
             >
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
           </div>
-        </DialogHeader>
+        </Card>
 
-        <ScrollArea className="flex-1 p-4">
+        {/* Messages Container */}
+        <div className="flex-1 h-[400px] overflow-y-auto border-2 border-black bg-[#fefcd0] p-4">
           <div className="space-y-4">
-            {conversation.messages.map((message) => (
+            {conversation.messages.map((message: any) => (
               <div
                 key={message._id}
                 className={`flex gap-3 ${
@@ -143,74 +143,90 @@ export function ConversationDetails({
                 }`}
               >
                 {message.role !== 'user' && (
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className="bg-purple-100 text-lg">
-                      {getToyAvatar()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="w-8 h-8 bg-purple-100 border-2 border-black flex items-center justify-center text-lg">
+                    {getToyAvatar()}
+                  </div>
                 )}
                 
                 <div className={`max-w-[70%] ${message.role === 'user' ? 'order-first' : ''}`}>
-                  <div
-                    className={`rounded-lg px-4 py-2 ${
-                      message.role === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100 text-gray-900'
-                    }`}
+                  <Card
+                    bg={message.role === 'user' ? '#c381b5' : '#ffffff'}
+                    borderColor="black"
+                    shadowColor={message.role === 'user' ? '#8b5fa3' : '#e0e0e0'}
+                    className="p-3"
                   >
-                    <p className="text-sm">{message.content}</p>
-                  </div>
+                    <p className={`text-sm font-bold ${
+                      message.role === 'user' ? 'text-white' : 'text-black'
+                    }`}>
+                      {message.content}
+                    </p>
+                  </Card>
                   
-                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                    <span>{format(new Date(message.timestamp), 'HH:mm:ss')}</span>
+                  <div className="flex items-center gap-2 mt-1 text-xs">
+                    <span className="font-bold text-gray-700">
+                      {format(new Date(message.timestamp), 'HH:mm:ss')}
+                    </span>
                     {message.metadata?.flagged && (
-                      <Badge variant="destructive" className="text-xs">
-                        <AlertCircle className="w-3 h-3 mr-1" />
+                      <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-red-600 bg-red-100 text-red-800 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
                         Flagged
-                      </Badge>
+                      </span>
                     )}
                     {isGuardianMode && message.metadata?.sentiment && (
-                      <Badge variant="secondary" className="text-xs">
+                      <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-gray-600 bg-gray-100 text-gray-800">
                         {message.metadata.sentiment}
-                      </Badge>
+                      </span>
                     )}
                     {isGuardianMode && message.metadata?.safetyScore !== undefined && (
-                      <Badge 
-                        variant={message.metadata.safetyScore > 0.8 ? "default" : "destructive"} 
-                        className="text-xs"
+                      <span 
+                        className={`px-2 py-1 text-xs font-black uppercase tracking-wider border ${
+                          message.metadata.safetyScore > 0.8 
+                            ? 'border-green-600 bg-green-100 text-green-800' 
+                            : 'border-red-600 bg-red-100 text-red-800'
+                        }`}
                       >
                         Safety: {(message.metadata.safetyScore * 100).toFixed(0)}%
-                      </Badge>
+                      </span>
                     )}
                   </div>
                 </div>
                 
                 {message.role === 'user' && (
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className="bg-blue-100">
-                      <User className="w-4 h-4" />
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="w-8 h-8 bg-blue-100 border-2 border-black flex items-center justify-center">
+                    <User className="w-4 h-4" />
+                  </div>
                 )}
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
 
+        {/* Guardian Mode Footer */}
         {isGuardianMode && (
-          <div className="border-t pt-4">
+          <Card
+            bg="#ffffff"
+            borderColor="black"
+            shadowColor="#f7931e"
+            className="p-4 mt-4"
+          >
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">
-                Guardian Mode: Full conversation access enabled
+              <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                🛡️ Guardian Mode: Full conversation access enabled
               </p>
-              <Button variant="outline" size="sm">
+              <Button
+                bg="#f7931e"
+                textColor="white"
+                borderColor="black"
+                shadow="#d67c1a"
+                className="py-2 px-3 font-bold uppercase tracking-wider hover-lift"
+              >
                 <Flag className="w-4 h-4 mr-2" />
                 Report Conversation
               </Button>
             </div>
-          </div>
+          </Card>
         )}
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Popup>
   );
 }

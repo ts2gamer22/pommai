@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useAction } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +22,10 @@ import {
   Mic,
   Settings,
   Sparkles,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
+import { playAudio, stopAudio, cleanupAudioResources } from "@/lib/audio";
 
 interface VoicePreviewProps {
   voice: any;
@@ -60,6 +65,8 @@ const PREVIEW_PHRASES = {
 
 export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPhrase, setSelectedPhrase] = useState("");
   const [customText, setCustomText] = useState("");
   const [phraseCategory, setPhraseCategory] = useState(isForKids ? "kids" : "general");
@@ -68,38 +75,92 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
   const [pitch, setPitch] = useState([100]);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentAudioId = useRef<string | null>(null);
+  
+  // Use Convex action for TTS
+  const synthesizeSpeech = useAction(api.aiServices.synthesizeSpeech);
 
   useEffect(() => {
     // Set initial phrase
     const phrases = PREVIEW_PHRASES[phraseCategory as keyof typeof PREVIEW_PHRASES];
     setSelectedPhrase(phrases[0]);
   }, [phraseCategory]);
+  
+  useEffect(() => {
+    // Cleanup audio resources on unmount
+    return () => {
+      if (currentAudioId.current) {
+        stopAudio(currentAudioId.current);
+      }
+      cleanupAudioResources();
+    };
+  }, []);
 
   const handlePlay = async () => {
     if (isPlaying) {
-      audioRef.current?.pause();
+      // Stop currently playing audio
+      if (currentAudioId.current) {
+        stopAudio(currentAudioId.current);
+      }
       setIsPlaying(false);
       return;
     }
 
-    // Here you would integrate with TTS API (11Labs, Azure, etc.)
-    // For now, we'll simulate with the preview URL
-    try {
-      if (!audioRef.current) {
-        audioRef.current = new Audio(voice.previewUrl);
-        audioRef.current.addEventListener('ended', () => {
-          setIsPlaying(false);
-        });
-      }
+    const textToSpeak = customText || selectedPhrase;
+    if (!textToSpeak) {
+      setError("Please enter or select text to preview");
+      return;
+    }
 
-      audioRef.current.volume = volume[0] / 100;
-      audioRef.current.playbackRate = speed[0] / 100;
-      
-      await audioRef.current.play();
-      setIsPlaying(true);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Call ElevenLabs TTS via Convex action
+      const audioResponse = await synthesizeSpeech({
+        text: textToSpeak,
+        voiceId: voice.externalVoiceId || voice.voiceId || "JBFqnCBsd6RMkjVDRZzb", // Fallback to default voice
+        voiceSettings: {
+          stability: 0.5,
+          similarityBoost: 0.75,
+          style: pitch[0] / 100, // Map pitch to style for effect
+          useSpeakerBoost: true,
+        },
+        outputFormat: "mp3_44100_128",
+      });
+
+      if (audioResponse?.audioData) {
+        // Generate unique ID for this audio
+        const audioId = `voice-preview-${Date.now()}`;
+        currentAudioId.current = audioId;
+        
+        // Play the audio using our utility
+        await playAudio(audioResponse.audioData, {
+          id: audioId,
+          volume: volume[0] / 100,
+          cache: true,
+          onEnded: () => {
+            setIsPlaying(false);
+            currentAudioId.current = null;
+          },
+          onError: (error) => {
+            console.error("Audio playback error:", error);
+            setError("Failed to play audio. Please try again.");
+            setIsPlaying(false);
+            currentAudioId.current = null;
+          },
+        });
+        
+        setIsPlaying(true);
+      } else {
+        throw new Error("No audio data received from TTS service");
+      }
     } catch (error) {
-      console.error("Error playing audio:", error);
+      console.error("Error synthesizing speech:", error);
+      setError(error instanceof Error ? error.message : "Failed to generate speech. Please try again.");
       setIsPlaying(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -237,15 +298,28 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
         </div>
       )}
 
+      {/* Error Display */}
+      {error && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
+
       {/* Play Controls */}
       <div className="flex items-center gap-3">
         <Button
           onClick={handlePlay}
           className="flex-1"
           size="lg"
-          disabled={!textToPreview}
+          disabled={!textToPreview || isLoading}
         >
-          {isPlaying ? (
+          {isLoading ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Generating...
+            </>
+          ) : isPlaying ? (
             <>
               <Pause className="w-5 h-5 mr-2" />
               Stop Preview
@@ -257,7 +331,7 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
             </>
           )}
         </Button>
-        <Button variant="outline" size="lg">
+        <Button variant="outline" size="lg" disabled={isLoading}>
           <Mic className="w-5 h-5 mr-2" />
           Test with Mic
         </Button>

@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
+import { Card, Button, Input } from "@pommai/ui";
 import {
   Select,
   SelectContent,
@@ -15,6 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import {
   Shield,
   Clock,
@@ -103,38 +99,45 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
   return (
     <div className="space-y-6">
       {/* Content Filtering */}
-      <Card className="p-6">
+      <Card 
+        bg="#ffffff"
+        borderColor="black"
+        shadowColor="#c381b5"
+        className="p-4 sm:p-6 hover-lift"
+      >
         <div className="flex items-center gap-2 mb-4">
           <Filter className="w-5 h-5 text-blue-600" />
-          <h3 className="text-lg font-semibold">Content Filtering</h3>
+          <h3 className="text-lg font-black uppercase tracking-wider text-black">
+            🔎 Content Filtering
+          </h3>
         </div>
 
         <div className="space-y-6">
           {/* Strictness Level */}
           <div>
-            <Label className="text-sm font-medium mb-2 block">
+            <label className="block text-sm font-black uppercase tracking-wider text-black mb-2">
               Content Filter Strictness
-            </Label>
+            </label>
             <Select value={strictnessLevel} onValueChange={(value: any) => setStrictnessLevel(value)}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full border-2 border-black font-bold">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="low">
                   <div>
-                    <p className="font-medium">Low</p>
+                    <p className="font-bold text-black">Low</p>
                     <p className="text-sm text-gray-500">Basic filtering for obvious inappropriate content</p>
                   </div>
                 </SelectItem>
                 <SelectItem value="medium">
                   <div>
-                    <p className="font-medium">Medium</p>
+                    <p className="font-bold text-black">Medium</p>
                     <p className="text-sm text-gray-500">Balanced filtering for age-appropriate content</p>
                   </div>
                 </SelectItem>
                 <SelectItem value="high">
                   <div>
-                    <p className="font-medium">High</p>
+                    <p className="font-bold text-black">High</p>
                     <p className="text-sm text-gray-500">Strict filtering with maximum protection</p>
                   </div>
                 </SelectItem>
@@ -144,58 +147,84 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
 
           {/* Blocked Topics */}
           <div>
-            <Label className="text-sm font-medium mb-2 block">
-              Blocked Topics
-            </Label>
+            <label className="block text-sm font-black uppercase tracking-wider text-black mb-2">
+              🚫 Blocked Topics
+            </label>
             <div className="flex gap-2 mb-3">
               <Input
                 placeholder="Add blocked topic..."
                 value={newBlockedTopic}
                 onChange={(e) => setNewBlockedTopic(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleAddBlockedTopic()}
+                bg="#ffffff"
+                borderColor="black"
+                className="font-bold flex-1"
               />
-              <Button onClick={handleAddBlockedTopic} size="sm">
+              <Button
+                bg={newBlockedTopic.trim() ? "#ff6b6b" : "#f0f0f0"}
+                textColor={newBlockedTopic.trim() ? "white" : "#999"}
+                borderColor="black"
+                shadow={newBlockedTopic.trim() ? "#e84545" : "#d0d0d0"}
+                onClick={handleAddBlockedTopic}
+                disabled={!newBlockedTopic.trim()}
+                className={`py-2 px-3 font-bold ${newBlockedTopic.trim() ? 'hover-lift' : 'cursor-not-allowed'}`}
+              >
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
               {blockedTopics.map((topic) => (
-                <Badge key={topic} variant="destructive" className="gap-1">
+                <span key={topic} className="px-2 py-1 text-xs font-black uppercase tracking-wider border-2 border-red-600 bg-red-100 text-red-800 flex items-center gap-2">
                   {topic}
-                  <X
-                    className="w-3 h-3 cursor-pointer"
+                  <button
                     onClick={() => handleRemoveBlockedTopic(topic)}
-                  />
-                </Badge>
+                    className="hover:text-red-600 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
               ))}
             </div>
           </div>
 
           {/* Allowed Topics */}
           <div>
-            <Label className="text-sm font-medium mb-2 block">
-              Encouraged Topics
-            </Label>
+            <label className="block text-sm font-black uppercase tracking-wider text-black mb-2">
+              ✅ Encouraged Topics
+            </label>
             <div className="flex gap-2 mb-3">
               <Input
                 placeholder="Add encouraged topic..."
                 value={newAllowedTopic}
                 onChange={(e) => setNewAllowedTopic(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleAddAllowedTopic()}
+                bg="#ffffff"
+                borderColor="black"
+                className="font-bold flex-1"
               />
-              <Button onClick={handleAddAllowedTopic} size="sm" variant="outline">
+              <Button
+                bg={newAllowedTopic.trim() ? "#92cd41" : "#f0f0f0"}
+                textColor={newAllowedTopic.trim() ? "white" : "#999"}
+                borderColor="black"
+                shadow={newAllowedTopic.trim() ? "#76a83a" : "#d0d0d0"}
+                onClick={handleAddAllowedTopic}
+                disabled={!newAllowedTopic.trim()}
+                className={`py-2 px-3 font-bold ${newAllowedTopic.trim() ? 'hover-lift' : 'cursor-not-allowed'}`}
+              >
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">
               {allowedTopics.map((topic) => (
-                <Badge key={topic} variant="secondary" className="gap-1">
+                <span key={topic} className="px-2 py-1 text-xs font-black uppercase tracking-wider border-2 border-green-600 bg-green-100 text-green-800 flex items-center gap-2">
                   {topic}
-                  <X
-                    className="w-3 h-3 cursor-pointer"
+                  <button
                     onClick={() => handleRemoveAllowedTopic(topic)}
-                  />
-                </Badge>
+                    className="hover:text-green-600 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
               ))}
             </div>
           </div>
@@ -203,18 +232,25 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
       </Card>
 
       {/* Time Controls */}
-      <Card className="p-6">
+      <Card 
+        bg="#ffffff"
+        borderColor="black"
+        shadowColor="#92cd41"
+        className="p-4 sm:p-6 hover-lift"
+      >
         <div className="flex items-center gap-2 mb-4">
           <Clock className="w-5 h-5 text-green-600" />
-          <h3 className="text-lg font-semibold">Time Controls</h3>
+          <h3 className="text-lg font-black uppercase tracking-wider text-black">
+            ⏰ Time Controls
+          </h3>
         </div>
 
         <div className="space-y-6">
           {/* Daily Limit */}
           <div>
             <div className="flex justify-between mb-2">
-              <Label className="text-sm font-medium">Daily Usage Limit</Label>
-              <span className="text-sm font-medium">{dailyLimit[0]} minutes</span>
+              <label className="text-sm font-black uppercase tracking-wider text-black">Daily Usage Limit</label>
+              <span className="text-sm font-black text-black">{dailyLimit[0]} minutes</span>
             </div>
             <Slider
               value={dailyLimit}
@@ -224,7 +260,7 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
               step={15}
               className="w-full"
             />
-            <div className="flex justify-between mt-1 text-xs text-gray-500">
+            <div className="flex justify-between mt-1 text-xs font-bold uppercase tracking-wide text-gray-500">
               <span>30 min</span>
               <span>4 hours</span>
             </div>
@@ -233,10 +269,10 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
           {/* School Day Rules */}
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="school-rules" className="text-sm font-medium">
-                School Day Restrictions
-              </Label>
-              <p className="text-sm text-gray-500">
+              <label htmlFor="school-rules" className="text-sm font-black uppercase tracking-wider text-black">
+                🏫 School Day Restrictions
+              </label>
+              <p className="text-sm font-bold text-gray-600">
                 Limit access during school hours on weekdays
               </p>
             </div>
@@ -250,10 +286,10 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
           {/* Weekend Rules */}
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="weekend-rules" className="text-sm font-medium">
-                Weekend Extended Hours
-              </Label>
-              <p className="text-sm text-gray-500">
+              <label htmlFor="weekend-rules" className="text-sm font-black uppercase tracking-wider text-black">
+                🎉 Weekend Extended Hours
+              </label>
+              <p className="text-sm font-bold text-gray-600">
                 Allow extra time on weekends
               </p>
             </div>
@@ -266,19 +302,25 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
 
           {/* Time Restrictions */}
           <div>
-            <Label className="text-sm font-medium mb-2 block">
-              Allowed Hours
-            </Label>
+            <label className="block text-sm font-black uppercase tracking-wider text-black mb-2">
+              🕰️ Allowed Hours
+            </label>
             <div className="space-y-2">
               {timeRestrictions.map((restriction) => (
-                <div key={restriction.id} className="flex items-center gap-2 p-3 bg-gray-50 rounded">
-                  <Badge variant="outline">
+                <Card
+                  key={restriction.id}
+                  bg="#f8f8f8"
+                  borderColor="black"
+                  shadowColor="#e0e0e0"
+                  className="flex items-center gap-2 p-3"
+                >
+                  <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-black bg-[#fefcd0] text-black">
                     {restriction.dayType === "weekday" ? "Weekdays" : "Weekends"}
-                  </Badge>
-                  <span className="text-sm">
+                  </span>
+                  <span className="text-sm font-bold text-black">
                     {restriction.startTime} - {restriction.endTime}
                   </span>
-                </div>
+                </Card>
               ))}
             </div>
           </div>
@@ -286,19 +328,26 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
       </Card>
 
       {/* Notification Preferences */}
-      <Card className="p-6">
+      <Card 
+        bg="#ffffff"
+        borderColor="black"
+        shadowColor="#f7931e"
+        className="p-4 sm:p-6 hover-lift"
+      >
         <div className="flex items-center gap-2 mb-4">
           <Bell className="w-5 h-5 text-purple-600" />
-          <h3 className="text-lg font-semibold">Notification Preferences</h3>
+          <h3 className="text-lg font-black uppercase tracking-wider text-black">
+            🔔 Notification Preferences
+          </h3>
         </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="real-time" className="text-sm font-medium">
-                Real-time Alerts
-              </Label>
-              <p className="text-sm text-gray-500">
+              <label htmlFor="real-time" className="text-sm font-black uppercase tracking-wider text-black">
+                ⚡ Real-time Alerts
+              </label>
+              <p className="text-sm font-bold text-gray-600">
                 Get instant notifications for safety concerns
               </p>
             </div>
@@ -311,10 +360,10 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
 
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="daily-summary" className="text-sm font-medium">
-                Daily Summary
-              </Label>
-              <p className="text-sm text-gray-500">
+              <label htmlFor="daily-summary" className="text-sm font-black uppercase tracking-wider text-black">
+                📅 Daily Summary
+              </label>
+              <p className="text-sm font-bold text-gray-600">
                 Receive a daily report of your child's activity
               </p>
             </div>
@@ -327,10 +376,10 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
 
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="weekly-report" className="text-sm font-medium">
-                Weekly Report
-              </Label>
-              <p className="text-sm text-gray-500">
+              <label htmlFor="weekly-report" className="text-sm font-black uppercase tracking-wider text-black">
+                📈 Weekly Report
+              </label>
+              <p className="text-sm font-bold text-gray-600">
                 Get detailed weekly analytics and insights
               </p>
             </div>
@@ -342,11 +391,11 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
           </div>
 
           <div>
-            <Label className="text-sm font-medium mb-2 block">
-              Alert Severity Threshold
-            </Label>
+            <label className="block text-sm font-black uppercase tracking-wider text-black mb-2">
+              🎯 Alert Severity Threshold
+            </label>
             <Select value={severityThreshold} onValueChange={(value: any) => setSeverityThreshold(value)}>
-              <SelectTrigger>
+              <SelectTrigger className="border-2 border-black font-bold">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -361,20 +410,42 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
 
       {/* Save Button */}
       <div className="flex justify-end gap-3">
-        <Button variant="outline">Reset to Defaults</Button>
-        <Button onClick={handleSaveSettings} className="gap-2">
+        <Button
+          bg="#f0f0f0"
+          textColor="black"
+          borderColor="black"
+          shadow="#d0d0d0"
+          className="py-2 px-4 font-bold uppercase tracking-wider hover-lift"
+        >
+          Reset to Defaults
+        </Button>
+        <Button
+          bg="#92cd41"
+          textColor="white"
+          borderColor="black"
+          shadow="#76a83a"
+          onClick={handleSaveSettings}
+          className="py-2 px-4 font-bold uppercase tracking-wider hover-lift flex items-center gap-2"
+        >
           <Save className="w-4 h-4" />
           Save Settings
         </Button>
       </div>
 
       {/* Info Box */}
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          These settings apply to all toys assigned to this child. Changes take effect immediately.
-        </AlertDescription>
-      </Alert>
+      <Card
+        bg="#e3f2fd"
+        borderColor="blue"
+        shadowColor="#2196f3"
+        className="p-4"
+      >
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <p className="text-sm font-bold text-blue-800 uppercase tracking-wide">
+            ℹ️ These settings apply to all toys assigned to this child. Changes take effect immediately.
+          </p>
+        </div>
+      </Card>
     </div>
   );
 }

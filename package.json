@@ -16,6 +16,15 @@
     "type-check": "turbo run type-check",
     "clean": "turbo run clean && rm -rf node_modules"
   },
+  "pnpm": {
+    "overrides": {
+      "react": "19.1.0",
+      "react-dom": "19.1.0",
+      "@types/react": "^19",
+      "@types/react-dom": "^19",
+      "typescript": "^5"
+    }
+  },
   "devDependencies": {
     "@turbo/gen": "^2.3.0",
     "prettier": "^3.3.3",
@@ -26,6 +35,8 @@
     "pnpm": ">=10.0.0"
   },
   "dependencies": {
-    "@radix-ui/react-alert-dialog": "^1.1.15"
+    "@radix-ui/react-alert-dialog": "^1.1.15",
+    "elevenlabs": "^1.59.0",
+    "openai": "^5.15.0"
   }
 }

@@ -1,56 +1,25 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-// BetterAuth required tables
-const authTables = {
+// ⚠️ IMPORTANT: BetterAuth tables are automatically managed by the component
+// Do NOT define users, sessions, accounts, or verifications tables here
+// The BetterAuth component injects these automatically via app.use(betterAuth) in convex.config.ts
+
+// Pommai-specific tables only
+const schema = defineSchema({
+  // Application-specific user data
+  // This complements the BetterAuth users table with app-specific fields
   users: defineTable({
+    // No need to duplicate email, name, etc. - those are in BetterAuth's users table
+    // Just add app-specific fields if needed
     email: v.string(),
     emailVerified: v.boolean(),
     name: v.optional(v.string()),
+    image: v.optional(v.string()),
     createdAt: v.string(),
     updatedAt: v.string(),
-    image: v.optional(v.string()),
   }).index("email", ["email"]),
   
-  sessions: defineTable({
-    userId: v.id("users"),
-    expiresAt: v.string(),
-    token: v.string(),
-    createdAt: v.string(),
-    updatedAt: v.string(),
-    activeAt: v.string(),
-    ipAddress: v.optional(v.string()),
-    userAgent: v.optional(v.string()),
-  })
-    .index("userId", ["userId"])
-    .index("token", ["token"]),
-  
-  accounts: defineTable({
-    userId: v.id("users"),
-    accountId: v.string(),
-    providerId: v.string(),
-    accessToken: v.optional(v.string()),
-    refreshToken: v.optional(v.string()),
-    idToken: v.optional(v.string()),
-    expiresAt: v.optional(v.string()),
-    password: v.optional(v.string()),
-    createdAt: v.string(),
-    updatedAt: v.string(),
-  })
-    .index("userId", ["userId"])
-    .index("accountId", ["accountId"]),
-  
-  verifications: defineTable({
-    identifier: v.string(),
-    value: v.string(),
-    expiresAt: v.string(),
-    createdAt: v.string(),
-    updatedAt: v.string(),
-  }).index("identifier", ["identifier"]),
-};
-
-// Pommai-specific tables
-const pommaiTables = {
   // Toy management tables
   toys: defineTable({
     name: v.string(),
@@ -275,9 +244,32 @@ const pommaiTables = {
     action: v.string(),
     timestamp: v.string(),
   }).index("messageId", ["messageId"]),
-};
-
-export default defineSchema({
-  ...authTables,
-  ...pommaiTables,
+  
+  // RAG Knowledge storage for toys
+  toyKnowledge: defineTable({
+    toyId: v.id("toys"),
+    content: v.string(),
+    type: v.union(
+      v.literal("backstory"),
+      v.literal("personality"),
+      v.literal("facts"),
+      v.literal("memories"),
+      v.literal("rules"),
+      v.literal("preferences"),
+      v.literal("relationships")
+    ),
+    metadata: v.optional(v.object({
+      source: v.string(),
+      importance: v.number(), // 0-1 scale
+      tags: v.array(v.string()),
+      expiresAt: v.optional(v.number()), // For temporary knowledge
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_toy", ["toyId"])
+    .index("by_type", ["type"])
+    .index("by_created", ["createdAt"]),
 });
+
+export default schema;

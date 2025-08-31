@@ -33,7 +33,7 @@ export const {
     onCreateUser: async (ctx, user) => {
       return ctx.db.insert("users", {
         email: user.email,
-        emailVerified: false,
+        emailVerified: user.emailVerified || false, // ✅ Use actual verification status from Better Auth
         name: user.name || "",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -44,6 +44,7 @@ export const {
     onUpdateUser: async (ctx, user) => {
       await ctx.db.patch(user.userId as Id<"users">, {
         email: user.email,
+        emailVerified: user.emailVerified || false, // ✅ Sync verification status
         name: user.name || "",
         updatedAt: new Date().toISOString(),
       });

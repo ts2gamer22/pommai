@@ -1,0 +1,38 @@
+# FastRTC Gateway Server Requirements
+
+# Web framework and async
+aiohttp==3.9.1
+aiortc==1.6.0
+av==11.0.0
+
+# WebRTC and media
+pyee==11.0.1
+cffi==1.16.0
+cryptography==41.0.7
+
+# AI/ML models
+torch==2.1.2
+torchaudio==2.1.2
+openai-whisper==20231117
+transformers==4.36.2
+TTS==0.22.0
+
+# Audio processing
+numpy==1.24.3
+scipy==1.11.4
+librosa==0.10.1
+soundfile==0.12.1
+
+# Convex integration
+convex==0.6.0
+python-dotenv==1.0.0
+
+# Utilities
+pydantic==2.5.3
+python-json-logger==2.0.7
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.23.2
+black==23.12.1
+pylint==3.0.3

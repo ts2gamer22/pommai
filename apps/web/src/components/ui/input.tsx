@@ -1,3 +1,3 @@
 "use client"
 
-export { Input, type InputProps } from '../Input'
+export { Input, type InputProps } from '@pommai/ui'

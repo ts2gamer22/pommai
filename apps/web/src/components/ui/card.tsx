@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 
-export { Card, type CardProps } from '../Card'
+export { Card, type CardProps } from '@pommai/ui'
 
 // Additional exports for shadcn/ui compatibility
 export const CardHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

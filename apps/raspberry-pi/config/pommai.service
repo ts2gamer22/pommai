@@ -1,6 +1,6 @@
 [Unit]
 Description=Pommai Smart Toy Client
-After=network.target sound.target
+After=network-online.target sound.target
 Wants=network-online.target
 StartLimitIntervalSec=0
 
@@ -10,27 +10,26 @@ Restart=always
 RestartSec=10
 User=pommai
 Group=pommai
-WorkingDirectory=/home/pommai/pommai/apps/raspberry-pi
-Environment="PATH=/home/pommai/pommai/apps/raspberry-pi/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-Environment="PYTHONPATH=/home/pommai/pommai/apps/raspberry-pi"
-ExecStartPre=/bin/sleep 10
-ExecStart=/home/pommai/pommai/apps/raspberry-pi/venv/bin/python /home/pommai/pommai/apps/raspberry-pi/src/pommai_client.py
+WorkingDirectory=/home/pommai/app
+Environment="PATH=/home/pommai/app/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONPATH=/home/pommai/app"
+ExecStart=/home/pommai/app/venv/bin/python /home/pommai/app/pommai_client_fastrtc.py
 
 # Resource limits for Pi Zero 2W
-MemoryLimit=150M
-CPUQuota=50%
+MemoryMax=200M
+CPUQuota=60%
 
 # Logging
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=pommai
 
-# Security hardening
+# Security hardening (relaxed for GPIO/I2C/SPI access)
 NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/tmp /home/pommai/pommai/apps/raspberry-pi/logs
+PrivateTmp=false
+ProtectSystem=false
+ProtectHome=false
+ReadWritePaths=/home/pommai /tmp /var/log/pommai
 
 [Install]
 WantedBy=multi-user.target

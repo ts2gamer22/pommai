@@ -1,8 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useToyWizardStore } from '@/stores/toyWizardStore';
-import { Button } from '@/components/ui/button';
+import { useToysStore } from '@/stores/useToysStore';
+import { Button, Card } from '@pommai/ui';
 import { 
   CheckCircle2, 
   MessageSquare, 
@@ -13,13 +15,35 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { useEffect } from 'react';
 
 export function CompletionStep() {
   const router = useRouter();
   const { toyConfig, resetWizard } = useToyWizardStore();
+  const { addToy } = useToysStore();
 
   useEffect(() => {
+    // Add the newly created toy to the toys store
+    const newToy = {
+      _id: `toy_${Date.now()}`, // Generate a temporary ID
+      name: toyConfig.name,
+      type: toyConfig.type as any,
+      status: 'active' as const,
+      isForKids: toyConfig.isForKids,
+      voiceId: toyConfig.voiceId,
+      voiceName: toyConfig.voiceName,
+      personalityPrompt: toyConfig.personalityPrompt,
+      isPublic: toyConfig.isPublic,
+      tags: toyConfig.tags,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      conversationCount: 0,
+      messageCount: 0,
+      lastActiveAt: undefined,
+      deviceId: undefined,
+    };
+    
+    addToy(newToy);
+    
     // Trigger confetti animation
     const duration = 3 * 1000;
     const animationEnd = Date.now() + duration;
@@ -84,7 +108,7 @@ export function CompletionStep() {
         animate={{ scale: 1 }}
         transition={{ type: 'spring', duration: 0.5 }}
       >
-        <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full mx-auto mb-6 flex items-center justify-center">
+        <div className="w-24 h-24 border-4 border-black bg-[#92cd41] mx-auto mb-6 flex items-center justify-center">
           <CheckCircle2 className="w-12 h-12 text-white" />
         </div>
       </motion.div>
@@ -95,11 +119,15 @@ export function CompletionStep() {
         transition={{ delay: 0.2 }}
         className="space-y-4"
       >
-        <h2 className="text-3xl font-bold text-gray-900">
+        <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-black"
+          style={{
+            textShadow: '2px 2px 0 #c381b5'
+          }}
+        >
           {toyConfig.name} is Ready!
         </h2>
         <div className="text-5xl mb-4">{getToyTypeIcon()}</div>
-        <p className="text-lg text-gray-600 max-w-md mx-auto">
+        <p className="text-lg font-bold text-gray-700 max-w-md mx-auto uppercase tracking-wide">
           Your AI companion has been successfully created and is excited to meet you!
         </p>
       </motion.div>
@@ -108,38 +136,44 @@ export function CompletionStep() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6 max-w-md mx-auto"
       >
-        <h3 className="font-semibold text-gray-900 mb-3">What's Next?</h3>
-        <div className="space-y-3 text-left">
-          <div className="flex items-start gap-3">
-            <MessageSquare className="w-5 h-5 text-purple-600 mt-0.5" />
-            <div>
-              <p className="font-medium text-gray-900">Start Chatting</p>
-              <p className="text-sm text-gray-600">
-                Jump right into a conversation with {toyConfig.name}
-              </p>
+        <Card
+          bg="#fefcd0"
+          borderColor="black"
+          shadowColor="#c381b5"
+          className="p-6 max-w-md mx-auto"
+        >
+          <h3 className="font-black text-lg uppercase tracking-wider text-black mb-3">What's Next?</h3>
+          <div className="space-y-3 text-left">
+            <div className="flex items-start gap-3">
+              <MessageSquare className="w-5 h-5 text-[#c381b5] mt-0.5" />
+              <div>
+                <p className="font-black text-black uppercase tracking-wide">Start Chatting</p>
+                <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                  Jump right into a conversation with {toyConfig.name}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Settings className="w-5 h-5 text-[#f7931e] mt-0.5" />
+              <div>
+                <p className="font-black text-black uppercase tracking-wide">Customize Further</p>
+                <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                  Fine-tune settings anytime from the dashboard
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Share2 className="w-5 h-5 text-[#92cd41] mt-0.5" />
+              <div>
+                <p className="font-black text-black uppercase tracking-wide">Share with Family</p>
+                <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                  Invite family members to interact with {toyConfig.name}
+                </p>
+              </div>
             </div>
           </div>
-          <div className="flex items-start gap-3">
-            <Settings className="w-5 h-5 text-purple-600 mt-0.5" />
-            <div>
-              <p className="font-medium text-gray-900">Customize Further</p>
-              <p className="text-sm text-gray-600">
-                Fine-tune settings anytime from the dashboard
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Share2 className="w-5 h-5 text-purple-600 mt-0.5" />
-            <div>
-              <p className="font-medium text-gray-900">Share with Family</p>
-              <p className="text-sm text-gray-600">
-                Invite family members to interact with {toyConfig.name}
-              </p>
-            </div>
-          </div>
-        </div>
+        </Card>
       </motion.div>
 
       <motion.div
@@ -149,18 +183,24 @@ export function CompletionStep() {
         className="flex flex-col sm:flex-row gap-3 justify-center"
       >
         <Button
-          size="lg"
+          bg="#c381b5"
+          textColor="white"
+          borderColor="black"
+          shadow="#8b5fa3"
           onClick={handleStartChatting}
-          className="group"
+          className="group py-3 px-6 font-black uppercase tracking-wider hover-lift"
         >
           <MessageSquare className="w-4 h-4 mr-2" />
           Start Chatting
           <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
         </Button>
         <Button
-          size="lg"
-          variant="outline"
+          bg="#ffffff"
+          textColor="black"
+          borderColor="black"
+          shadow="#e0e0e0"
           onClick={handleGoToDashboard}
+          className="py-3 px-6 font-black uppercase tracking-wider hover-lift"
         >
           Go to Dashboard
         </Button>
@@ -172,10 +212,17 @@ export function CompletionStep() {
         transition={{ delay: 0.8 }}
         className="mt-8"
       >
-        <div className="inline-flex items-center gap-2 text-sm text-gray-500">
-          <Sparkles className="w-4 h-4" />
-          <span>Tip: Say "Hello" to {toyConfig.name} to start your first conversation!</span>
-        </div>
+        <Card
+          bg="#f7931e"
+          borderColor="black"
+          shadowColor="#d67c1a"
+          className="p-4 max-w-md mx-auto"
+        >
+          <div className="inline-flex items-center gap-2 text-sm font-bold text-white uppercase tracking-wide">
+            <Sparkles className="w-4 h-4" />
+            <span>Tip: Say "Hello" to {toyConfig.name} to start your first conversation!</span>
+          </div>
+        </Card>
       </motion.div>
     </div>
   );

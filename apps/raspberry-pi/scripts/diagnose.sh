@@ -74,11 +74,11 @@ echo ""
 echo -e "${YELLOW}Software Dependencies:${NC}"
 
 # Python version
-if command -v python3.9 &> /dev/null; then
-    PY_VERSION=$(python3.9 --version 2>&1 | cut -d' ' -f2)
-    check_status 0 "Python 3.9 installed ($PY_VERSION)"
+if command -v python3 &> /dev/null; then
+    PY_VERSION=$(python3 --version 2>&1 | cut -d' ' -f2)
+    check_status 0 "Python installed ($PY_VERSION)"
 else
-    check_status 1 "Python 3.9 not found"
+    check_status 1 "python3 not found"
 fi
 
 # Check for required system packages
@@ -119,11 +119,13 @@ for dir in "${DIRS[@]}"; do
     fi
 done
 
-# Check main application file
-if [ -f "$POMMAI_APP_DIR/pommai_client.py" ]; then
-    check_status 0 "Main application file found"
+# Check main application file (FastRTC client)
+if [ -f "$POMMAI_APP_DIR/pommai_client_fastrtc.py" ]; then
+    check_status 0 "FastRTC client found"
+elif [ -f "$POMMAI_APP_DIR/pommai_client.py" ]; then
+    check_status 0 "Legacy client found"
 else
-    check_status 1 "Main application file missing"
+    check_status 1 "Client entrypoint missing"
 fi
 
 # Check virtual environment
@@ -135,7 +137,7 @@ if [ -d "$POMMAI_APP_DIR/venv" ]; then
         echo "  Checking Python packages..."
         REQUIRED_PACKAGES=("websockets" "pyaudio" "RPi.GPIO" "vosk" "aiofiles")
         for pkg in "${REQUIRED_PACKAGES[@]}"; do
-            if $POMMAI_APP_DIR/venv/bin/pip show $pkg &>/dev/null; then
+            if "$POMMAI_APP_DIR/venv/bin/pip" show $pkg &>/dev/null; then
                 echo -e "  ${GREEN}✓${NC} $pkg installed"
             else
                 echo -e "  ${RED}✗${NC} $pkg not installed"
@@ -161,11 +163,36 @@ echo -e "${YELLOW}Configuration:${NC}"
 if [ -f "$POMMAI_APP_DIR/.env" ]; then
     check_status 0 ".env file exists"
     
-    # Check required variables (without showing values)
-    source $POMMAI_APP_DIR/.env
-    [ -n "$CONVEX_URL" ] && check_status 0 "CONVEX_URL configured" || check_status 1 "CONVEX_URL not set"
-    [ -n "$POMMAI_USER_TOKEN" ] && check_status 0 "POMMAI_USER_TOKEN configured" || check_status 1 "POMMAI_USER_TOKEN not set"
-    [ -n "$POMMAI_TOY_ID" ] && check_status 0 "POMMAI_TOY_ID configured" || check_status 1 "POMMAI_TOY_ID not set"
+    # Load env (no echo of secrets)
+    set -a; source "$POMMAI_APP_DIR/.env"; set +a
+
+    # Check FastRTC vars with legacy fallbacks (without showing values)
+    if [ -n "$FASTRTC_GATEWAY_URL" ]; then
+        check_status 0 "FASTRTC_GATEWAY_URL configured"
+    elif [ -n "$CONVEX_URL" ]; then
+        echo -e "${YELLOW}Using legacy CONVEX_URL; set FASTRTC_GATEWAY_URL in .env${NC}"
+        check_status 0 "CONVEX_URL present (legacy)"
+    else
+        check_status 1 "FASTRTC_GATEWAY_URL not set"
+    fi
+
+    if [ -n "$AUTH_TOKEN" ]; then
+        check_status 0 "AUTH_TOKEN configured"
+    elif [ -n "$POMMAI_USER_TOKEN" ]; then
+        echo -e "${YELLOW}Using legacy POMMAI_USER_TOKEN; set AUTH_TOKEN in .env${NC}"
+        check_status 0 "POMMAI_USER_TOKEN present (legacy)"
+    else
+        check_status 1 "AUTH_TOKEN not set"
+    fi
+
+    if [ -n "$TOY_ID" ]; then
+        check_status 0 "TOY_ID configured"
+    elif [ -n "$POMMAI_TOY_ID" ]; then
+        echo -e "${YELLOW}Using legacy POMMAI_TOY_ID; set TOY_ID in .env${NC}"
+        check_status 0 "POMMAI_TOY_ID present (legacy)"
+    else
+        check_status 1 "TOY_ID not set"
+    fi
 else
     check_status 1 ".env file not found"
 fi
@@ -188,7 +215,7 @@ if systemctl is-active --quiet pommai; then
     echo "  Service uptime: $(systemctl show pommai --property=ActiveEnterTimestamp | cut -d'=' -f2-)"
     
     # Check recent logs for errors
-    ERROR_COUNT=$(journalctl -u pommai --since "1 hour ago" | grep -c ERROR || true)
+    ERROR_COUNT=$(journalctl -u pommai --since "1 hour ago" 2>/dev/null | grep -c ERROR || true)
     if [ $ERROR_COUNT -gt 0 ]; then
         echo -e "  ${YELLOW}Warning: $ERROR_COUNT errors in last hour${NC}"
     fi
@@ -214,13 +241,21 @@ else
     check_status 1 "No internet connection"
 fi
 
-# Check if we can resolve Convex URL
-if [ -n "$CONVEX_URL" ]; then
-    CONVEX_HOST=$(echo $CONVEX_URL | sed -E 's|^wss?://([^/]+).*|\1|' | cut -d':' -f1)
-    if host $CONVEX_HOST &>/dev/null; then
-        check_status 0 "Can resolve Convex host: $CONVEX_HOST"
-    else
-        check_status 1 "Cannot resolve Convex host: $CONVEX_HOST"
+# Check if we can resolve and reach FastRTC gateway host
+EFFECTIVE_WS_URL="${FASTRTC_GATEWAY_URL:-$CONVEX_URL}"
+if [ -n "$EFFECTIVE_WS_URL" ]; then
+    GATEWAY_HOST=$(echo "$EFFECTIVE_WS_URL" | sed -E 's|^wss?://([^/:]+).*|\1|')
+    if [ -n "$GATEWAY_HOST" ]; then
+        if host "$GATEWAY_HOST" &>/dev/null; then
+            check_status 0 "DNS resolution ok for: $GATEWAY_HOST"
+        else
+            check_status 1 "Cannot resolve host: $GATEWAY_HOST"
+        fi
+        if ping -c 1 -W 2 "$GATEWAY_HOST" &>/dev/null; then
+            check_status 0 "Gateway reachable: $GATEWAY_HOST"
+        else
+            check_status 1 "Gateway not reachable: $GATEWAY_HOST"
+        fi
     fi
 fi
 
@@ -270,8 +305,8 @@ echo "=================="
 # Count issues
 ISSUES=0
 [ ! -f "$POMMAI_APP_DIR/.env" ] && ((ISSUES++))
-[ -z "$POMMAI_USER_TOKEN" ] && ((ISSUES++))
-[ -z "$POMMAI_TOY_ID" ] && ((ISSUES++))
+[ -z "$AUTH_TOKEN" ] && [ -z "$POMMAI_USER_TOKEN" ] && ((ISSUES++))
+[ -z "$TOY_ID" ] && [ -z "$POMMAI_TOY_ID" ] && ((ISSUES++))
 systemctl is-active --quiet pommai || ((ISSUES++))
 
 if [ $ISSUES -eq 0 ]; then
@@ -283,7 +318,7 @@ else
     echo "1. Complete configuration: sudo nano $POMMAI_APP_DIR/.env"
     echo "2. Start service: sudo systemctl start pommai"
     echo "3. Check logs: sudo journalctl -u pommai -f"
-    echo "4. Re-run setup: sudo /path/to/setup.sh"
+    echo "4. Re-run setup: sudo /home/pommai/scripts/setup.sh (if present)"
 fi
 
 echo ""

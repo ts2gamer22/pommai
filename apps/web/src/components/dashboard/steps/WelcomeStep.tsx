@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Sparkles, Heart, Shield, Brain } from 'lucide-react';
+import { Card } from '@pommai/ui';
 
 export function WelcomeStep() {
   const features = [
@@ -28,55 +29,72 @@ export function WelcomeStep() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 step-component">
       <div className="text-center space-y-4">
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', duration: 0.5 }}
         >
-          <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mx-auto flex items-center justify-center">
-            <Sparkles className="w-10 h-10 text-white" />
+          <div className="w-20 h-20 mx-auto flex items-center justify-center mb-4">
+            <Sparkles className="w-16 h-16 text-[#c381b5] animate-pulse" />
           </div>
         </motion.div>
         
-        <h2 className="text-3xl font-bold text-gray-900">
-          Welcome to AI Toy Creation!
+        <h2 className="font-minecraft text-base sm:text-lg font-black mb-4 uppercase tracking-wider text-gray-800"
+          style={{
+            textShadow: '2px 2px 0 #c381b5'
+          }}
+        >
+          🎉 Welcome to AI Toy Creation!
         </h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Let's create a magical AI companion together. This wizard will guide you 
+        <p className="font-geo text-sm font-medium text-gray-600 max-w-2xl mx-auto leading-relaxed">
+          Let's create a magical AI companion together! This wizard will guide you 
           through personalizing your toy's personality, voice, and capabilities.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-8">
         {features.map((feature, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-gray-50 rounded-lg p-4 flex gap-4"
           >
-            <div className="flex-shrink-0">
-              <div className="w-12 h-12 bg-white rounded-lg shadow-sm flex items-center justify-center">
-                <feature.icon className="w-6 h-6 text-purple-600" />
+            <Card
+              bg="#ffffff"
+              borderColor="black"
+              shadowColor="#c381b5"
+              className="p-4 sm:p-6 hover-lift transition-transform cursor-pointer group"
+            >
+              <div className="flex gap-4">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-[#fefcd0] border-2 border-black flex items-center justify-center group-hover:animate-pulse">
+                    <feature.icon className="w-6 h-6 text-[#c381b5]" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-minecraft font-black text-base uppercase tracking-wider text-gray-800 mb-2">{feature.title}</h3>
+                  <p className="font-geo text-sm font-medium text-gray-600 tracking-wide leading-relaxed">{feature.description}</p>
+                </div>
               </div>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">{feature.title}</h3>
-              <p className="text-sm text-gray-600 mt-1">{feature.description}</p>
-            </div>
+            </Card>
           </motion.div>
         ))}
       </div>
 
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mt-6">
-        <p className="text-sm text-purple-800">
-          <strong>Note:</strong> This process takes about 5-10 minutes. Your progress 
+      <Card
+        bg="#fefcd0"
+        borderColor="black"
+        shadowColor="#c381b5"
+        className="p-4 sm:p-6 mt-6"
+      >
+        <p className="font-geo text-sm font-medium text-gray-700">
+          <strong className="font-minecraft uppercase tracking-wider">📝 Note:</strong> This process takes about 5-10 minutes. Your progress 
           is automatically saved, so you can return anytime to continue where you left off.
         </p>
-      </div>
+      </Card>
     </div>
   );
 }

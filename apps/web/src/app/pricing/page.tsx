@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Card } from "@/components";
+import { Button, Card } from '@pommai/ui';
 import Link from "next/link";
 
 export default function PricingPage() {

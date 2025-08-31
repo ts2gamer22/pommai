@@ -1,33 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/Tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Shield,
-  Users,
-  AlertTriangle,
-  Activity,
-  Clock,
-  PauseCircle,
-  PlayCircle,
-  Settings,
-  BarChart3,
-  MessageSquare,
-  AlertCircle,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Card, Button } from "@pommai/ui";
 import { SafetyControls } from "./SafetyControls";
 import { LiveMonitoring } from "./LiveMonitoring";
 import { SafetyAnalytics } from "./SafetyAnalytics";
+import { GuardianHeader } from "./GuardianHeader";
+import { ActiveAlertsCard } from "./ActiveAlertsCard";
+import { ChildProfilesCard } from "./ChildProfilesCard";
+import { OverviewTab } from "./OverviewTab";
 
 interface ChildProfile {
   id: string;
@@ -105,11 +86,6 @@ export function GuardianDashboard() {
     // In production, this would pause all toys
   };
 
-  const pauseAllToys = () => {
-    console.log("All toys paused");
-    // In production, this would pause all toys
-  };
-
   const resolveAlert = (alertId: string) => {
     console.log("Resolving alert:", alertId);
     // In production, this would mark the alert as resolved
@@ -120,217 +96,95 @@ export function GuardianDashboard() {
   const childAlerts = safetyAlerts.filter(a => a.childId === selectedChild.id);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-[#fefcd0] to-[#f4e5d3]">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Shield className="w-8 h-8 text-blue-600" />
-            <div>
-              <h1 className="text-3xl font-bold">Guardian Dashboard</h1>
-              <p className="text-gray-600">Monitor and protect your children's AI interactions</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="destructive"
-              size="lg"
-              onClick={emergencyStop}
-              className="gap-2"
-            >
-              <PauseCircle className="w-5 h-5" />
-              Emergency Stop
-            </Button>
-          </div>
-        </div>
+        <GuardianHeader onEmergencyStop={emergencyStop} />
 
         {/* Active Alerts */}
-        {activeAlerts.length > 0 && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Active Safety Alerts</AlertTitle>
-            <AlertDescription>
-              You have {activeAlerts.length} unresolved safety alerts that require your attention.
-            </AlertDescription>
-          </Alert>
-        )}
+        <ActiveAlertsCard activeAlerts={activeAlerts} />
 
         {/* Child Profiles */}
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Your Children
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {children.map((child) => (
-              <Card
-                key={child.id}
-                className={`p-4 cursor-pointer transition-all ${
-                  selectedChild.id === child.id
-                    ? "border-2 border-blue-500 bg-blue-50 dark:bg-blue-950"
-                    : "hover:border-gray-300"
-                }`}
-                onClick={() => setSelectedChildId(child.id)}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl">{child.avatar}</div>
-                    <div>
-                      <h3 className="font-semibold">{child.name}</h3>
-                      <p className="text-sm text-gray-500">{child.age} years old</p>
-                    </div>
-                  </div>
-                  {selectedChild.id === child.id && (
-                    <Badge variant="default">Selected</Badge>
-                  )}
-                </div>
-                
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Daily Usage</span>
-                      <span>{child.currentUsage} / {child.dailyLimit} min</span>
-                    </div>
-                    <Progress
-                      value={(child.currentUsage / child.dailyLimit) * 100}
-                      className="h-2"
-                    />
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Active Toys</span>
-                    <Badge variant="secondary">{child.assignedToys.length}</Badge>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Alerts</span>
-                    <Badge 
-                      variant={childAlerts.some(a => !a.resolved) ? "destructive" : "secondary"}
-                    >
-                      {childAlerts.filter(a => !a.resolved).length}
-                    </Badge>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </Card>
+        <ChildProfilesCard 
+          children={children}
+          selectedChildId={selectedChildId}
+          onChildSelect={setSelectedChildId}
+        />
 
         {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="monitoring">Live Monitoring</TabsTrigger>
-            <TabsTrigger value="controls">Safety Controls</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-4">
-            {/* Recent Alerts */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5" />
-                Recent Safety Alerts
-              </h3>
-              <div className="space-y-3">
-                {childAlerts.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">
-                    No safety alerts for {selectedChild.name}
-                  </p>
-                ) : (
-                  childAlerts.map((alert) => (
-                    <div
-                      key={alert.id}
-                      className={`p-4 rounded-lg border ${
-                        alert.resolved
-                          ? "bg-gray-50 border-gray-200"
-                          : alert.severity === "high"
-                          ? "bg-red-50 border-red-200"
-                          : alert.severity === "medium"
-                          ? "bg-yellow-50 border-yellow-200"
-                          : "bg-blue-50 border-blue-200"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3">
-                          {alert.resolved ? (
-                            <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
-                          ) : alert.severity === "high" ? (
-                            <XCircle className="w-5 h-5 text-red-500 mt-0.5" />
-                          ) : alert.severity === "medium" ? (
-                            <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5" />
-                          ) : (
-                            <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5" />
-                          )}
-                          <div className="flex-1">
-                            <p className="font-medium">{alert.message}</p>
-                            <p className="text-sm text-gray-500 mt-1">
-                              {formatDistanceToNow(alert.timestamp, { addSuffix: true })}
-                            </p>
-                          </div>
-                        </div>
-                        {!alert.resolved && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => resolveAlert(alert.id)}
-                          >
-                            Resolve
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </Card>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">Today's Activity</p>
-                    <p className="text-2xl font-bold">{selectedChild.currentUsage} min</p>
-                  </div>
-                  <Clock className="w-8 h-8 text-blue-500" />
-                </div>
-              </Card>
-              
-              <Card className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">Safety Score</p>
-                    <p className="text-2xl font-bold">98%</p>
-                  </div>
-                  <Shield className="w-8 h-8 text-green-500" />
-                </div>
-              </Card>
-              
-              <Card className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">Messages Today</p>
-                    <p className="text-2xl font-bold">127</p>
-                  </div>
-                  <MessageSquare className="w-8 h-8 text-purple-500" />
-                </div>
-              </Card>
+        <div className="space-y-4">
+          {/* Tab Navigation */}
+          <Card
+            bg="#ffffff"
+            borderColor="black"
+            shadowColor="#c381b5"
+            className="p-2"
+          >
+            <div className="grid grid-cols-4 gap-2">
+              <Button
+                bg={activeTab === "overview" ? "#c381b5" : "#f0f0f0"}
+                textColor={activeTab === "overview" ? "white" : "black"}
+                borderColor="black"
+                shadow={activeTab === "overview" ? "#8b5fa3" : "#d0d0d0"}
+                onClick={() => setActiveTab("overview")}
+                className="py-2 px-4 font-minecraft font-black uppercase tracking-wider hover-lift text-xs sm:text-sm"
+              >
+                Overview
+              </Button>
+              <Button
+                bg={activeTab === "monitoring" ? "#c381b5" : "#f0f0f0"}
+                textColor={activeTab === "monitoring" ? "white" : "black"}
+                borderColor="black"
+                shadow={activeTab === "monitoring" ? "#8b5fa3" : "#d0d0d0"}
+                onClick={() => setActiveTab("monitoring")}
+                className="py-2 px-4 font-minecraft font-black uppercase tracking-wider hover-lift text-xs sm:text-sm"
+              >
+                Live Monitoring
+              </Button>
+              <Button
+                bg={activeTab === "controls" ? "#c381b5" : "#f0f0f0"}
+                textColor={activeTab === "controls" ? "white" : "black"}
+                borderColor="black"
+                shadow={activeTab === "controls" ? "#8b5fa3" : "#d0d0d0"}
+                onClick={() => setActiveTab("controls")}
+                className="py-2 px-4 font-minecraft font-black uppercase tracking-wider hover-lift text-xs sm:text-sm"
+              >
+                Safety Controls
+              </Button>
+              <Button
+                bg={activeTab === "analytics" ? "#c381b5" : "#f0f0f0"}
+                textColor={activeTab === "analytics" ? "white" : "black"}
+                borderColor="black"
+                shadow={activeTab === "analytics" ? "#8b5fa3" : "#d0d0d0"}
+                onClick={() => setActiveTab("analytics")}
+                className="py-2 px-4 font-minecraft font-black uppercase tracking-wider hover-lift text-xs sm:text-sm"
+              >
+                Analytics
+              </Button>
             </div>
-          </TabsContent>
+          </Card>
 
-          <TabsContent value="monitoring">
+          {/* Tab Content */}
+          {activeTab === "overview" && (
+            <OverviewTab 
+              selectedChild={selectedChild}
+              childAlerts={childAlerts}
+              onResolveAlert={resolveAlert}
+            />
+          )}
+
+          {activeTab === "monitoring" && (
             <LiveMonitoring childId={selectedChild.id} />
-          </TabsContent>
+          )}
 
-          <TabsContent value="controls">
+          {activeTab === "controls" && (
             <SafetyControls childId={selectedChild.id} />
-          </TabsContent>
+          )}
 
-          <TabsContent value="analytics">
+          {activeTab === "analytics" && (
             <SafetyAnalytics childId={selectedChild.id} />
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </div>
     </div>
   );

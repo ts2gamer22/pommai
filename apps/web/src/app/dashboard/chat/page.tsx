@@ -8,7 +8,7 @@ import { ChatInterface } from '@/components/chat/ChatInterface';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Bot, MessageSquare } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/Tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@pommai/ui';
 
 export default function ChatPage() {
   const router = useRouter();
@@ -16,7 +16,7 @@ export default function ChatPage() {
   const toyName = searchParams.get('toy');
   
   // Get user's toys
-  const toys = useQuery(api.toys.getUserToys);
+  const toys = useQuery(api.toys.getUserToys, {});
   const [selectedToyId, setSelectedToyId] = useState<string | null>(null);
   
   // Find toy by name or select first available
@@ -61,9 +61,11 @@ export default function ChatPage() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Button
-              variant="ghost"
-              size="sm"
               onClick={() => router.push('/dashboard')}
+              bg="#fefcd0"
+              textColor="black"
+              borderColor="black"
+              shadow="#c381b5"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard

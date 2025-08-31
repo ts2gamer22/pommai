@@ -7,10 +7,12 @@ export interface InputProps
   bg?: string;
   textColor?: string;
   borderColor?: string;
+  fontSize?: string;
   style?: React.CSSProperties & {
     "--input-custom-bg"?: string;
     "--input-custom-text"?: string;
     "--input-custom-border"?: string;
+    "--input-custom-font-size"?: string;
   };
 }
 
@@ -21,6 +23,7 @@ export const Input = ({
   bg,
   textColor,
   borderColor,
+  fontSize,
   style,
   ...props
 }: InputProps): JSX.Element => {
@@ -35,6 +38,7 @@ export const Input = ({
     "--input-custom-bg": bg,
     "--input-custom-text": textColor,
     "--input-custom-border": borderColor,
+    "--input-custom-font-size": fontSize,
     borderImageSource: svgString,
   };
 

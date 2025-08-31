@@ -1,8 +1,7 @@
 'use client';
 
 import { useToyWizardStore } from '@/stores/toyWizardStore';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
+import { Card } from '@pommai/ui';
 import { Shield, Users, Baby, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -57,31 +56,44 @@ export function ForKidsToggleStep() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Who is this toy for?
+    <div className="space-y-6 step-component">
+      <div className="text-center sm:text-left">
+        <h2 className="font-minecraft text-base sm:text-lg font-black mb-3 uppercase tracking-wider text-gray-800"
+          style={{
+            textShadow: '2px 2px 0 #c381b5'
+          }}
+        >
+          🛁 Who is this toy for?
         </h2>
-        <p className="text-gray-600">
+        <p className="font-geo text-sm font-medium text-gray-600 tracking-wide leading-relaxed">
           Choose whether to enable Guardian Mode with enhanced safety features for children.
         </p>
       </div>
 
       {/* Mode Selection */}
       <div className="space-y-4">
-        <Label>Select Mode</Label>
+        <label className="font-geo block text-sm font-semibold uppercase tracking-wider text-black mb-2">Select Mode</label>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Kids Mode */}
           <motion.label
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className={`
-              relative flex flex-col p-6 border-2 rounded-lg cursor-pointer transition-all
-              ${toyConfig.isForKids 
-                ? 'border-purple-600 bg-purple-50' 
-                : 'border-gray-200 hover:border-gray-300'
+              relative flex flex-col p-6 border-[5px] cursor-pointer transition-all hover-lift
+              ${ toyConfig.isForKids 
+                ? 'border-black bg-[#c381b5] text-white' 
+                : 'border-black bg-white text-black hover:bg-[#fefcd0]'
               }
             `}
+            style={{
+              borderImageSlice: 3,
+              borderImageWidth: 2,
+              borderImageRepeat: 'stretch',
+              borderImageOutset: 2,
+              boxShadow: toyConfig.isForKids
+                ? '2px 2px 0 2px #8b5fa3, -2px -2px 0 2px #c381b5'
+                : '2px 2px 0 2px #e0e0e0, -2px -2px 0 2px #ffffff',
+            }}
           >
             <input
               type="radio"
@@ -91,32 +103,30 @@ export function ForKidsToggleStep() {
               className="sr-only"
             />
             <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                toyConfig.isForKids ? 'bg-purple-600' : 'bg-gray-200'
+              <div className={`w-12 h-12 border-2 border-black flex items-center justify-center ${
+                toyConfig.isForKids ? 'bg-white text-[#c381b5]' : 'bg-[#fefcd0] text-black'
               }`}>
-                <Shield className={`w-6 h-6 ${
-                  toyConfig.isForKids ? 'text-white' : 'text-gray-600'
-                }`} />
+                <Shield className="w-6 h-6" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg text-gray-900">
+                <h3 className="font-minecraft font-black text-base uppercase tracking-wider mb-3">
                   Guardian Mode (For Kids)
                 </h3>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="font-geo text-sm font-medium opacity-90 leading-relaxed mb-4">
                   Enhanced safety features, content filtering, and age-appropriate interactions
                 </p>
-                <ul className="mt-3 space-y-1 text-sm text-gray-600">
+                <ul className="space-y-2 text-sm font-geo font-medium">
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span>
-                    Strict content moderation
+                    <span className="text-[#92cd41] font-bold">✓</span>
+                    <span>Strict content moderation</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span>
-                    No personal information collection
+                    <span className="text-[#92cd41] font-bold">✓</span>
+                    <span>No personal information collection</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span>
-                    Educational focus
+                    <span className="text-[#92cd41] font-bold">✓</span>
+                    <span>Educational focus</span>
                   </li>
                 </ul>
               </div>
@@ -128,12 +138,21 @@ export function ForKidsToggleStep() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className={`
-              relative flex flex-col p-6 border-2 rounded-lg cursor-pointer transition-all
-              ${!toyConfig.isForKids 
-                ? 'border-purple-600 bg-purple-50' 
-                : 'border-gray-200 hover:border-gray-300'
+              relative flex flex-col p-6 border-[5px] cursor-pointer transition-all hover-lift
+              ${ !toyConfig.isForKids 
+                ? 'border-black bg-[#c381b5] text-white' 
+                : 'border-black bg-white text-black hover:bg-[#fefcd0]'
               }
             `}
+            style={{
+              borderImageSlice: 3,
+              borderImageWidth: 2,
+              borderImageRepeat: 'stretch',
+              borderImageOutset: 2,
+              boxShadow: !toyConfig.isForKids
+                ? '2px 2px 0 2px #8b5fa3, -2px -2px 0 2px #c381b5'
+                : '2px 2px 0 2px #e0e0e0, -2px -2px 0 2px #ffffff',
+            }}
           >
             <input
               type="radio"
@@ -143,32 +162,30 @@ export function ForKidsToggleStep() {
               className="sr-only"
             />
             <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                !toyConfig.isForKids ? 'bg-purple-600' : 'bg-gray-200'
+              <div className={`w-12 h-12 border-2 border-black flex items-center justify-center ${
+                !toyConfig.isForKids ? 'bg-white text-[#c381b5]' : 'bg-[#fefcd0] text-black'
               }`}>
-                <Users className={`w-6 h-6 ${
-                  !toyConfig.isForKids ? 'text-white' : 'text-gray-600'
-                }`} />
+                <Users className="w-6 h-6" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg text-gray-900">
+                <h3 className="font-minecraft font-black text-base uppercase tracking-wider mb-3">
                   General Mode
                 </h3>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="font-geo text-sm font-medium opacity-90 leading-relaxed mb-4">
                   Full features for teens and adults with standard safety measures
                 </p>
-                <ul className="mt-3 space-y-1 text-sm text-gray-600">
+                <ul className="space-y-2 text-sm font-geo font-medium">
                   <li className="flex items-center gap-2">
-                    <span className="text-blue-500">•</span>
-                    More conversational freedom
+                    <span className="text-[#f7931e] font-bold">•</span>
+                    <span>More conversational freedom</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-blue-500">•</span>
-                    Advanced personality options
+                    <span className="text-[#f7931e] font-bold">•</span>
+                    <span>Advanced personality options</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-blue-500">•</span>
-                    Complex interactions
+                    <span className="text-[#f7931e] font-bold">•</span>
+                    <span>Complex interactions</span>
                   </li>
                 </ul>
               </div>
@@ -185,62 +202,68 @@ export function ForKidsToggleStep() {
           exit={{ opacity: 0, height: 0 }}
           className="space-y-4"
         >
-          <Label>Select Age Group</Label>
-          <RadioGroup
-            value={toyConfig.ageGroup || ''}
-            onValueChange={(value) => handleAgeGroupChange(value as '3-5' | '6-8' | '9-12')}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {AGE_GROUPS.map((group) => (
-                <label
-                  key={group.id}
-                  htmlFor={`age-${group.id}`}
-                  className={`
-                    relative flex items-center p-4 border-2 rounded-lg cursor-pointer
-                    transition-all hover:border-purple-400
-                    ${toyConfig.ageGroup === group.id 
-                      ? 'border-purple-600 bg-purple-50' 
-                      : 'border-gray-200'
-                    }
-                  `}
-                >
-                  <RadioGroupItem
-                    id={`age-${group.id}`}
-                    value={group.id}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center gap-3 w-full">
-                    <group.icon className={`w-8 h-8 ${
-                      toyConfig.ageGroup === group.id ? 'text-purple-600' : 'text-gray-600'
-                    }`} />
-                    <div>
-                      <span className="font-medium text-gray-900">{group.name}</span>
-                      <p className="text-xs text-gray-600">{group.description}</p>
-                    </div>
+          <label className="font-geo block text-sm font-semibold uppercase tracking-wider text-black mb-3">Select Age Group</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {AGE_GROUPS.map((group) => (
+              <label
+                key={group.id}
+                htmlFor={`age-${group.id}`}
+                className={`
+                  relative flex items-center p-4 border-[5px] cursor-pointer transition-all hover-lift
+                  ${ toyConfig.ageGroup === group.id 
+                    ? 'border-black bg-[#c381b5] text-white' 
+                    : 'border-black bg-white text-black hover:bg-[#fefcd0]'
+                  }
+                `}
+                style={{
+                  borderImageSlice: 3,
+                  borderImageWidth: 2,
+                  borderImageRepeat: 'stretch',
+                  borderImageOutset: 2,
+                  boxShadow: toyConfig.ageGroup === group.id
+                    ? '2px 2px 0 2px #8b5fa3, -2px -2px 0 2px #c381b5'
+                    : '2px 2px 0 2px #e0e0e0, -2px -2px 0 2px #ffffff',
+                }}
+              >
+                <input
+                  id={`age-${group.id}`}
+                  type="radio"
+                  name="ageGroup"
+                  value={group.id}
+                  checked={toyConfig.ageGroup === group.id}
+                  onChange={(e) => handleAgeGroupChange(e.target.value as '3-5' | '6-8' | '9-12')}
+                  className="sr-only"
+                />
+                <div className="flex items-center gap-3 w-full">
+                  <group.icon className={`w-8 h-8 ${
+                    toyConfig.ageGroup === group.id ? 'text-white' : 'text-[#c381b5]'
+                  }`} />
+                  <div>
+                    <span className="font-minecraft font-black text-sm uppercase tracking-wider">{group.name}</span>
+                    <p className="font-geo text-xs font-medium opacity-80 leading-relaxed">{group.description}</p>
                   </div>
-                </label>
-              ))}
-            </div>
-          </RadioGroup>
+                </div>
+              </label>
+            ))}
+          </div>
         </motion.div>
       )}
 
       {/* Information Box */}
-      <div className={`p-4 rounded-lg border ${
-        toyConfig.isForKids 
-          ? 'bg-green-50 border-green-200' 
-          : 'bg-blue-50 border-blue-200'
-      }`}>
-        <p className={`text-sm ${
-          toyConfig.isForKids ? 'text-green-800' : 'text-blue-800'
-        }`}>
-          <strong>Note:</strong> {
+      <Card
+        bg={toyConfig.isForKids ? "#92cd41" : "#c381b5"}
+        borderColor="black"
+        shadowColor={toyConfig.isForKids ? "#76a83a" : "#8b5fa3"}
+        className="p-4"
+      >
+        <p className="font-geo text-sm font-medium text-white leading-relaxed">
+          <strong className="font-minecraft uppercase tracking-wider">📝 Note:</strong> {
             toyConfig.isForKids 
               ? 'Guardian Mode includes automatic content filtering, safe conversation boundaries, and parental controls. Safety settings can be customized in the next steps.'
               : 'General Mode is designed for mature users who want full creative freedom with their AI companion. Basic safety measures are still in place.'
           }
         </p>
-      </div>
+      </Card>
     </div>
   );
 }

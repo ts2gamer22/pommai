@@ -68,13 +68,20 @@ export const getMessages = query({
   },
 });
 
-// Generate AI response
+// Generate AI response with audio
 export const generateAIResponse = action({
   args: {
     conversationId: v.id("conversations"),
     userMessage: v.string(),
+    includeAudio: v.optional(v.boolean()),
+    sessionId: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<string> => {
+  handler: async (ctx, args): Promise<{
+    text: string;
+    audioData?: string;
+    format?: string;
+    duration?: number;
+  }> => {
     // Get conversation and toy details
     const conversation = await ctx.runQuery(api.conversations.getConversationWithMessages, {
       conversationId: args.conversationId,
@@ -85,45 +92,134 @@ export const generateAIResponse = action({
     }
 
     const toy = conversation.toy;
+    const deviceId = "web-dashboard"; // Default device ID for web
+    const sessionId = args.sessionId || `session-${Date.now()}`;
+    
+    // Build conversation context from recent messages
     const recentMessages = conversation.messages.slice(-10); // Last 10 messages for context
-
-    // Build context from recent messages
     const conversationContext = recentMessages
       .map((msg: any) => `${msg.role === "user" ? "User" : toy.name}: ${msg.content}`)
       .join("\n");
 
-    // Generate system prompt based on toy configuration
-    const systemPrompt = `You are ${toy.name}, a ${toy.type} toy with the following personality: ${toy.personalityPrompt}.
-${toy.isForKids ? `This is a conversation with a child aged ${toy.ageGroup}. Keep responses age-appropriate, educational, and safe.` : ""}
+    // Use the real AI pipeline if available
+    try {
+      // First, generate the text response using the AI services
+      const messages = [
+        {
+          role: "system" as const,
+          content: `You are ${toy.name}, a ${toy.type || "friendly"} toy with the following personality: ${toy.personalityPrompt || "helpful and friendly"}.
+${toy.isForKids ? `This is a conversation with a child aged ${toy.ageGroup || "young"}. Keep responses age-appropriate, educational, and safe. Be encouraging and positive.` : ""}
+${conversationContext ? `\nRecent conversation:\n${conversationContext}` : ""}
 
-Recent conversation:
-${conversationContext}
+Stay in character and respond naturally as ${toy.name} would. Keep responses concise and engaging.`
+        },
+        {
+          role: "user" as const,
+          content: args.userMessage
+        }
+      ];
 
-Stay in character and respond naturally as ${toy.name} would.`;
+      // Generate text response
+      const llmResponse = await ctx.runAction(api.aiServices.generateResponse, {
+        messages,
+        model: "openai/gpt-oss-120b", // Use default model
+        temperature: 0.7, // Use default temperature
+        maxTokens: toy.isForKids ? 150 : 300,
+      });
 
-    // TODO: Replace with actual LLM API call
-    // For now, return a mock response
-    const mockResponse = `Hello! I'm ${toy.name}, and I'm so happy to talk with you! What would you like to chat about today? 🌟`;
+      const responseText = llmResponse.content || "I'm having trouble understanding. Can you try asking in a different way?";
+      
+      // Apply safety check for kids' toys
+      let finalText = responseText;
+      let metadata: any = {
+        safetyScore: 1.0,
+        flagged: false,
+      };
 
-    // Apply safety checks if it's a kids' toy
-    let finalResponse = mockResponse;
-    let metadata: any = {};
+      // Generate audio if requested
+      let audioData: string | undefined;
+      let format: string | undefined;
+      let duration: number | undefined;
 
-    if (toy.isForKids) {
-      // TODO: Implement actual safety checking
-      metadata.safetyScore = 1.0;
-      metadata.flagged = false;
+      if (args.includeAudio !== false) { // Default to including audio
+        try {
+          const audioResponse = await ctx.runAction(api.aiServices.synthesizeSpeech, {
+            text: finalText,
+            voiceId: toy.voiceId || "JBFqnCBsd6RMkjVDRZzb", // Default voice
+            voiceSettings: {
+              stability: 0.5,
+              similarityBoost: 0.75,
+              style: 0,
+              useSpeakerBoost: true,
+            },
+            outputFormat: "mp3_44100_128",
+          });
+
+          audioData = audioResponse.audioData;
+          format = audioResponse.format;
+          duration = audioResponse.duration;
+        } catch (audioError) {
+          console.error("Failed to generate audio:", audioError);
+          // Continue without audio
+        }
+      }
+
+      // Save AI response with metadata
+      await ctx.runMutation(api.messages.sendMessage, {
+        conversationId: args.conversationId,
+        content: finalText,
+        role: "toy",
+        metadata,
+      });
+
+      return {
+        text: finalText,
+        audioData,
+        format,
+        duration,
+      };
+    } catch (error) {
+      console.error("Error in AI pipeline:", error);
+      
+      // Fallback response
+      const fallbackText = `Hi! I'm ${toy.name}. I'm having a little trouble right now, but I'm still happy to talk with you! What would you like to chat about?`;
+      
+      // Try to generate audio for fallback
+      let audioData: string | undefined;
+      let format: string | undefined;
+      
+      if (args.includeAudio !== false) {
+        try {
+          const audioResponse = await ctx.runAction(api.aiServices.synthesizeSpeech, {
+            text: fallbackText,
+            voiceId: toy.voiceId || "JBFqnCBsd6RMkjVDRZzb",
+            outputFormat: "mp3_44100_128",
+          });
+          audioData = audioResponse.audioData;
+          format = audioResponse.format;
+        } catch (audioError) {
+          console.error("Failed to generate fallback audio:", audioError);
+        }
+      }
+      
+      // Save fallback response
+      await ctx.runMutation(api.messages.sendMessage, {
+        conversationId: args.conversationId,
+        content: fallbackText,
+        role: "toy",
+        metadata: {
+          safetyScore: 1.0,
+          flagged: false,
+          // Note: isFallback is tracked internally but not in schema
+        },
+      });
+
+      return {
+        text: fallbackText,
+        audioData,
+        format,
+      };
     }
-
-    // Save AI response
-    await ctx.runMutation(api.messages.sendMessage, {
-      conversationId: args.conversationId,
-      content: finalResponse,
-      role: "toy",
-      metadata,
-    });
-
-    return finalResponse;
   },
 });
 

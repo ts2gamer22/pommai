@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Card, Button, Input } from "@pommai/ui";
 import {
   Activity,
   MessageSquare,
@@ -19,6 +14,9 @@ import {
   Volume2,
   VolumeX,
   RefreshCw,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -164,127 +162,173 @@ export function LiveMonitoring({ childId }: LiveMonitoringProps) {
 
   const getSafetyBadge = (score?: number) => {
     if (!score) return null;
-    if (score >= 95) return <Badge variant="default" className="bg-green-500">Safe</Badge>;
-    if (score >= 80) return <Badge variant="secondary">Normal</Badge>;
-    return <Badge variant="destructive">Review</Badge>;
+    if (score >= 95) return <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-green-600 bg-green-100 text-green-800">Safe</span>;
+    if (score >= 80) return <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-gray-600 bg-gray-100 text-gray-800">Normal</span>;
+    return <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-red-600 bg-red-100 text-red-800">Review</span>;
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
       {/* Active Conversations List */}
-      <Card className="p-6 lg:col-span-1">
+      <Card 
+        bg="#ffffff"
+        borderColor="black"
+        shadowColor="#c381b5"
+        className="p-4 sm:p-6 xl:col-span-1 hover-lift"
+      >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Activity className="w-5 h-5" />
-            Active Sessions
+          <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-black flex items-center gap-2">
+            <Activity className="w-4 sm:w-5 h-4 sm:h-5" />
+            📊 Active Sessions
           </h3>
-          <Badge variant="secondary">{activeConversations.length}</Badge>
+          <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border-2 border-black bg-[#c381b5] text-white">
+            {activeConversations.length}
+          </span>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[400px] sm:max-h-[500px] overflow-y-auto">
           {activeConversations.map((conversation) => (
-            <div
+            <Card
               key={conversation.id}
-              className={`p-3 rounded-lg border cursor-pointer transition-all ${
+              bg={selectedConversationId === conversation.id ? "#c381b5" : "#ffffff"}
+              borderColor="black"
+              shadowColor={selectedConversationId === conversation.id ? "#8b5fa3" : "#e0e0e0"}
+              className={`p-3 cursor-pointer transition-all hover-lift ${
                 selectedConversationId === conversation.id
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                  : "hover:border-gray-300"
+                  ? "text-white"
+                  : "text-black hover:shadow-[0_4px_0_2px_#c381b5]"
               }`}
               onClick={() => setSelectedConversationId(conversation.id)}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-medium">{conversation.toyName}</p>
-                  <p className="text-sm text-gray-500">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-black uppercase tracking-wider text-sm sm:text-base truncate">
+                    {conversation.toyName}
+                  </p>
+                  <p className={`text-xs sm:text-sm font-bold uppercase tracking-wide truncate ${
+                    selectedConversationId === conversation.id ? "text-white opacity-90" : "text-gray-600"
+                  }`}>
                     Started {formatDistanceToNow(conversation.startTime, { addSuffix: true })}
                   </p>
                 </div>
-                <div className="flex flex-col gap-1 items-end">
+                <div className="flex flex-col gap-1 items-end flex-shrink-0">
                   {conversation.isPaused && (
-                    <Badge variant="outline" className="text-orange-600">
+                    <span className="px-1 sm:px-2 py-1 text-xs font-black uppercase tracking-wider border border-orange-600 bg-orange-100 text-orange-800">
                       Paused
-                    </Badge>
+                    </span>
                   )}
                   {conversation.isMonitored && (
-                    <Badge variant="outline" className="text-blue-600">
-                      <Eye className="w-3 h-3 mr-1" />
+                    <span className="px-1 sm:px-2 py-1 text-xs font-black uppercase tracking-wider border border-blue-600 bg-blue-100 text-blue-800 flex items-center gap-1">
+                      <Eye className="w-3 h-3" />
                       Live
-                    </Badge>
+                    </span>
                   )}
                 </div>
               </div>
               <div className="mt-2 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-500">
+                <MessageSquare className="w-3 sm:w-4 h-3 sm:h-4 text-gray-400" />
+                <span className={`text-xs sm:text-sm font-bold uppercase tracking-wide ${
+                  selectedConversationId === conversation.id ? "text-white opacity-90" : "text-gray-600"
+                }`}>
                   {conversation.messages.length} messages
                 </span>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
 
         {activeConversations.length === 0 && (
           <div className="text-center py-8 text-gray-500">
-            <Activity className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No active conversations</p>
+            <Activity className="w-8 sm:w-12 h-8 sm:h-12 mx-auto mb-3 opacity-50" />
+            <p className="font-bold uppercase tracking-wide text-sm sm:text-base">No active conversations</p>
           </div>
         )}
       </Card>
 
       {/* Live Conversation View */}
-      <Card className="p-6 lg:col-span-2">
+      <Card 
+        bg="#ffffff"
+        borderColor="black"
+        shadowColor="#f7931e"
+        className="p-4 sm:p-6 xl:col-span-2 hover-lift"
+      >
         {selectedConversation ? (
           <>
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg font-semibold">{selectedConversation.toyName}</h3>
+            <div className="flex items-center justify-between mb-4 gap-4">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-black truncate">
+                  {selectedConversation.toyName}
+                </h3>
                 {selectedConversation.isPaused && (
-                  <Badge variant="destructive">Paused</Badge>
+                  <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border-2 border-red-600 bg-red-100 text-red-800 flex-shrink-0">
+                    Paused
+                  </span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                 <Button
-                  size="sm"
-                  variant="outline"
+                  bg={selectedConversation.isMonitored ? "#f0f0f0" : "#92cd41"}
+                  textColor={selectedConversation.isMonitored ? "black" : "white"}
+                  borderColor="black"
+                  shadow={selectedConversation.isMonitored ? "#d0d0d0" : "#76a83a"}
                   onClick={() => handleToggleMonitoring(selectedConversation.id)}
+                  className="py-1 sm:py-2 px-2 sm:px-3 text-xs sm:text-sm font-bold uppercase tracking-wider hover-lift"
                 >
                   {selectedConversation.isMonitored ? (
-                    <><EyeOff className="w-4 h-4 mr-1" /> Hide</>
+                    <>
+                      <EyeOff className="w-3 sm:w-4 h-3 sm:h-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Hide</span>
+                    </>
                   ) : (
-                    <><Eye className="w-4 h-4 mr-1" /> Monitor</>
+                    <>
+                      <Eye className="w-3 sm:w-4 h-3 sm:h-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Monitor</span>
+                    </>
                   )}
                 </Button>
                 <Button
-                  size="sm"
-                  variant={selectedConversation.isPaused ? "default" : "destructive"}
+                  bg={selectedConversation.isPaused ? "#92cd41" : "#ff6b6b"}
+                  textColor="white"
+                  borderColor="black"
+                  shadow={selectedConversation.isPaused ? "#76a83a" : "#e84545"}
                   onClick={() => handlePauseConversation(selectedConversation.id)}
+                  className="py-1 sm:py-2 px-2 sm:px-3 text-xs sm:text-sm font-bold uppercase tracking-wider hover-lift"
                 >
                   {selectedConversation.isPaused ? (
-                    <><PlayCircle className="w-4 h-4 mr-1" /> Resume</>
+                    <>
+                      <PlayCircle className="w-3 sm:w-4 h-3 sm:h-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Resume</span>
+                    </>
                   ) : (
-                    <><PauseCircle className="w-4 h-4 mr-1" /> Pause</>
+                    <>
+                      <PauseCircle className="w-3 sm:w-4 h-3 sm:h-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Pause</span>
+                    </>
                   )}
                 </Button>
                 <Button
-                  size="sm"
-                  variant="outline"
+                  bg={audioEnabled ? "#c381b5" : "#f0f0f0"}
+                  textColor={audioEnabled ? "white" : "black"}
+                  borderColor="black"
+                  shadow={audioEnabled ? "#8b5fa3" : "#d0d0d0"}
                   onClick={() => setAudioEnabled(!audioEnabled)}
+                  className="py-1 sm:py-2 px-2 sm:px-3 text-xs sm:text-sm font-bold uppercase tracking-wider hover-lift"
                 >
                   {audioEnabled ? (
-                    <Volume2 className="w-4 h-4" />
+                    <Volume2 className="w-3 sm:w-4 h-3 sm:h-4" />
                   ) : (
-                    <VolumeX className="w-4 h-4" />
+                    <VolumeX className="w-3 sm:w-4 h-3 sm:h-4" />
                   )}
                 </Button>
               </div>
             </div>
 
-            <Separator className="mb-4" />
+            <div className="h-px bg-black mb-4"></div>
 
             {/* Messages */}
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-4">
+            <div className="h-[300px] sm:h-[400px] overflow-y-auto pr-2 sm:pr-4 border-2 border-black bg-[#fefcd0] p-3 sm:p-4">
+              <div className="space-y-3 sm:space-y-4">
                 {selectedConversation.messages.map((message) => (
                   <div
                     key={message.id}
@@ -293,33 +337,33 @@ export function LiveMonitoring({ childId }: LiveMonitoringProps) {
                     }`}
                   >
                     <div
-                      className={`max-w-[70%] rounded-lg p-3 ${
+                      className={`max-w-[85%] sm:max-w-[70%] border-2 border-black p-2 sm:p-3 ${
                         message.role === "user"
-                          ? "bg-blue-500 text-white"
+                          ? "bg-[#c381b5] text-white shadow-[2px_2px_0_0_#8b5fa3]"
                           : message.role === "toy"
-                          ? "bg-gray-100 dark:bg-gray-800"
-                          : "bg-yellow-100 dark:bg-yellow-900"
+                          ? "bg-white text-black shadow-[2px_2px_0_0_#e0e0e0]"
+                          : "bg-[#f7931e] text-white shadow-[2px_2px_0_0_#d67c1a]"
                       }`}
                     >
-                      <p className="text-sm">{message.content}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs opacity-70">
-                          {message.timestamp.toLocaleTimeString()}
+                      <p className="text-xs sm:text-sm font-bold break-words">{message.content}</p>
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-2">
+                        <span className="text-xs font-bold uppercase tracking-wider opacity-70">
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         {message.safetyScore && getSafetyBadge(message.safetyScore)}
                         {message.flagged && (
-                          <Badge variant="destructive" className="text-xs">
-                            <AlertTriangle className="w-3 h-3 mr-1" />
+                          <span className="px-1 sm:px-2 py-1 text-xs font-black uppercase tracking-wider border border-red-600 bg-red-100 text-red-800 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" />
                             Flagged
-                          </Badge>
+                          </span>
                         )}
                       </div>
                       {message.topics && message.topics.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {message.topics.map((topic) => (
-                            <Badge key={topic} variant="outline" className="text-xs">
+                            <span key={topic} className="px-1 sm:px-2 py-1 text-xs font-black uppercase tracking-wider border border-black bg-[#92cd41] text-white">
                               {topic}
-                            </Badge>
+                            </span>
                           ))}
                         </div>
                       )}
@@ -328,58 +372,87 @@ export function LiveMonitoring({ childId }: LiveMonitoringProps) {
                 ))}
                 <div ref={messagesEndRef} />
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Auto-scroll toggle */}
-            <div className="mt-4 flex items-center justify-between">
+            <div className="mt-4 flex items-center justify-between gap-4">
               <Button
-                size="sm"
-                variant="outline"
+                bg={autoScroll ? "#92cd41" : "#f0f0f0"}
+                textColor={autoScroll ? "white" : "black"}
+                borderColor="black"
+                shadow={autoScroll ? "#76a83a" : "#d0d0d0"}
                 onClick={() => setAutoScroll(!autoScroll)}
+                className="py-1 sm:py-2 px-2 sm:px-3 text-xs sm:text-sm font-bold uppercase tracking-wider hover-lift"
               >
-                <RefreshCw className={`w-4 h-4 mr-1 ${autoScroll ? "animate-spin" : ""}`} />
+                <RefreshCw className={`w-3 sm:w-4 h-3 sm:h-4 mr-1 ${autoScroll ? "animate-spin" : ""}`} />
                 Auto-scroll {autoScroll ? "On" : "Off"}
               </Button>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm font-bold uppercase tracking-wide text-gray-700 truncate">
                 {selectedConversation.messages.length} messages in this session
               </p>
             </div>
 
             {/* Safety Alert */}
             {selectedConversation.messages.some(m => m.flagged) && (
-              <Alert className="mt-4" variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  This conversation contains flagged content. Review required.
-                </AlertDescription>
-              </Alert>
+              <Card
+                bg="#ffe4e1"
+                borderColor="red"
+                shadowColor="#ff6b6b"
+                className="mt-4 p-3 sm:p-4"
+              >
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                  <p className="text-xs sm:text-sm font-bold text-red-700 uppercase tracking-wide">
+                    ⚠️ This conversation contains flagged content. Review required.
+                  </p>
+                </div>
+              </Card>
             )}
           </>
         ) : (
-          <div className="flex items-center justify-center h-[500px] text-gray-500">
+          <div className="flex items-center justify-center h-[400px] sm:h-[500px] text-gray-500">
             <div className="text-center">
-              <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Select a conversation to monitor</p>
+              <MessageSquare className="w-8 sm:w-12 h-8 sm:h-12 mx-auto mb-3 opacity-50" />
+              <p className="font-bold uppercase tracking-wide text-sm sm:text-base">Select a conversation to monitor</p>
             </div>
           </div>
         )}
       </Card>
 
       {/* Quick Actions */}
-      <Card className="p-4 lg:col-span-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-green-600" />
-            <span className="text-sm font-medium">
-              All conversations are being monitored for safety
+      <Card 
+        bg="#ffffff"
+        borderColor="black"
+        shadowColor="#92cd41"
+        className="p-4 xl:col-span-3 hover-lift"
+      >
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <Shield className="w-4 sm:w-5 h-4 sm:h-5 text-green-600 flex-shrink-0" />
+            <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-black">
+              🛡️ All conversations are being monitored for safety
             </span>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline">
-              Export Session
+            <Button
+              bg="#f0f0f0"
+              textColor="black"
+              borderColor="black"
+              shadow="#d0d0d0"
+              className="py-1 sm:py-2 px-2 sm:px-3 text-xs sm:text-sm font-bold uppercase tracking-wider hover-lift"
+            >
+              <span className="hidden sm:inline">Export Session</span>
+              <span className="sm:hidden">Export</span>
             </Button>
-            <Button size="sm" variant="outline">
-              Safety Report
+            <Button
+              bg="#c381b5"
+              textColor="white"
+              borderColor="black"
+              shadow="#8b5fa3"
+              className="py-1 sm:py-2 px-2 sm:px-3 text-xs sm:text-sm font-bold uppercase tracking-wider hover-lift"
+            >
+              <span className="hidden sm:inline">Safety Report</span>
+              <span className="sm:hidden">Report</span>
             </Button>
           </div>
         </div>

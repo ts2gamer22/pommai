@@ -243,12 +243,17 @@ pommai/
 - [ ] Vosk wake word detection
 - [ ] SQLite conversation cache
 
-### Phase 4: Integration (Week 7-8)
-- [ ] Pi ↔ Cloud sync protocol
-- [ ] Real-time conversation relay
-- [ ] Offline mode handling
-- [ ] Error recovery mechanisms
-- [ ] Performance optimization
+### Phase 4: FastRTC + Convex Integration (Week 7-8)
+- [ ] Install and configure Convex Agent component
+- [ ] Implement FastRTC WebSocket gateway for real-time communication
+- [ ] Configure Cloudflare Calls (TURN) for WebRTC: client rtc_configuration via get_cloudflare_turn_credentials_async (Cloudflare keys only); server server_rtc_configuration via get_cloudflare_turn_credentials (short TTL); manage secrets via env (CLOUDFLARE_TURN_KEY_ID/CLOUDFLARE_TURN_KEY_API_TOKEN)
+- [ ] Integrate AI services (OpenAI Whisper STT, ElevenLabs TTS, OpenRouter LLM)
+- [ ] Update Python client to use FastRTC with WebSocket
+- [ ] Implement RAG system using Convex's built-in vector search
+- [ ] Set up Convex Python SDK for real-time subscriptions
+- [ ] Implement safety features for Guardian Mode
+- [ ] Test end-to-end audio pipeline with < 2s latency
+- [ ] Optimize for Pi Zero 2W memory constraints (< 100MB RAM)
 
 ### Phase 5: Safety & Polish (Week 9-10)
 - [ ] Content filtering system
@@ -833,3 +838,43 @@ Conversation style:
 - **Delightful**: Magical experience for children
 
 This platform will revolutionize how children interact with their toys while giving parents peace of mind through transparency and control.
+
+## WebRTC/TURN Plan: Cloudflare Calls for FastRTC
+
+When deploying in cloud environments with firewalls (e.g., RunPod or similar), direct WebRTC connections may fail. We will use Cloudflare Calls (managed TURN) exclusively to relay media and ensure reliable connectivity.
+
+- Client
+  - Use rtc_configuration = get_cloudflare_turn_credentials_async() with Cloudflare keys.
+  - Credentials are short-lived by default (ttl ~600s). Do not hardcode tokens.
+
+- Server
+  - Set server_rtc_configuration = get_cloudflare_turn_credentials(ttl=600) for compatibility and testability.
+
+- Environment variables
+  - CLOUDFLARE_TURN_KEY_ID and CLOUDFLARE_TURN_KEY_API_TOKEN.
+
+- Notes
+  - When deploying on a remote server, rtc_configuration must be provided.
+  - Avoid committing secrets to git. Use deployment secret stores.
+
+Example (Cloudflare-only):
+
+```python
+from fastrtc import Stream, get_cloudflare_turn_credentials_async, get_cloudflare_turn_credentials
+import os
+
+async def rtc_config():
+    return await get_cloudflare_turn_credentials_async(
+        turn_key_id=os.environ["CLOUDFLARE_TURN_KEY_ID"],
+        turn_key_api_token=os.environ["CLOUDFLARE_TURN_KEY_API_TOKEN"],
+        ttl=600,
+    )
+
+stream = Stream(
+    handler=...,
+    rtc_configuration=rtc_config,
+    server_rtc_configuration=get_cloudflare_turn_credentials(ttl=600),
+    modality="audio",
+    mode="send-receive",
+)
+```

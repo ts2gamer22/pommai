@@ -2,10 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card } from '@/components/Card';
-import { Button } from '@/components/Button';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/Tabs';
-import { Input } from '@/components/Input';
+import { Card, Button, Tabs, TabsList, TabsTrigger, TabsContent, Input } from '@pommai/ui';
 import Link from 'next/link';
 import { ToyWizard } from '@/components/dashboard/ToyWizard';
 import { MyToysGrid } from '@/components/dashboard/MyToysGrid';
@@ -30,67 +27,67 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#fefcd0' }}>
+    <div className="min-h-screen bg-gradient-to-br from-[#fefcd0] to-[#f4e5d3] dashboard-page">
       {/* Navigation Header */}
-      <header className="border-b-[5px] border-black bg-white relative" 
-        style={{
-          boxShadow: '0 4px 0 0 #c381b5'
-        }}
-      >
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-3 hover:translate-y-[-1px] transition-transform">
-            <img src="/pommaiicon.png" alt="Pommai Logo" className="h-10 w-10 pixelated" />
-            <img src="/pommaitext.png" alt="Pommai" className="h-8 pixelated" />
-          </Link>
-          <nav className="flex gap-4 items-center">
-            <div className="hidden md:flex items-center gap-2">
-              <span className="text-2xl">👤</span>
-              <span className="text-black font-bold uppercase tracking-wider">Welcome back!</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                bg="#c381b5"
-                textColor="white"
-                borderColor="black"
-                shadow="#8b5fa3"
-                className="py-2 px-4 text-sm font-bold uppercase tracking-wider"
-                onClick={() => router.push('/dashboard/history')}
-              >
-                <span className="flex items-center gap-2">
-                  <span>📜</span>
-                  History
-                </span>
-              </Button>
-              <Button 
-                bg="#ff6b6b"
-                textColor="white"
-                borderColor="black"
-                shadow="#e84545"
-                className="py-2 px-6 text-sm font-bold uppercase tracking-wider"
-              >
-                <span className="flex items-center gap-2">
-                  <span>🚪</span>
-                  Sign Out
-                </span>
-              </Button>
-            </div>
-          </nav>
+      <header className="border-b-[5px] border-black bg-white shadow-[0_4px_0_0_#c381b5]">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <Link href="/" className="flex items-center gap-3 hover-lift transition-transform">
+              <img src="/pommaiicon.png" alt="Pommai Logo" className="h-8 w-8 sm:h-10 sm:w-10 pixelated" />
+              <img src="/pommaitext.png" alt="Pommai" className="h-6 sm:h-8 pixelated" />
+            </Link>
+            
+            {/* Mobile-friendly navigation */}
+            <nav className="flex items-center gap-2 sm:gap-4">
+              <div className="hidden sm:flex items-center gap-3">
+                <span className="text-xl sm:text-2xl">👤</span>
+                <span className="font-geo text-black font-bold text-xs sm:text-sm uppercase tracking-wider">Welcome!</span>
+              </div>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Button
+                  bg="#c381b5"
+                  textColor="white"
+                  borderColor="black"
+                  shadow="#8b5fa3"
+                  className="py-2 px-2 sm:px-4 text-xs sm:text-sm font-minecraft font-black uppercase tracking-wider hover-lift"
+                  onClick={() => router.push('/dashboard/history')}
+                >
+                  <span className="flex items-center gap-1 sm:gap-2">
+                    <span>📜</span>
+                    <span className="hidden sm:inline">History</span>
+                  </span>
+                </Button>
+                <Button 
+                  bg="#ff6b6b"
+                  textColor="white"
+                  borderColor="black"
+                  shadow="#e84545"
+                  className="py-2 px-2 sm:px-4 text-xs sm:text-sm font-minecraft font-black uppercase tracking-wider hover-lift"
+                >
+                  <span className="flex items-center gap-1 sm:gap-2">
+                    <span>🚪</span>
+                    <span className="hidden sm:inline">Sign Out</span>
+                  </span>
+                </Button>
+              </div>
+            </nav>
+          </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 max-w-7xl py-6 md:py-8">
-        {/* Dashboard Header with Pixel Art */}
-        <div className="mb-8 relative">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-4xl md:text-6xl font-black mb-3 uppercase tracking-wider text-black"
+      <div className="container mx-auto px-4 max-w-7xl py-4 sm:py-6 lg:py-8">
+        {/* Dashboard Header with better mobile spacing */}
+        <div className="mb-6 sm:mb-8 lg:mb-10 relative">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+            <div className="text-center sm:text-left">
+              <h1 className="font-minecraft text-lg sm:text-xl lg:text-2xl mb-2 sm:mb-4 uppercase tracking-wider text-gray-800"
                 style={{
-                  textShadow: '3px 3px 0 #c381b5, 6px 6px 0 #92cd41'
+                  textShadow: '2px 2px 0 #c381b5, 4px 4px 0 #92cd41'
                 }}
               >
                 My AI Toys
               </h1>
-              <p className="text-gray-700 text-lg md:text-xl font-bold uppercase tracking-wide">Create magical companions for endless fun!</p>
+              <p className="font-geo text-gray-600 text-sm sm:text-base font-medium tracking-wide">Create magical companions for endless fun!</p>
             </div>
             <div className="hidden lg:block text-6xl xl:text-8xl animate-bounce" style={{ animationDuration: '3s' }}>
               🧸
@@ -98,103 +95,103 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Quick Stats - Improved Layout */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        {/* Stats Cards - Mobile-Responsive Layout */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8 sm:mb-10 lg:mb-12">
           <Card 
             bg="#ffffff" 
             borderColor="black" 
             shadowColor="#c381b5"
-            className="p-4 md:p-6 hover:translate-y-[-2px] transition-transform cursor-pointer group"
+            className="p-3 sm:p-4 lg:p-6 hover-lift transition-transform cursor-pointer group"
             onClick={() => setActiveTab('toys')}
           >
-            <div className="flex justify-between items-start mb-3">
-              <span className="text-3xl md:text-4xl group-hover:animate-pulse">🧸</span>
-              <span className="text-3xl md:text-5xl font-black">0</span>
+            <div className="flex justify-between items-start mb-2 sm:mb-3 lg:mb-4">
+              <span className="text-2xl sm:text-3xl lg:text-4xl group-hover:animate-pulse">🧸</span>
+              <span className="text-2xl sm:text-3xl lg:text-5xl font-black">0</span>
             </div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-700">My Toys</h3>
-            <p className="text-xs text-gray-500 mt-1">Click to view</p>
+            <h3 className="font-geo text-xs sm:text-sm font-semibold uppercase tracking-wider text-gray-600 mb-1">My Toys</h3>
+            <p className="font-geo text-xs text-gray-500 hidden sm:block">Click to view</p>
           </Card>
           
           <Card 
             bg="#ffffff" 
             borderColor="black" 
             shadowColor="#92cd41"
-            className="p-4 md:p-6 hover:translate-y-[-2px] transition-transform cursor-pointer group"
+            className="p-3 sm:p-4 lg:p-6 hover-lift transition-transform cursor-pointer group"
             onClick={() => setActiveTab('devices')}
           >
-            <div className="flex justify-between items-start mb-3">
-              <span className="text-3xl md:text-4xl group-hover:animate-pulse">📱</span>
-              <span className="text-3xl md:text-5xl font-black">0</span>
+            <div className="flex justify-between items-start mb-2 sm:mb-3 lg:mb-4">
+              <span className="text-2xl sm:text-3xl lg:text-4xl group-hover:animate-pulse">📱</span>
+              <span className="text-2xl sm:text-3xl lg:text-5xl font-black">0</span>
             </div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-700">Devices</h3>
-            <p className="text-xs text-gray-500 mt-1">No connections</p>
+            <h3 className="font-geo text-xs sm:text-sm font-semibold uppercase tracking-wider text-gray-600 mb-1">Devices</h3>
+            <p className="font-geo text-xs text-gray-500 hidden sm:block">No connections</p>
           </Card>
           
           <Card 
             bg="#ffffff" 
             borderColor="black" 
             shadowColor="#f7931e"
-            className="p-4 md:p-6 hover:translate-y-[-2px] transition-transform cursor-pointer group"
+            className="p-3 sm:p-4 lg:p-6 hover-lift transition-transform cursor-pointer group"
             onClick={() => router.push('/dashboard/chat')}
           >
-            <div className="flex justify-between items-start mb-3">
-              <span className="text-3xl md:text-4xl group-hover:animate-pulse">💬</span>
-              <span className="text-3xl md:text-5xl font-black">0</span>
+            <div className="flex justify-between items-start mb-2 sm:mb-3 lg:mb-4">
+              <span className="text-2xl sm:text-3xl lg:text-4xl group-hover:animate-pulse">💬</span>
+              <span className="text-2xl sm:text-3xl lg:text-5xl font-black">0</span>
             </div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-700">Chats Today</h3>
-            <p className="text-xs text-gray-500 mt-1">Start talking!</p>
+            <h3 className="font-geo text-xs sm:text-sm font-semibold uppercase tracking-wider text-gray-600 mb-1">Chats Today</h3>
+            <p className="font-geo text-xs text-gray-500 hidden sm:block">Start talking!</p>
           </Card>
           
           <Card 
             bg={isGuardianMode ? "#c381b5" : "#ffffff"} 
             borderColor="black" 
             shadowColor={isGuardianMode ? "#8b5fa3" : "#ff6b6b"}
-            className="p-4 md:p-6 cursor-pointer hover:translate-y-[-2px] transition-all group relative overflow-hidden"
+            className="p-3 sm:p-4 lg:p-6 cursor-pointer hover-lift transition-all group relative overflow-hidden"
             onClick={() => setIsGuardianMode(!isGuardianMode)}
           >
             {isGuardianMode && (
               <div className="absolute inset-0 opacity-20">
-                <div className="animate-pulse bg-gradient-to-br from-purple-400 to-pink-400" />
+                <div className="animate-pulse bg-gradient-to-br from-purple-400 to-pink-400 h-full w-full" />
               </div>
             )}
-            <div className="flex justify-between items-start mb-3 relative z-10">
-              <span className="text-3xl md:text-4xl group-hover:animate-spin" style={{ animationDuration: '2s' }}>🛡️</span>
-              <span className={`text-xl md:text-2xl font-black ${isGuardianMode ? 'text-white' : 'text-black'}`}>
+            <div className="flex justify-between items-start mb-2 sm:mb-3 lg:mb-4 relative z-10">
+              <span className="text-2xl sm:text-3xl lg:text-4xl group-hover:animate-spin" style={{ animationDuration: '2s' }}>🛡️</span>
+              <span className={`text-lg sm:text-xl lg:text-3xl font-black ${ isGuardianMode ? 'text-white' : 'text-black'}`}>
                 {isGuardianMode ? 'ON' : 'OFF'}
               </span>
             </div>
-            <h3 className={`text-sm font-bold uppercase tracking-wider relative z-10 ${isGuardianMode ? 'text-white' : 'text-gray-700'}`}>
+            <h3 className={`font-geo text-xs sm:text-sm font-semibold uppercase tracking-wider relative z-10 mb-1 ${isGuardianMode ? 'text-white' : 'text-gray-600'}`}>
               Guardian
             </h3>
-            <p className={`text-xs mt-1 relative z-10 ${isGuardianMode ? 'text-white opacity-90' : 'text-gray-500'}`}>
+            <p className={`font-geo text-xs relative z-10 hidden sm:block ${isGuardianMode ? 'text-white opacity-90' : 'text-gray-500'}`}>
               {isGuardianMode ? 'Protected' : 'Click to enable'}
             </p>
           </Card>
         </div>
 
-        {/* Main Content Tabs - Enhanced */}
+        {/* Main Content Tabs - Mobile-Enhanced */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList 
-            className="mb-8 w-full flex flex-wrap justify-center gap-2" 
-            bg="#fef8e4"
-            shadowColor="#92cd41"
+            className="mb-6 sm:mb-8 w-full flex flex-wrap justify-center gap-2 sm:gap-3 p-2" 
+            bg="#ffffff"
+            shadowColor="#c381b5"
           >
-            <TabsTrigger value="toys" className="flex items-center gap-2">
-              <span>🧸</span> My Toys
+            <TabsTrigger value="toys" className="font-minecraft flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-black hover-lift uppercase tracking-wider">
+              <span>🧸</span> <span className="hidden sm:inline">My </span>Toys
             </TabsTrigger>
-            <TabsTrigger value="create" className="flex items-center gap-2">
+            <TabsTrigger value="create" className="font-minecraft flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-black hover-lift uppercase tracking-wider">
               <span>✨</span> Create
             </TabsTrigger>
-            <TabsTrigger value="devices" className="flex items-center gap-2">
-              <span>📱</span> Devices
+            <TabsTrigger value="devices" className="font-minecraft flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-black hover-lift uppercase tracking-wider">
+              <span>📱</span> <span className="hidden sm:inline">Devices</span><span className="sm:hidden">Dev</span>
             </TabsTrigger>
             {isGuardianMode && (
-              <TabsTrigger value="guardian" className="flex items-center gap-2">
-                <span>🛡️</span> Guardian
+              <TabsTrigger value="guardian" className="font-minecraft flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-black hover-lift uppercase tracking-wider">
+                <span>🛡️</span> <span className="hidden sm:inline">Guardian</span><span className="sm:hidden">Guard</span>
               </TabsTrigger>
             )}
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <span>⚙️</span> Settings
+            <TabsTrigger value="settings" className="font-minecraft flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-black hover-lift uppercase tracking-wider">
+              <span>⚙️</span> <span className="hidden sm:inline">Settings</span><span className="sm:hidden">Set</span>
             </TabsTrigger>
           </TabsList>
 
@@ -207,27 +204,27 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="devices">
-            <div className="space-y-6">
+            <div className="space-y-8">
               <Card 
                 bg="#ffffff" 
                 borderColor="black" 
                 shadowColor="#f7931e"
-                className="p-8 text-center"
+                className="p-8 text-center hover-lift"
               >
-                <h2 className="text-3xl font-black mb-6 uppercase tracking-wider">Device Hub</h2>
+                <h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-6 uppercase tracking-wider text-gray-800">Device Hub</h2>
                 <div className="inline-block relative mb-8">
                   <span className="text-8xl">🔌</span>
                   <span className="absolute -bottom-2 -right-2 text-3xl animate-pulse">⚡</span>
                 </div>
-                <p className="text-xl font-bold text-gray-700 mb-2">No devices connected</p>
-                <p className="text-gray-600 mb-6">Connect a Raspberry Pi to bring your toys to life!</p>
+                <p className="font-geo text-base font-medium text-gray-700 mb-2">No devices connected</p>
+                <p className="font-geo text-sm text-gray-600 mb-8">Connect a Raspberry Pi to bring your toys to life!</p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button 
                     bg="#f7931e" 
                     textColor="white" 
                     shadow="#d47a1a"
                     borderColor="black"
-                    className="font-bold uppercase tracking-wider"
+                    className="font-minecraft font-black uppercase tracking-wider hover-lift"
                   >
                     <span className="flex items-center gap-2">
                       <span>📚</span> Setup Guide
@@ -238,7 +235,7 @@ export default function DashboardPage() {
                     textColor="white" 
                     shadow="#76a83a"
                     borderColor="black"
-                    className="font-bold uppercase tracking-wider"
+                    className="font-minecraft font-black uppercase tracking-wider hover-lift"
                   >
                     <span className="flex items-center gap-2">
                       <span>🔍</span> Scan for Devices
@@ -254,24 +251,24 @@ export default function DashboardPage() {
                 shadowColor="#f7931e"
                 className="p-6"
               >
-                <h3 className="text-xl font-bold mb-4 uppercase tracking-wider flex items-center gap-2">
+                <h3 className="font-minecraft text-base sm:text-lg font-black mb-4 uppercase tracking-wider flex items-center gap-2 text-gray-800">
                   <span>📦</span> What You&apos;ll Need
                 </h3>
                 <div className="grid md:grid-cols-3 gap-4">
                   <div className="text-center">
                     <span className="text-4xl block mb-2">🧠</span>
-                    <p className="font-bold">Raspberry Pi</p>
-                    <p className="text-sm text-gray-600">Any model works!</p>
+                    <p className="font-geo font-semibold text-gray-800">Raspberry Pi</p>
+                    <p className="font-geo text-sm text-gray-600">Any model works!</p>
                   </div>
                   <div className="text-center">
                     <span className="text-4xl block mb-2">🎤</span>
-                    <p className="font-bold">Microphone</p>
-                    <p className="text-sm text-gray-600">USB or GPIO</p>
+                    <p className="font-geo font-semibold text-gray-800">Microphone</p>
+                    <p className="font-geo text-sm text-gray-600">USB or GPIO</p>
                   </div>
                   <div className="text-center">
                     <span className="text-4xl block mb-2">🔊</span>
-                    <p className="font-bold">Speaker</p>
-                    <p className="text-sm text-gray-600">3.5mm or Bluetooth</p>
+                    <p className="font-geo font-semibold text-gray-800">Speaker</p>
+                    <p className="font-geo text-sm text-gray-600">3.5mm or Bluetooth</p>
                   </div>
                 </div>
               </Card>
@@ -291,24 +288,24 @@ export default function DashboardPage() {
               shadowColor="#c381b5"
               className="p-6"
             >
-              <h2 className="text-2xl font-semibold mb-6">Interaction History</h2>
+              <h2 className="font-minecraft text-xl sm:text-2xl font-black mb-6">Interaction History</h2>
               <div className="text-center py-12 text-gray-500">
-                <p>No interactions recorded yet.</p>
-                <p className="mt-2">Voice interactions will appear here once your child starts using Pommai.</p>
+                <p className="font-geo">No interactions recorded yet.</p>
+                <p className="font-geo mt-2">Voice interactions will appear here once your child starts using Pommai.</p>
               </div>
             </Card>
           </TabsContent>
 
           <TabsContent value="settings">
-            <div className="max-w-5xl mx-auto space-y-6">
+            <div className="max-w-5xl mx-auto space-y-8">
               <Card 
                 bg="#ffffff" 
                 borderColor="black" 
                 shadowColor="#c381b5"
-                className="p-8"
+                className="p-8 hover-lift"
               >
-                <div className="text-center mb-8">
-                  <h2 className="text-4xl font-black mb-3 uppercase tracking-wider text-black"
+                <div className="text-center mb-10">
+                  <h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-4 uppercase tracking-wider text-gray-800"
                     style={{
                       textShadow: '2px 2px 0 #c381b5'
                     }}
@@ -319,7 +316,7 @@ export default function DashboardPage() {
                 
                 <div className="grid md:grid-cols-2 gap-8">
                   <div className="space-y-6">
-                    <h3 className="font-black text-xl uppercase tracking-wider flex items-center gap-2">
+                    <h3 className="font-minecraft font-black text-base uppercase tracking-wider flex items-center gap-2 text-gray-800">
                       <span className="text-2xl">👤</span> Profile
                     </h3>
                     
@@ -330,7 +327,7 @@ export default function DashboardPage() {
                       className="p-5 space-y-4"
                     >
                       <div>
-                        <label className="block text-sm font-black mb-2 uppercase tracking-wider">Email</label>
+                        <label className="font-geo block text-sm font-semibold mb-2 uppercase tracking-wider text-gray-700">Email</label>
                         <Input 
                           type="email" 
                           defaultValue="user@example.com" 
@@ -338,17 +335,17 @@ export default function DashboardPage() {
                           borderColor="black"
                           disabled
                           readOnly
-                          className="font-bold"
+                          className="font-geo font-medium"
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-black mb-2 uppercase tracking-wider">Username</label>
+                        <label className="font-geo block text-sm font-semibold mb-2 uppercase tracking-wider text-gray-700">Username</label>
                         <Input 
                           defaultValue="PommaiParent123" 
                           bg="#ffffff"
                           borderColor="black"
-                          className="font-bold"
+                          className="font-geo font-medium"
                           onChange={(e) => console.log('Username changed:', e.target.value)}
                         />
                       </div>
@@ -362,8 +359,8 @@ export default function DashboardPage() {
                     >
                       <div className="flex items-start justify-between">
                         <div>
-                          <h4 className="font-black text-lg uppercase tracking-wider mb-2">Free Plan</h4>
-                          <p className="text-sm opacity-90">1 AI Toy • Basic Features</p>
+                          <h4 className="font-minecraft font-black text-base uppercase tracking-wider mb-2">Free Plan</h4>
+                          <p className="font-geo text-sm opacity-90">1 AI Toy • Basic Features</p>
                         </div>
                         <span className="text-3xl">🎆</span>
                       </div>
@@ -372,7 +369,7 @@ export default function DashboardPage() {
                         textColor="white" 
                         shadow="#76a83a"
                         borderColor="black"
-                        className="mt-4 w-full font-black uppercase tracking-wider"
+                        className="mt-4 w-full font-minecraft font-black uppercase tracking-wider"
                       >
                         <span className="flex items-center justify-center gap-2">
                           <span>🚀</span> Upgrade to Pro
@@ -382,7 +379,7 @@ export default function DashboardPage() {
                   </div>
                   
                   <div className="space-y-6">
-                    <h3 className="font-black text-xl uppercase tracking-wider flex items-center gap-2">
+                    <h3 className="font-minecraft font-black text-base uppercase tracking-wider flex items-center gap-2 text-gray-800">
                       <span className="text-2xl">🔔</span> Preferences
                     </h3>
                     
@@ -392,7 +389,7 @@ export default function DashboardPage() {
                       shadowColor="#e0e0e0"
                       className="p-5"
                     >
-                      <h4 className="font-black mb-4 uppercase tracking-wider flex items-center gap-2">
+                      <h4 className="font-minecraft font-black mb-4 uppercase tracking-wider flex items-center gap-2 text-gray-800">
                         <span>📧</span> Notifications
                       </h4>
                       <div className="space-y-3">
@@ -404,7 +401,7 @@ export default function DashboardPage() {
                         ].map(({ label, icon, checked }) => (
                           <label key={label} className="flex items-center cursor-pointer p-2 hover:bg-white rounded transition-colors">
                             <Checkbox className="mr-3" defaultChecked={checked} />
-                            <span className="flex-1 font-bold">{label}</span>
+                            <span className="font-geo flex-1 font-medium">{label}</span>
                             <span className="text-xl">{icon}</span>
                           </label>
                         ))}
@@ -417,7 +414,7 @@ export default function DashboardPage() {
                       shadowColor="#ff6b6b"
                       className="p-5"
                     >
-                      <h4 className="font-black mb-4 uppercase tracking-wider flex items-center gap-2">
+                      <h4 className="font-minecraft font-black mb-4 uppercase tracking-wider flex items-center gap-2 text-gray-800">
                         <span>🧸</span> Default Toy Settings
                       </h4>
                       <div className="space-y-3">
@@ -429,7 +426,7 @@ export default function DashboardPage() {
                         ].map(({ label, icon, checked }) => (
                           <label key={label} className="flex items-center cursor-pointer p-2 hover:bg-white rounded transition-colors">
                             <Checkbox className="mr-3" defaultChecked={checked} />
-                            <span className="flex-1 font-bold">{label}</span>
+                            <span className="font-geo flex-1 font-medium">{label}</span>
                             <span className="text-xl">{icon}</span>
                           </label>
                         ))}
@@ -438,13 +435,13 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 
-                <div className="mt-8 pt-8 border-t-[5px] border-black flex justify-center gap-4">
+                <div className="mt-10 pt-8 border-t-[5px] border-black flex justify-center gap-6">
                   <Button 
                     bg="#92cd41" 
                     textColor="white" 
                     shadow="#76a83a"
                     borderColor="black"
-                    className="px-8 py-3 font-black uppercase tracking-wider transform hover:scale-105 transition-transform"
+                    className="px-8 py-3 font-minecraft font-black uppercase tracking-wider hover-lift transition-transform"
                   >
                     <span className="flex items-center gap-2">
                       <span>💾</span> Save Changes
@@ -455,7 +452,7 @@ export default function DashboardPage() {
                     textColor="black" 
                     shadow="#d0d0d0"
                     borderColor="black"
-                    className="px-8 py-3 font-black uppercase tracking-wider"
+                    className="px-8 py-3 font-minecraft font-black uppercase tracking-wider hover-lift"
                   >
                     Cancel
                   </Button>

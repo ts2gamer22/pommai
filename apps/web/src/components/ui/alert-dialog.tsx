@@ -3,7 +3,7 @@
 import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/Button"
+import { Button } from "@pommai/ui"
 
 const AlertDialog = AlertDialogPrimitive.Root
 
@@ -119,23 +119,37 @@ AlertDialogDescription.displayName =
 const AlertDialogAction = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Action>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Action ref={ref} className={cn("", className)} asChild>
-    {/* Use RetroUI Button as the action */}
-    <Button {...props} />
-  </AlertDialogPrimitive.Action>
-))
+>(({ className, formAction, children, ...props }, ref) => {
+  // Filter out formAction if it's a function since our Button only accepts string formAction
+  const buttonProps = typeof formAction === 'function' 
+    ? { ...props, children }
+    : { ...props, formAction, children };
+    
+  return (
+    <AlertDialogPrimitive.Action ref={ref} className={cn("", className)} asChild>
+      {/* Use RetroUI Button as the action */}
+      <Button {...buttonProps} />
+    </AlertDialogPrimitive.Action>
+  )
+})
 AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName
 
 const AlertDialogCancel = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Cancel>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Cancel ref={ref} className={cn("", className)} asChild>
-    {/* Use RetroUI Button as the cancel */}
-    <Button bg="#e5e5e5" {...props} />
-  </AlertDialogPrimitive.Cancel>
-))
+>(({ className, formAction, children, ...props }, ref) => {
+  // Filter out formAction if it's a function since our Button only accepts string formAction
+  const buttonProps = typeof formAction === 'function' 
+    ? { ...props, children }
+    : { ...props, formAction, children };
+    
+  return (
+    <AlertDialogPrimitive.Cancel ref={ref} className={cn("", className)} asChild>
+      {/* Use RetroUI Button as the cancel */}
+      <Button bg="#e5e5e5" {...buttonProps} />
+    </AlertDialogPrimitive.Cancel>
+  )
+})
 AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName
 
 export {

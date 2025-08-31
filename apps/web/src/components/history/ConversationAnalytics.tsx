@@ -1,8 +1,6 @@
 'use client';
 
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, Button } from '@pommai/ui';
 import { 
   BarChart, 
   Bar, 
@@ -40,9 +38,15 @@ export function ConversationAnalytics({ analytics, isLoading }: ConversationAnal
     return (
       <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="p-4">
-            <Skeleton className="h-8 w-32 mb-4" />
-            <Skeleton className="h-32 w-full" />
+          <Card 
+            key={i} 
+            bg="#f8f8f8"
+            borderColor="black"
+            shadowColor="#e0e0e0"
+            className="p-4"
+          >
+            <div className="h-8 w-32 mb-4 bg-gray-300 border-2 border-black animate-pulse"></div>
+            <div className="h-32 w-full bg-gray-200 border-2 border-black animate-pulse"></div>
           </Card>
         ))}
       </div>
@@ -83,44 +87,69 @@ export function ConversationAnalytics({ analytics, isLoading }: ConversationAnal
     <div className="space-y-4">
       {/* Summary Stats */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="p-4">
+        <Card 
+          bg="#ffffff"
+          borderColor="black"
+          shadowColor="#c381b5"
+          className="p-4 hover-lift"
+        >
           <div className="flex items-center justify-between mb-2">
             <MessageSquare className="w-5 h-5 text-purple-600" />
-            <span className="text-2xl font-bold">{analytics.totalConversations}</span>
+            <span className="text-2xl font-black text-black">{analytics.totalConversations}</span>
           </div>
-          <p className="text-sm text-gray-600">Total Conversations</p>
+          <p className="text-sm font-bold uppercase tracking-wide text-gray-700">Total Conversations</p>
         </Card>
         
-        <Card className="p-4">
+        <Card 
+          bg="#ffffff"
+          borderColor="black"
+          shadowColor="#92cd41"
+          className="p-4 hover-lift"
+        >
           <div className="flex items-center justify-between mb-2">
             <Clock className="w-5 h-5 text-blue-600" />
-            <span className="text-2xl font-bold">{formatDuration(analytics.averageDuration)}</span>
+            <span className="text-2xl font-black text-black">{formatDuration(analytics.averageDuration)}</span>
           </div>
-          <p className="text-sm text-gray-600">Avg Duration</p>
+          <p className="text-sm font-bold uppercase tracking-wide text-gray-700">Avg Duration</p>
         </Card>
         
-        <Card className="p-4">
+        <Card 
+          bg="#ffffff"
+          borderColor="black"
+          shadowColor="#f7931e"
+          className="p-4 hover-lift"
+        >
           <div className="flex items-center justify-between mb-2">
             <MessageSquare className="w-5 h-5 text-green-600" />
-            <span className="text-2xl font-bold">{analytics.totalMessages}</span>
+            <span className="text-2xl font-black text-black">{analytics.totalMessages}</span>
           </div>
-          <p className="text-sm text-gray-600">Total Messages</p>
+          <p className="text-sm font-bold uppercase tracking-wide text-gray-700">Total Messages</p>
         </Card>
         
-        <Card className="p-4">
+        <Card 
+          bg="#ffffff"
+          borderColor="black"
+          shadowColor="#fefcd0"
+          className="p-4 hover-lift"
+        >
           <div className="flex items-center justify-between mb-2">
             <AlertCircle className="w-5 h-5 text-orange-600" />
-            <span className="text-2xl font-bold">{analytics.flaggedMessageCount}</span>
+            <span className="text-2xl font-black text-black">{analytics.flaggedMessageCount}</span>
           </div>
-          <p className="text-sm text-gray-600">Flagged</p>
+          <p className="text-sm font-bold uppercase tracking-wide text-gray-700">Flagged</p>
         </Card>
       </div>
 
       {/* Sentiment Distribution */}
-      <Card className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <Card 
+        bg="#ffffff"
+        borderColor="black"
+        shadowColor="#c381b5"
+        className="p-4 hover-lift"
+      >
+        <h3 className="font-black text-lg uppercase tracking-wider text-black mb-4 flex items-center gap-2">
           <Smile className="w-5 h-5" />
-          Sentiment Distribution
+          😊 Sentiment Distribution
         </h3>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
@@ -130,7 +159,7 @@ export function ConversationAnalytics({ analytics, isLoading }: ConversationAnal
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent, icon }) => `${icon} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent, icon }) => `${icon} ${((percent || 0) * 100).toFixed(0)}%`}
                 outerRadius={70}
                 fill="#8884d8"
                 dataKey="value"
@@ -147,10 +176,10 @@ export function ConversationAnalytics({ analytics, isLoading }: ConversationAnal
           {sentimentData.map((item) => (
             <div key={item.name} className="flex items-center gap-2">
               <div 
-                className="w-3 h-3 rounded-full" 
+                className="w-3 h-3 border border-black" 
                 style={{ backgroundColor: item.color }}
               />
-              <span className="text-sm text-gray-600">{item.name}</span>
+              <span className="text-sm font-bold uppercase tracking-wide text-gray-700">{item.name}</span>
             </div>
           ))}
         </div>
@@ -158,10 +187,15 @@ export function ConversationAnalytics({ analytics, isLoading }: ConversationAnal
 
       {/* Conversations Over Time */}
       {analytics.conversationsByDay.length > 0 && (
-        <Card className="p-4">
-          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <Card 
+          bg="#ffffff"
+          borderColor="black"
+          shadowColor="#92cd41"
+          className="p-4 hover-lift"
+        >
+          <h3 className="font-black text-lg uppercase tracking-wider text-black mb-4 flex items-center gap-2">
             <Calendar className="w-5 h-5" />
-            Activity Trend
+            📅 Activity Trend
           </h3>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
@@ -195,16 +229,23 @@ export function ConversationAnalytics({ analytics, isLoading }: ConversationAnal
 
       {/* Top Topics */}
       {analytics.topTopics && analytics.topTopics.length > 0 && (
-        <Card className="p-4">
-          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <Card 
+          bg="#ffffff"
+          borderColor="black"
+          shadowColor="#f7931e"
+          className="p-4 hover-lift"
+        >
+          <h3 className="font-black text-lg uppercase tracking-wider text-black mb-4 flex items-center gap-2">
             <TrendingUp className="w-5 h-5" />
-            Top Topics
+            🔥 Top Topics
           </h3>
           <div className="space-y-2">
             {analytics.topTopics.slice(0, 5).map((topic, i) => (
               <div key={i} className="flex items-center justify-between">
-                <Badge variant="secondary">{topic.topic}</Badge>
-                <span className="text-sm text-gray-600">{topic.count}</span>
+                <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-black bg-[#c381b5] text-white">
+                  {topic.topic}
+                </span>
+                <span className="text-sm font-bold text-gray-700">{topic.count}</span>
               </div>
             ))}
           </div>

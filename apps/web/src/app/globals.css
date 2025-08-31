@@ -1,44 +1,185 @@
 @import "tailwindcss";
-@import '../components/retroui.css';
+@import '@pommai/ui/src/styles/retroui.css';
+
+/* RetroUI Minecraft Font */
+@font-face {
+  font-family: 'Minecraft';
+  src: url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Fallback for Minecraft-style font */
+.font-minecraft {
+  font-family: "Press Start 2P", "Minecraft", monospace, sans-serif;
+  font-weight: normal;
+  text-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+}
+
+/* Work Sans font for subheadings */
+.font-geo {
+  font-family: var(--font-geo), "Work Sans", sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.015em;
+}
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
   
-  /* RetroUI Theme Variables */
-  --bg-button: #fefcd0;
-  --text-button: #000000;
-  --shadow-button: #c381b5;
-  --border-button: #000000;
+  /* ========================================
+   * PRIMARY POMMAI COLOR PALETTE
+   * ======================================== */
+  --pommai-cream: #fefcd0;
+  --pommai-purple: #c381b5;
+  --pommai-green: #92cd41;
+  --pommai-orange: #f7931e;
+  --pommai-dark-purple: #8b5fa3;
+  --pommai-dark-green: #76a83a;
+  --pommai-black: #000000;
+  --pommai-white: #ffffff;
+  --pommai-gray: #6b7280;
+  --pommai-light-gray: #f3f4f6;
+  --pommai-red: #ef4444;
   
-  --bg-card: #fefcd0;
-  --text-card: #000000;
-  --shadow-card: #c381b5;
-  --border-card: #000000;
+  /* ========================================
+   * RETROUI COMPONENT THEME VARIABLES
+   * ======================================== */
   
-  --bg-input: #fefcd0;
-  --text-input: #000000;
-  --border-input: #000000;
+  /* Button Component Variables */
+  --bg-button: var(--pommai-cream);
+  --text-button: var(--pommai-black);
+  --shadow-button: var(--pommai-purple);
+  --border-button: var(--pommai-black);
+  --button-custom-bg: var(--bg-button);
+  --button-custom-text: var(--text-button);
+  --button-custom-shadow: var(--shadow-button);
+  --button-custom-border: var(--border-button);
   
-  --bg-textarea: #fefcd0;
-  --text-textarea: #000000;
-  --border-textarea: #000000;
+  /* Card Component Variables */
+  --bg-card: var(--pommai-white);
+  --text-card: var(--pommai-black);
+  --shadow-card: var(--pommai-purple);
+  --border-card: var(--pommai-black);
+  --card-custom-bg: var(--bg-card);
+  --card-custom-text: var(--text-card);
+  --card-custom-shadow: var(--shadow-card);
+  --card-custom-border: var(--border-card);
   
-  --color-progressbar: #c381b5;
-  --border-progressbar: #000000;
+  /* Input Component Variables */
+  --bg-input: var(--pommai-cream);
+  --text-input: var(--pommai-black);
+  --border-input: var(--pommai-black);
+  --input-custom-bg: var(--bg-input);
+  --input-custom-text: var(--text-input);
+  --input-custom-border: var(--border-input);
   
-  --bg-popup-base: #fefcd0;
-  --bg-popup: #fefcd0;
-  --text-popup: #000000;
+  /* TextArea Component Variables */
+  --bg-textarea: var(--pommai-cream);
+  --text-textarea: var(--pommai-black);
+  --border-textarea: var(--pommai-black);
+  --textarea-custom-bg: var(--bg-textarea);
+  --textarea-custom-text: var(--text-textarea);
+  --textarea-custom-border: var(--border-textarea);
   
-  --bg-dropdown: #fefcd0;
-  --text-dropdown: #000000;
-  --border-dropdown: #000000;
-  --shadow-dropdown: #c381b5;
+  /* ProgressBar Component Variables */
+  --color-progressbar: var(--pommai-purple);
+  --border-progressbar: var(--pommai-black);
+  --progressbar-custom-color: var(--color-progressbar);
+  --progressbar-custom-border-color: var(--border-progressbar);
   
-  --bg-accordion: #fefcd0;
-  --text-accordion: #000000;
-  --shadow-accordion: #c381b5;
+  /* Popup Component Variables */
+  --bg-popup-base: var(--pommai-cream);
+  --bg-popup: var(--pommai-white);
+  --text-popup: var(--pommai-black);
+  --popup-overlay-bg: rgba(0, 0, 0, 0.5);
+  --popup-base-bg: var(--bg-popup-base);
+  --popup-bg: var(--bg-popup);
+  --popup-text: var(--text-popup);
+  
+  /* Dropdown Component Variables */
+  --bg-dropdown: var(--pommai-cream);
+  --text-dropdown: var(--pommai-black);
+  --border-dropdown: var(--pommai-black);
+  --shadow-dropdown: var(--pommai-purple);
+  --bg-dropdown-hover: #e0e0e0;
+  --dropdown-custom-bg: var(--bg-dropdown);
+  --dropdown-custom-text: var(--text-dropdown);
+  --dropdown-custom-border: var(--border-dropdown);
+  --dropdown-custom-shadow: var(--shadow-dropdown);
+  --dropdown-content-custom-bg: var(--bg-dropdown);
+  --dropdown-content-custom-text: var(--text-dropdown);
+  --dropdown-content-custom-border: var(--border-dropdown);
+  --dropdown-content-custom-shadow: var(--shadow-dropdown);
+  
+  /* Accordion Component Variables */
+  --bg-accordion: var(--pommai-cream);
+  --text-accordion: var(--pommai-black);
+  --shadow-accordion: var(--pommai-purple);
+  --accordion-custom-bg: var(--bg-accordion);
+  --accordion-custom-text: var(--text-accordion);
+  --accordion-custom-shadow: var(--shadow-accordion);
+  --accordion-item-custom-bg: var(--bg-accordion);
+  --accordion-item-custom-text: var(--text-accordion);
+  --accordion-item-custom-shadow: var(--shadow-accordion);
+  
+  /* Bubble/Speech Balloon Variables */
+  --bubble-bg-color: var(--pommai-white);
+  --bubble-text-color: var(--pommai-black);
+  --bubble-border-color: var(--pommai-black);
+  
+  /* ========================================
+   * DESIGN SYSTEM TOKENS
+   * ======================================== */
+  
+  /* Spacing System */
+  --spacing-xs: 0.25rem;  /* 4px */
+  --spacing-sm: 0.5rem;   /* 8px */
+  --spacing-md: 1rem;     /* 16px */
+  --spacing-lg: 1.5rem;   /* 24px */
+  --spacing-xl: 2rem;     /* 32px */
+  --spacing-2xl: 3rem;    /* 48px */
+  --spacing-3xl: 4rem;    /* 64px */
+  
+  /* Border Radius System */
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  
+  /* Typography Scale */
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.875rem;    /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.5rem;     /* 24px */
+  --text-3xl: 1.875rem;   /* 30px */
+  --text-4xl: 2.25rem;    /* 36px */
+  --text-5xl: 3rem;       /* 48px */
+  --text-6xl: 3.75rem;    /* 60px */
+  
+  /* Z-Index Scale */
+  --z-dropdown: 1000;
+  --z-modal: 1040;
+  --z-popover: 1050;
+  --z-tooltip: 1060;
+  --z-toast: 1070;
+  
+  /* Shadow System */
+  --shadow-sm: 2px 2px 0 0;
+  --shadow-md: 3px 3px 0 0;
+  --shadow-lg: 4px 4px 0 0;
+  --shadow-xl: 6px 6px 0 0;
+  
+  /* Border System */
+  --border-thin: 2px;
+  --border-medium: 3px;
+  --border-thick: 4px;
+  --border-extra-thick: 5px;
 }
 
 @theme inline {
@@ -58,15 +199,77 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  /* Use RetroUI Minecraft font globally for consistency */
-  font-family: "Minecraft", Arial, Helvetica, sans-serif;
+  font-family: var(--font-minecraft), "Press Start 2P", "Minecraft", Arial, Helvetica, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ensure headings use the RetroUI font and consistent spacing */
-h1, h2, h3, h4, h5, h6, .retro-heading {
-  font-family: "Minecraft", Arial, Helvetica, sans-serif;
-  letter-spacing: 0.03em;
+/* Typography System */
+/* Headers use Press Start 2P (Minecraft font) */
+h1, .retro-heading, .main-title {
+  font-family: var(--font-minecraft), "Press Start 2P", "Minecraft", Arial, Helvetica, sans-serif;
+  font-weight: normal;
+  letter-spacing: 0.05em;
+  margin: 0;
+  line-height: 1.3;
+  text-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
 }
+
+/* Subheadings use Work Sans */
+h2, h3, h4, h5, h6, .sub-heading {
+  font-family: var(--font-geo), "Work Sans", sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.015em;
+  margin: 0;
+  line-height: 1.4;
+}
+
+h1, .text-display { font-size: var(--text-6xl); }
+h2, .text-h2 { font-size: var(--text-4xl); }
+h3, .text-h3 { font-size: var(--text-3xl); }
+h4, .text-h4 { font-size: var(--text-2xl); }
+h5, .text-h5 { font-size: var(--text-xl); }
+h6, .text-h6 { font-size: var(--text-lg); }
+
+.text-body { font-size: var(--text-base); }
+.text-small { font-size: var(--text-sm); }
+.text-tiny { font-size: var(--text-xs); }
+
+/* Spacing Utilities */
+.space-xs { margin: var(--spacing-xs); }
+.space-sm { margin: var(--spacing-sm); }
+.space-md { margin: var(--spacing-md); }
+.space-lg { margin: var(--spacing-lg); }
+.space-xl { margin: var(--spacing-xl); }
+.space-2xl { margin: var(--spacing-2xl); }
+.space-3xl { margin: var(--spacing-3xl); }
+
+.gap-xs { gap: var(--spacing-xs); }
+.gap-sm { gap: var(--spacing-sm); }
+.gap-md { gap: var(--spacing-md); }
+.gap-lg { gap: var(--spacing-lg); }
+.gap-xl { gap: var(--spacing-xl); }
+.gap-2xl { gap: var(--spacing-2xl); }
+.gap-3xl { gap: var(--spacing-3xl); }
+
+.p-xs { padding: var(--spacing-xs); }
+.p-sm { padding: var(--spacing-sm); }
+.p-md { padding: var(--spacing-md); }
+.p-lg { padding: var(--spacing-lg); }
+.p-xl { padding: var(--spacing-xl); }
+.p-2xl { padding: var(--spacing-2xl); }
+.p-3xl { padding: var(--spacing-3xl); }
+
+.m-xs { margin: var(--spacing-xs); }
+.m-sm { margin: var(--spacing-sm); }
+.m-md { margin: var(--spacing-md); }
+.m-lg { margin: var(--spacing-lg); }
+.m-xl { margin: var(--spacing-xl); }
+.m-2xl { margin: var(--spacing-2xl); }
+.m-3xl { margin: var(--spacing-3xl); }
 
 /* Pixel Select Styles */
 .pixel-select-trigger {
@@ -94,21 +297,427 @@ h1, h2, h3, h4, h5, h6, .retro-heading {
 }
 
 /* Mobile responsive utilities */
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .container {
     padding-left: 1rem;
     padding-right: 1rem;
   }
+  
+  /* Override global mobile typography with our improved sizes */
+  .dashboard-page h1.font-minecraft {
+    font-size: 1.125rem !important; /* text-lg */
+  }
+  
+  .dashboard-page h2.font-minecraft {
+    font-size: 1rem !important; /* text-base */
+  }
+  
+  .dashboard-page h3.font-minecraft {
+    font-size: 1rem !important; /* text-base */
+  }
+  
+  .toy-wizard h1.font-minecraft {
+    font-size: 1rem !important; /* text-base */
+  }
+  
+  .toy-wizard h2.font-minecraft {
+    font-size: 1rem !important; /* text-base */
+  }
+  
+  /* Mobile button adjustments */
+  .pixel-button {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--text-sm);
+  }
+  
+  /* Mobile card adjustments */
+  .pixel-card {
+    margin: var(--spacing-xs);
+    padding: var(--spacing-md);
+  }
+  
+  /* Mobile form adjustments */
+  .form-label {
+    font-size: var(--text-xs);
+  }
+
+  /* Force Tailwind responsive classes on mobile */
+  .dashboard-page .sm\:text-xl {
+    font-size: 1.25rem !important;
+  }
+  
+  .dashboard-page .sm\:text-lg {
+    font-size: 1.125rem !important;
+  }
+  
+  .toy-wizard .sm\:text-lg {
+    font-size: 1.125rem !important;
+  }
 }
 
-/* Pixel Radio and Checkbox styles */
-input[type="radio"]:checked::before,
-input[type="checkbox"]:checked::before {
+@media (max-width: 768px) {
+  /* Tablet and small screen adjustments */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+  }
+  
+  .tabs-mobile {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+  
+  /* Force responsive text sizes with our improved sizing */
+  .dashboard-page .responsive-text-lg {
+    font-size: 1rem !important; /* text-base */
+  }
+  
+  .dashboard-page .responsive-text-xl {
+    font-size: 1.125rem !important; /* text-lg */
+  }
+  
+  .toy-wizard .responsive-text-lg {
+    font-size: 1rem !important; /* text-base */
+  }
+  
+  .toy-wizard .responsive-text-xl {
+    font-size: 1.125rem !important; /* text-lg */
+  }
+}
+
+@media (min-width: 769px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--spacing-lg);
+  }
+}
+
+/* Dashboard Page Specific Overrides */
+.dashboard-page h1.font-minecraft {
+  font-size: 1.125rem !important; /* text-lg */
+}
+
+@media (min-width: 640px) {
+  .dashboard-page h1.font-minecraft {
+    font-size: 1.25rem !important; /* text-xl */
+  }
+}
+
+@media (min-width: 1024px) {
+  .dashboard-page h1.font-minecraft {
+    font-size: 1.5rem !important; /* text-2xl */
+  }
+}
+
+.dashboard-page h2.font-minecraft {
+  font-size: 1rem !important; /* text-base */
+}
+
+@media (min-width: 640px) {
+  .dashboard-page h2.font-minecraft {
+    font-size: 1.125rem !important; /* text-lg */
+  }
+}
+
+@media (min-width: 1024px) {
+  .dashboard-page h2.font-minecraft {
+    font-size: 1.25rem !important; /* text-xl */
+  }
+}
+
+.dashboard-page h3.font-minecraft {
+  font-size: 1rem !important; /* text-base */
+}
+
+/* ToyWizard Specific Overrides */
+.toy-wizard h1.font-minecraft {
+  font-size: 1rem !important; /* text-base */
+}
+
+@media (min-width: 640px) {
+  .toy-wizard h1.font-minecraft {
+    font-size: 1.125rem !important; /* text-lg */
+  }
+}
+
+@media (min-width: 1024px) {
+  .toy-wizard h1.font-minecraft {
+    font-size: 1.25rem !important; /* text-xl */
+  }
+}
+
+.toy-wizard h2.font-minecraft {
+  font-size: 1rem !important; /* text-base */
+}
+
+@media (min-width: 640px) {
+  .toy-wizard h2.font-minecraft {
+    font-size: 1.125rem !important; /* text-lg */
+  }
+}
+
+/* Force text color overrides */
+.dashboard-page .text-gray-800 {
+  color: rgb(31 41 55) !important;
+}
+
+.dashboard-page .text-gray-600 {
+  color: rgb(75 85 99) !important;
+}
+
+.dashboard-page .text-gray-700 {
+  color: rgb(55 65 81) !important;
+}
+
+/* Force font size overrides for Tailwind classes */
+.dashboard-page .text-lg {
+  font-size: 1.125rem !important;
+}
+
+.dashboard-page .text-xl {
+  font-size: 1.25rem !important;
+}
+
+.dashboard-page .text-2xl {
+  font-size: 1.5rem !important;
+}
+
+.dashboard-page .text-base {
+  font-size: 1rem !important;
+}
+
+.dashboard-page .text-sm {
+  font-size: 0.875rem !important;
+}
+
+.dashboard-page .text-xs {
+  font-size: 0.75rem !important;
+}
+
+/* ToyWizard specific font size overrides */
+.toy-wizard .text-lg {
+  font-size: 1.125rem !important;
+}
+
+.toy-wizard .text-xl {
+  font-size: 1.25rem !important;
+}
+
+.toy-wizard .text-base {
+  font-size: 1rem !important;
+}
+
+.toy-wizard .text-sm {
+  font-size: 0.875rem !important;
+}
+
+.toy-wizard .text-xs {
+  font-size: 0.75rem !important;
+}
+
+/* Force font family overrides */
+.dashboard-page .font-geo,
+.toy-wizard .font-geo,
+.step-component .font-geo {
+  font-family: var(--font-geo), "Work Sans", sans-serif !important;
+}
+
+.dashboard-page .font-minecraft,
+.toy-wizard .font-minecraft,
+.step-component .font-minecraft {
+  font-family: var(--font-minecraft), "Press Start 2P", "Minecraft", Arial, Helvetica, sans-serif !important;
+}
+
+/* Override global heading rules specifically for our improved components */
+.dashboard-page h1.font-minecraft.text-lg,
+.dashboard-page h1.font-minecraft.text-xl,
+.dashboard-page h1.font-minecraft.text-2xl {
+  font-size: inherit !important;
+}
+
+.dashboard-page h2.font-minecraft.text-base,
+.dashboard-page h2.font-minecraft.text-lg,
+.dashboard-page h2.font-minecraft.text-xl {
+  font-size: inherit !important;
+}
+
+.dashboard-page h3.font-minecraft.text-base,
+.dashboard-page h3.font-minecraft.text-lg {
+  font-size: inherit !important;
+}
+
+.toy-wizard h1.font-minecraft.text-base,
+.toy-wizard h1.font-minecraft.text-lg,
+.toy-wizard h1.font-minecraft.text-xl {
+  font-size: inherit !important;
+}
+
+.toy-wizard h2.font-minecraft.text-base,
+.toy-wizard h2.font-minecraft.text-lg {
+  font-size: inherit !important;
+}
+
+/* Touch-friendly interactions */
+@media (hover: none) {
+  .hover-lift:hover {
+    transform: none;
+  }
+  
+  .hover-lift:active {
+    transform: scale(0.98);
+  }
+  
+  .pixel-button:hover {
+    transform: none;
+  }
+  
+  .pixel-button:active {
+    transform: translateY(2px);
+  }
+}
+
+/* Responsive spacing classes */
+.mobile-p-sm { padding: var(--spacing-sm); }
+.mobile-p-md { padding: var(--spacing-md); }
+.mobile-m-sm { margin: var(--spacing-sm); }
+.mobile-m-md { margin: var(--spacing-md); }
+
+.tablet-p-md { padding: var(--spacing-md); }
+.tablet-p-lg { padding: var(--spacing-lg); }
+.tablet-m-md { margin: var(--spacing-md); }
+.tablet-m-lg { margin: var(--spacing-lg); }
+
+@media (max-width: 640px) {
+  .mobile-p-sm { padding: var(--spacing-sm) !important; }
+  .mobile-p-md { padding: var(--spacing-md) !important; }
+  .mobile-m-sm { margin: var(--spacing-sm) !important; }
+  .mobile-m-md { margin: var(--spacing-md) !important; }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tablet-p-md { padding: var(--spacing-md) !important; }
+  .tablet-p-lg { padding: var(--spacing-lg) !important; }
+  .tablet-m-md { margin: var(--spacing-md) !important; }
+  .tablet-m-lg { margin: var(--spacing-lg) !important; }
+}
+
+/* Step component specific overrides */
+.step-component h2.font-minecraft {
+  font-size: 1rem !important; /* text-base */
+}
+
+@media (min-width: 640px) {
+  .step-component h2.font-minecraft {
+    font-size: 1.125rem !important; /* text-lg */
+  }
+}
+
+.step-component .text-gray-800 {
+  color: rgb(31 41 55) !important;
+}
+
+.step-component .text-gray-600 {
+  color: rgb(75 85 99) !important;
+}
+
+.step-component .text-gray-700 {
+  color: rgb(55 65 81) !important;
+}
+
+.step-component .text-base {
+  font-size: 1rem !important;
+}
+
+.step-component .text-sm {
+  font-size: 0.875rem !important;
+}
+
+.step-component .text-lg {
+  font-size: 1.125rem !important;
+}
+
+.step-component h2.font-minecraft.text-base,
+.step-component h2.font-minecraft.text-lg {
+  font-size: inherit !important;
+}
+
+/* Enhanced Pixel Radio and Checkbox styles */
+.pixel-checkbox,
+.pixel-radio {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--pommai-black);
+  background-color: var(--pommai-cream);
+  position: relative;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Auth page specific overrides */
+.auth-page h1.main-title {
+  font-size: 1rem !important; /* 16px - larger title for better visibility */
+}
+
+.auth-page .text-xs {
+  font-size: 0.75rem !important; /* 12px - force small text */
+}
+
+.auth-page .pixel-button,
+.auth-page button {
+  font-size: 0.75rem !important; /* 12px - force small button text */
+}
+
+@media (max-width: 640px) {
+  .auth-page h1.main-title {
+    font-size: 1rem !important; /* 16px - larger title on mobile */
+  }
+}
+
+.pixel-checkbox:checked,
+.pixel-radio:checked {
+  background-color: var(--pommai-purple);
+}
+
+.pixel-checkbox:checked::before,
+.pixel-radio:checked::before {
   content: '';
   position: absolute;
-  inset: 2px;
-  background-color: black;
-  transform: scale(1);
+  inset: 3px;
+  background-color: var(--pommai-black);
+  image-rendering: pixelated;
+}
+
+.pixel-checkbox:hover,
+.pixel-radio:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 0 var(--pommai-black);
+}
+
+.pixel-checkbox:active,
+.pixel-radio:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+/* Form labels */
+.form-label {
+  font-size: var(--text-sm);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pommai-black);
+  margin-bottom: var(--spacing-sm);
+  display: block;
+}
+
+.form-help {
+  font-size: var(--text-xs);
+  color: var(--pommai-gray);
+  margin-top: var(--spacing-xs);
 }
 
 /* Pixel border for cards and inputs */
@@ -128,14 +737,54 @@ input[type="checkbox"]:checked::before {
   pointer-events: none;
 }
 
-/* Smooth animations */
+/* Enhanced animations */
 @keyframes pixel-bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
 }
 
+@keyframes pixel-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@keyframes pixel-glow {
+  0%, 100% { box-shadow: 0 0 0 var(--pommai-purple); }
+  50% { box-shadow: 0 0 8px var(--pommai-purple); }
+}
+
 .pixel-bounce {
   animation: pixel-bounce 0.5s ease-in-out;
+}
+
+.pixel-shake {
+  animation: pixel-shake 0.3s ease-in-out;
+}
+
+.pixel-glow {
+  animation: pixel-glow 2s ease-in-out infinite;
+}
+
+/* Hover effects */
+.hover-lift:hover {
+  transform: translateY(-2px);
+  transition: transform 0.1s ease;
+}
+
+.hover-press:active {
+  transform: translateY(2px);
+  transition: transform 0.05s ease;
+}
+
+/* Loading states */
+.loading-pulse {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 /* Tab improvements */

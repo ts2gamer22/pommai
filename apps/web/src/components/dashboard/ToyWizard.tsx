@@ -4,20 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToyWizardStore, type WizardStep } from '@/stores/toyWizardStore';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Card } from '@/components/ui/card';
+import { useToysStore } from '@/stores/useToysStore';
+import { Button, ProgressBar, Card, Popup } from '@pommai/ui';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 
 // Import step components (to be created)
 import { WelcomeStep } from './steps/WelcomeStep';
@@ -82,12 +71,44 @@ export function ToyWizard() {
     markStepCompleted,
     canProceedToStep,
     resetWizard,
+    setIsCreating,
   } = useToyWizardStore();
+  
+  const { addToy } = useToysStore();
 
   const currentStepIndex = WIZARD_STEPS.indexOf(currentStep);
   const progressPercentage = ((currentStepIndex + 1) / WIZARD_STEPS.length) * 100;
 
   const handleNext = () => {
+    // Special handling for review step - actually create the toy
+    if (currentStep === 'review') {
+      setIsCreating(true);
+      
+      // Create the toy object
+      const newToy = {
+        _id: `toy_${Date.now()}`, // Generate a temporary ID
+        name: toyConfig.name,
+        type: toyConfig.type as any,
+        status: 'active' as const,
+        isForKids: toyConfig.isForKids,
+        voiceId: toyConfig.voiceId,
+        voiceName: toyConfig.voiceName,
+        personalityPrompt: toyConfig.personalityPrompt,
+        isPublic: toyConfig.isPublic,
+        tags: toyConfig.tags,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        conversationCount: 0,
+        messageCount: 0,
+        lastActiveAt: undefined,
+        deviceId: undefined,
+      };
+      
+      // Add toy to the store
+      addToy(newToy);
+      setIsCreating(false);
+    }
+    
     markStepCompleted(currentStep);
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < WIZARD_STEPS.length) {
@@ -143,40 +164,59 @@ export function ToyWizard() {
   const CurrentStepComponent = StepComponent[currentStep];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#fefcd0] to-[#f4e5d3] py-6 sm:py-8 toy-wizard">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Create Your AI Toy
-            </h1>
+        <div className="mb-8 sm:mb-10">
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
+            <div className="text-center sm:text-left">
+              <h1 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-3 uppercase tracking-wider text-gray-800"
+                style={{
+                  textShadow: '2px 2px 0 #c381b5, 4px 4px 0 #92cd41'
+                }}
+              >
+                🧸 Create Your AI Toy
+              </h1>
+              <p className="font-geo text-sm sm:text-base font-medium text-gray-600 leading-relaxed">Design the perfect companion!</p>
+            </div>
             {currentStep !== 'completion' && (
               <Button
-                variant="ghost"
-                size="sm"
+                bg="#ff6b6b"
+                textColor="white"
+                borderColor="black"
+                shadow="#e84545"
                 onClick={handleExit}
-                className="text-gray-500 hover:text-gray-700"
+                className="py-2 px-3 text-sm font-minecraft font-black uppercase tracking-wider hover-lift"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </Button>
             )}
           </div>
           
           {/* Progress bar */}
           {currentStep !== 'completion' && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>{STEP_TITLES[currentStep]}</span>
-                <span>Step {currentStepIndex + 1} of {WIZARD_STEPS.length - 1}</span>
+            <div className="space-y-4">
+              <div className="flex justify-between text-sm font-geo font-medium text-gray-700">
+                <span className="font-geo">{STEP_TITLES[currentStep]}</span>
+                <span className="font-geo">Step {currentStepIndex + 1} of {WIZARD_STEPS.length - 1}</span>
               </div>
-              <Progress value={progressPercentage} className="h-2" />
+              <ProgressBar 
+                progress={progressPercentage} 
+                color="#c381b5"
+                borderColor="black"
+                className="shadow-[0_2px_0_2px_#8b5fa3]"
+              />
             </div>
           )}
         </div>
 
         {/* Main content */}
-        <Card className="p-6 md:p-8">
+        <Card 
+          bg="#ffffff" 
+          borderColor="black" 
+          shadowColor="#c381b5"
+          className="p-6 sm:p-8 lg:p-10 hover-lift transition-transform"
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
@@ -192,46 +232,79 @@ export function ToyWizard() {
 
         {/* Navigation buttons */}
         {currentStep !== 'completion' && (
-          <div className="mt-8 flex justify-between">
+          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row justify-between gap-4">
             <Button
-              variant="outline"
+              bg={currentStepIndex === 0 ? "#f0f0f0" : "#ffffff"}
+              textColor={currentStepIndex === 0 ? "#999" : "black"}
+              borderColor="black"
+              shadow={currentStepIndex === 0 ? "#d0d0d0" : "#e0e0e0"}
               onClick={handleBack}
               disabled={currentStepIndex === 0}
-              className="flex items-center gap-2"
+              className={`flex items-center gap-2 py-3 px-6 sm:px-8 font-minecraft font-black uppercase tracking-wider transition-all ${
+                currentStepIndex === 0 ? 'cursor-not-allowed' : 'hover-lift'
+              }`}
             >
               <ArrowLeft className="w-4 h-4" />
-              Back
+              <span className="hidden sm:inline">Back</span>
             </Button>
             
             <Button
+              bg={canGoNext() ? "#92cd41" : "#f0f0f0"}
+              textColor={canGoNext() ? "white" : "#999"}
+              borderColor="black"
+              shadow={canGoNext() ? "#76a83a" : "#d0d0d0"}
               onClick={handleNext}
               disabled={!canGoNext()}
-              className="flex items-center gap-2"
+              className={`flex items-center gap-2 py-3 px-6 sm:px-8 font-minecraft font-black uppercase tracking-wider transition-all ${
+                canGoNext() ? 'hover-lift' : 'cursor-not-allowed'
+              }`}
             >
-              {currentStep === 'review' ? 'Create Toy' : 'Next'}
+              <span>{currentStep === 'review' ? '✨ Create Toy' : 'Next'}</span>
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
         )}
       </div>
 
-      {/* Exit confirmation dialog */}
-      <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Exit Toy Creation?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your progress will be saved. You can continue creating this toy later from where you left off.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Continue Creating</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmExit}>
-              Exit
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Exit confirmation popup */}
+      {showExitDialog && (
+        <Popup
+          isOpen={showExitDialog}
+          onClose={() => setShowExitDialog(false)}
+          title="🚪 Exit Toy Creation?"
+          bg="#ffffff"
+          borderColor="black"
+          className="max-w-md"
+        >
+          <div className="space-y-4">
+            <p className="font-geo text-gray-700 font-semibold">
+              Your progress will be saved automatically. You can continue creating this toy later from where you left off.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <Button
+                bg="#f0f0f0"
+                textColor="black"
+                borderColor="black"
+                shadow="#d0d0d0"
+                onClick={() => setShowExitDialog(false)}
+                className="flex-1 py-2 px-4 font-minecraft font-black uppercase tracking-wider hover-lift"
+              >
+                Continue Creating
+              </Button>
+              <Button
+                bg="#ff6b6b"
+                textColor="white"
+                borderColor="black"
+                shadow="#e84545"
+                onClick={confirmExit}
+                className="flex-1 py-2 px-4 font-minecraft font-black uppercase tracking-wider hover-lift"
+              >
+                Exit
+              </Button>
+            </div>
+          </div>
+        </Popup>
+      )}
     </div>
   );
 }

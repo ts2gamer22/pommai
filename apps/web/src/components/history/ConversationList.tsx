@@ -1,9 +1,6 @@
 'use client';
 
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, Button } from '@pommai/ui';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 import { 
   MessageSquare, 
@@ -31,12 +28,17 @@ export function ConversationList({
 }: ConversationListProps) {
   if (isLoading) {
     return (
-      <Card className="p-4">
+      <Card 
+        bg="#ffffff"
+        borderColor="black"
+        shadowColor="#e0e0e0"
+        className="p-4"
+      >
         <div className="space-y-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-20 w-full" />
+              <div className="h-4 w-32 bg-gray-300 border-2 border-black animate-pulse"></div>
+              <div className="h-20 w-full bg-gray-200 border-2 border-black animate-pulse"></div>
             </div>
           ))}
         </div>
@@ -46,10 +48,15 @@ export function ConversationList({
 
   if (conversations.length === 0) {
     return (
-      <Card className="p-8 text-center">
+      <Card 
+        bg="#ffffff"
+        borderColor="black"
+        shadowColor="#c381b5"
+        className="p-8 text-center hover-lift"
+      >
         <MessageSquare className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">No conversations found</h3>
-        <p className="text-gray-600">
+        <h3 className="text-lg font-black uppercase tracking-wider text-black mb-2">No conversations found</h3>
+        <p className="font-bold text-gray-700 uppercase tracking-wide">
           Try adjusting your filters or search criteria
         </p>
       </Card>
@@ -57,7 +64,7 @@ export function ConversationList({
   }
 
   // Group conversations by date
-  const groupedConversations = conversations.reduce((groups, conv) => {
+  const groupedConversations = conversations.reduce((groups: Record<string, any[]>, conv: any) => {
     const date = new Date(conv.startedAt);
     let dateKey: string;
     
@@ -94,45 +101,50 @@ export function ConversationList({
   };
 
   return (
-    <Card className="overflow-hidden">
-      <ScrollArea className="h-[600px]">
+    <Card 
+      bg="#ffffff"
+      borderColor="black"
+      shadowColor="#c381b5"
+      className="overflow-hidden hover-lift"
+    >
+      <div className="h-[600px] overflow-y-auto border-2 border-black bg-[#fefcd0]">
         <div className="p-4 space-y-6">
           {Object.entries(groupedConversations).map(([date, convs]) => (
             <div key={date}>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                {date}
+              <h3 className="text-sm font-black uppercase tracking-wider text-black mb-3">
+                📅 {date}
               </h3>
               <div className="space-y-2">
                 {convs.map((conv) => (
-                  <motion.div
+                  <Card
                     key={conv._id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    whileHover={{ x: 4 }}
+                    bg={selectedId === conv._id ? "#c381b5" : "#ffffff"}
+                    borderColor="black"
+                    shadowColor={selectedId === conv._id ? "#8b5fa3" : "#e0e0e0"}
+                    className={`p-4 cursor-pointer transition-all hover-lift ${
+                      selectedId === conv._id 
+                        ? 'text-white' 
+                        : 'text-black hover:shadow-[0_4px_0_2px_#c381b5]'
+                    }`}
                     onClick={() => onSelect(conv._id)}
-                    className={`
-                      p-4 rounded-lg border cursor-pointer transition-all
-                      ${selectedId === conv._id 
-                        ? 'border-purple-500 bg-purple-50' 
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }
-                    `}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-gray-900">
+                          <h4 className="font-black uppercase tracking-wider text-inherit">
                             {conv.toyName}
                           </h4>
                           {conv.flaggedMessageCount > 0 && (
-                            <Badge variant="destructive" className="text-xs">
-                              <AlertCircle className="w-3 h-3 mr-1" />
+                            <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-red-600 bg-red-100 text-red-800 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
                               {conv.flaggedMessageCount} flagged
-                            </Badge>
+                            </span>
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className={`flex items-center gap-4 text-sm font-bold ${
+                          selectedId === conv._id ? 'text-white opacity-90' : 'text-gray-700'
+                        }`}>
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             {format(new Date(conv.startedAt), 'h:mm a')}
@@ -157,25 +169,25 @@ export function ConversationList({
                     
                     {conv.topics && conv.topics.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
-                        {conv.topics.slice(0, 3).map((topic, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
+                        {conv.topics.slice(0, 3).map((topic: string, i: number) => (
+                          <span key={i} className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-black bg-[#92cd41] text-white">
                             {topic}
-                          </Badge>
+                          </span>
                         ))}
                         {conv.topics.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
+                          <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-black bg-[#f7931e] text-white">
                             +{conv.topics.length - 3} more
-                          </Badge>
+                          </span>
                         )}
                       </div>
                     )}
-                  </motion.div>
+                  </Card>
                 ))}
               </div>
             </div>
           ))}
         </div>
-      </ScrollArea>
+      </div>
     </Card>
   );
 }

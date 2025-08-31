@@ -6,21 +6,29 @@ C:/Users/Admin/Desktop/pommai
 │   │   │   ├── audio_stream_manager.py
 │   │   │   ├── button_handler.py
 │   │   │   ├── conversation_cache.py
+│   │   │   ├── fastrtc_connection.py
 │   │   │   ├── led_controller.py
 │   │   │   ├── opus_audio_codec.py
 │   │   │   ├── wake_word_detector.py
-│   │   │   └── pommai_client.py
+│   │   │   └── pommai_client_fastrtc.py
+│   │   ├── scripts
+│   │   │   ├── setup.sh
+│   │   │   ├── update.sh
+│   │   │   └── diagnose.sh
 │   │   ├── config
 │   │   │   └── pommai.service
 │   │   ├── audio_responses
 │   │   ├── tests
 │   │   │   ├── test_audio.py
+│   │   │   ├── test_audio_streaming.py
 │   │   │   ├── test_button.py
 │   │   │   ├── test_cache.py
+│   │   │   ├── test_integration.py
 │   │   │   ├── test_leds.py
 │   │   │   ├── test_opus.py
 │   │   │   └── test_wake_word.py
 │   │   ├── .env.example
+│   │   ├── DEPLOYMENT_GUIDE.md
 │   │   ├── README.md
 │   │   └── requirements.txt
 │   └── web
@@ -31,6 +39,10 @@ C:/Users/Admin/Desktop/pommai
 │       │   │   ├── dataModel.d.ts
 │       │   │   ├── server.d.ts
 │       │   │   └── server.js
+│       │   ├── agentSchema.ts
+│       │   ├── agents.ts
+│       │   ├── aiPipeline.ts
+│       │   ├── aiServices.ts
 │       │   ├── auth.config.ts
 │       │   ├── auth.ts
 │       │   ├── children.ts
@@ -39,7 +51,9 @@ C:/Users/Admin/Desktop/pommai
 │       │   ├── http.ts
 │       │   ├── knowledgeBase.ts
 │       │   ├── messages.ts
+│       │   ├── rag.ts
 │       │   ├── README.md
+│       │   ├── safety.ts
 │       │   ├── schema.ts
 │       │   ├── toys.ts
 │       │   ├── voices.ts
@@ -132,7 +146,10 @@ C:/Users/Admin/Desktop/pommai
 │       │   │   └── TextArea.tsx
 │       │   ├── lib
 │       │   │   ├── auth-client.ts
-│       │   │   └── auth.ts
+│       │   │   ├── auth.ts
+│       │   │   └── fastrtc
+│       │   │       ├── server.ts
+│       │   │       └── protocol.ts
 │       │   ├── stores
 │       │   │   └── toyWizardStore.ts
 │       │   ├── types
@@ -153,7 +170,13 @@ C:/Users/Admin/Desktop/pommai
 │   │   │   ├── betterauthconvex.md
 │   │   │   ├── nextjscontext.md
 │   │   │   └── vercel.md
-│   │   └── phase3context
+│   │   ├── phase2context
+│   │   │   ├── convexagent.md
+│   │   │   ├── elevenlabsmodels.md
+│   │   │   ├── elevenlabsquickstart.md
+│   │   │   ├── elevenlabsvoicechanger.md
+│   │   │   └── elevenllabstexttospeech.md
+│   │   ├── phase3context
 │   │       ├── audio-streaming-protocol.md
 │   │       ├── convex-integration-guide.md
 │   │       ├── gpio-control.md
@@ -162,10 +185,12 @@ C:/Users/Admin/Desktop/pommai
 │   │       ├── raspberry-pi-setup.md
 │   │       ├── README.md
 │   │       └── websocket-api.md
+│   │   └── phase4context
 │   └── phase
 │       ├── phase1.md
 │       ├── phase2.md
-│       └── phase3.md
+│       ├── phase3.md
+│       └── phase4.md
 ├── packages
 │   ├── config
 │   │   └── tsconfig

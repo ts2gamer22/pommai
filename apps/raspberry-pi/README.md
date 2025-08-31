@@ -4,14 +4,14 @@ This is the Raspberry Pi Zero 2W client for the Pommai smart toy platform. It pr
 
 ## Features
 
-- **Real-time voice interaction** via WebSocket connection to Convex backend
+- **Real-time voice interaction** via FastRTC WebSocket gateway
 - **Multiple toy personalities** - Switch between different AI toy configurations
 - **Guardian mode** - Enhanced safety features for children
 - **Offline mode** - Basic interactions when internet is unavailable
 - **Wake word detection** - Hands-free activation with "Hey Pommai"
 - **Hardware integration** - Button control and LED feedback via ReSpeaker HAT
 - **Audio compression** - Opus codec for efficient streaming
-- **Secure communication** - Token-based authentication with Convex
+- **Secure communication** - Token-based authentication with FastRTC gateway
 
 ## Hardware Requirements
 
@@ -81,10 +81,10 @@ nano .env
 ```
 
 Required configuration:
-- `CONVEX_URL` - Your Convex deployment WebSocket URL
+- `FASTRTC_GATEWAY_URL` - Your FastRTC gateway WebSocket URL
+- `AUTH_TOKEN` - Authentication token from web platform
 - `DEVICE_ID` - Unique identifier for this device
-- `POMMAI_USER_TOKEN` - Authentication token from web dashboard
-- `POMMAI_TOY_ID` - Initial toy to load
+- `TOY_ID` - Initial toy to load
 
 ### 4. Test Installation
 
@@ -108,7 +108,7 @@ python tests/test_button.py
 source venv/bin/activate
 
 # Run the client
-python src/pommai_client.py
+python src/pommai_client_fastrtc.py
 ```
 
 ### Systemd Service (Recommended)
@@ -177,8 +177,8 @@ sudo usermod -a -G gpio $USER
 - Monitor with `htop` or `ps aux`
 
 ### Connection Issues
-- Verify CONVEX_URL is correct
-- Check authentication token is valid
+- Verify FASTRTC_GATEWAY_URL and AUTH_TOKEN are correct
+- Check device can reach the gateway host (see diagnose.sh)
 - Test network connectivity
 - Review logs: `journalctl -u pommai -n 100`
 
@@ -188,14 +188,26 @@ sudo usermod -a -G gpio $USER
 ```
 raspberry-pi/
 ├── src/
-│   └── pommai_client.py    # Main client application
+│   ├── pommai_client_fastrtc.py  # Main FastRTC client application
+│   ├── fastrtc_connection.py     # FastRTC WebSocket handler
+│   ├── pommai_client.py          # Legacy Convex client (deprecated)
+│   ├── audio_stream_manager.py   # Audio capture/playback
+│   ├── opus_audio_codec.py       # Opus compression
+│   ├── led_controller.py         # LED patterns and control
+│   ├── button_handler.py         # GPIO button handling
+│   ├── wake_word_detector.py     # "Hey Pommai" detection
+│   └── conversation_cache.py     # Offline mode support
 ├── config/
-│   └── pommai.service      # Systemd service file
-├── audio_responses/        # Offline audio files
-├── tests/                  # Test scripts
-├── requirements.txt        # Python dependencies
-├── .env.example           # Configuration template
-└── README.md              # This file
+│   └── pommai.service            # Systemd service file
+├── scripts/
+│   ├── setup.sh                  # Automated deployment
+│   ├── update.sh                 # Update script
+│   └── diagnose.sh               # System diagnostics
+├── audio_responses/              # Offline audio files
+├── tests/                        # Hardware and integration tests
+├── requirements.txt              # Python dependencies
+├── .env.example                  # Configuration template
+└── README.md                     # This file
 ```
 
 ### Testing

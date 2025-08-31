@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Card } from "@/components";
+import { Button, Card } from '@pommai/ui';
 import Link from "next/link";
 import { useState } from 'react';
 
@@ -17,7 +17,7 @@ export default function Home() {
             <img src="/pommaitext.png" alt="Pommai" className="h-8" />
           </Link>
           <nav className="flex gap-4 items-center">
-            <Link href="/pricing" className="text-black hover:text-gray-700 font-medium">
+            <Link href="/pricing" className="text-black hover:text-gray-700 font-geo font-medium text-sm">
               Pricing
             </Link>
             <Link href="/auth">
@@ -51,11 +51,11 @@ export default function Home() {
         <section className="relative overflow-hidden">
           <div className="container mx-auto px-4 py-20">
             <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-5xl md:text-7xl font-bold mb-6 retro-text text-black">
+              <h1 className="text-3xl md:text-4xl font-minecraft font-bold mb-6 main-title text-black">
                 Bring Your Toys to Life
-              </h2>
-              <div className="text-6xl mb-8">🧸</div>
-              <p className="text-xl md:text-2xl mb-10 text-gray-800 max-w-2xl mx-auto leading-relaxed">
+              </h1>
+              <div className="text-4xl mb-8">🧸</div>
+              <p className="text-lg md:text-xl mb-10 text-gray-800 max-w-2xl mx-auto leading-relaxed font-geo">
                 Create unique AI personalities for your plushies and toys.
                 Safe, magical, and completely under your control.
               </p>
@@ -66,7 +66,7 @@ export default function Home() {
                     textColor="white"
                     borderColor="black"
                     shadow="#8b5fa3"
-                    className="px-10 py-5 text-xl font-bold"
+                    className="px-8 py-4 text-lg font-geo font-bold"
                   >
                     Start Creating
                   </Button>
@@ -77,7 +77,7 @@ export default function Home() {
                     textColor="black"
                     borderColor="black"
                     shadow="#d0d0d0"
-                    className="px-10 py-5 text-xl font-bold"
+                    className="px-8 py-4 text-lg font-geo font-bold"
                   >
                     Learn More
                   </Button>
@@ -96,7 +96,7 @@ export default function Home() {
                 className="p-8"
               >
                 <div className="text-center mb-6">
-                  <span className="text-sm font-bold uppercase tracking-wider text-gray-600">Your toy is saying</span>
+                  <span className="text-xs font-geo font-bold uppercase tracking-wider text-gray-600">Your toy is saying</span>
                 </div>
                 <div className="flex flex-col md:flex-row items-center gap-8">
                   <div className="text-8xl flex-shrink-0">🐻</div>
@@ -107,13 +107,13 @@ export default function Home() {
                       shadowColor="#92cd41"
                       className="p-4 mb-4"
                     >
-                      <p className="text-lg font-medium text-black" style={{ fontFamily: 'Georgia, serif' }}>
+                      <p className="text-base font-geo font-medium text-black">
                         &quot;Hello! I&apos;m Teddy! Want to hear a story about magical forests?&quot;
                       </p>
                     </Card>
                     <div className="flex gap-3 items-center justify-center md:justify-start">
                       <div className="w-4 h-4 rounded-full bg-green-500 animate-pulse"></div>
-                      <span className="text-sm font-bold uppercase tracking-wider text-gray-600">Active</span>
+                      <span className="text-xs font-geo font-bold uppercase tracking-wider text-gray-600">Active</span>
                     </div>
                   </div>
                 </div>
@@ -125,9 +125,9 @@ export default function Home() {
         {/* How It Works */}
         <section id="how-it-works" className="bg-white border-y-4 border-black py-20">
           <div className="container mx-auto px-4">
-            <h3 className="text-5xl font-bold text-center mb-16 retro-text text-black">
+            <h2 className="text-3xl font-geo font-bold text-center mb-16 sub-heading text-black">
               How It Works
-            </h3>
+            </h2>
             <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
               {[
                 {
@@ -160,9 +160,9 @@ export default function Home() {
                     shadowColor={hoveredCard === index ? feature.color : '#000000'}
                     className="p-8 cursor-pointer transition-all hover:translate-y-[-4px] h-full"
                   >
-                    <div className="text-6xl mb-6 text-center">{feature.icon}</div>
-                    <h4 className="text-2xl font-bold mb-3 text-black retro-text text-center">{feature.title}</h4>
-                    <p className="text-gray-700 text-center leading-relaxed">{feature.description}</p>
+                    <div className="text-4xl mb-6 text-center">{feature.icon}</div>
+                    <h3 className="text-xl font-geo font-bold mb-3 text-black sub-heading text-center">{feature.title}</h3>
+                    <p className="text-gray-700 text-center leading-relaxed font-geo text-sm">{feature.description}</p>
                   </Card>
                 </div>
               ))}
@@ -174,10 +174,10 @@ export default function Home() {
         <section className="py-20" style={{ backgroundColor: '#ffe4e1' }}>
           <div className="container mx-auto px-4">
             <div className="max-w-5xl mx-auto">
-              <h3 className="text-5xl font-bold text-center mb-16 retro-text text-black">
+              <h2 className="text-3xl font-geo font-bold text-center mb-16 sub-heading text-black">
                 Safety First, Always
-              </h3>
-              <div className="text-center text-6xl mb-12">🛡️</div>
+              </h2>
+              <div className="text-center text-4xl mb-12">🛡️</div>
               <div className="grid md:grid-cols-2 gap-8">
                 <Card 
                   bg="#ffffff" 
@@ -185,23 +185,23 @@ export default function Home() {
                   shadowColor="#000000"
                   className="p-8"
                 >
-                  <h4 className="text-2xl font-bold mb-6 text-black retro-text">For Parents</h4>
-                  <ul className="space-y-4 text-lg">
+                  <h3 className="text-xl font-geo font-bold mb-6 text-black sub-heading">For Parents</h3>
+                  <ul className="space-y-4 text-base">
                     <li className="flex items-start">
-                      <span className="text-green-600 font-bold mr-3 text-xl">✓</span>
-                      <span className="text-gray-700">Real-time conversation monitoring</span>
+                      <span className="text-green-600 font-bold mr-3 text-lg">✓</span>
+                      <span className="text-gray-700 font-geo text-sm">Real-time conversation monitoring</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-green-600 font-bold mr-3 text-xl">✓</span>
-                      <span className="text-gray-700">Content filtering & safety controls</span>
+                      <span className="text-green-600 font-bold mr-3 text-lg">✓</span>
+                      <span className="text-gray-700 font-geo text-sm">Content filtering & safety controls</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-green-600 font-bold mr-3 text-xl">✓</span>
-                      <span className="text-gray-700">Emergency stop button</span>
+                      <span className="text-green-600 font-bold mr-3 text-lg">✓</span>
+                      <span className="text-gray-700 font-geo text-sm">Emergency stop button</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-green-600 font-bold mr-3 text-xl">✓</span>
-                      <span className="text-gray-700">Complete privacy - your data stays yours</span>
+                      <span className="text-green-600 font-bold mr-3 text-lg">✓</span>
+                      <span className="text-gray-700 font-geo text-sm">Complete privacy - your data stays yours</span>
                     </li>
                   </ul>
                 </Card>
@@ -211,23 +211,23 @@ export default function Home() {
                   shadowColor="#000000"
                   className="p-8"
                 >
-                  <h4 className="text-2xl font-bold mb-6 text-black retro-text">For Kids</h4>
-                  <ul className="space-y-4 text-lg">
+                  <h3 className="text-xl font-geo font-bold mb-6 text-black sub-heading">For Kids</h3>
+                  <ul className="space-y-4 text-base">
                     <li className="flex items-start">
-                      <span className="text-green-600 font-bold mr-3 text-xl">✓</span>
-                      <span className="text-gray-700">Age-appropriate responses only</span>
+                      <span className="text-green-600 font-bold mr-3 text-lg">✓</span>
+                      <span className="text-gray-700 font-geo text-sm">Age-appropriate responses only</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-green-600 font-bold mr-3 text-xl">✓</span>
-                      <span className="text-gray-700">No data collection from children</span>
+                      <span className="text-green-600 font-bold mr-3 text-lg">✓</span>
+                      <span className="text-gray-700 font-geo text-sm">No data collection from children</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-green-600 font-bold mr-3 text-xl">✓</span>
-                      <span className="text-gray-700">Push-to-talk (not always listening)</span>
+                      <span className="text-green-600 font-bold mr-3 text-lg">✓</span>
+                      <span className="text-gray-700 font-geo text-sm">Push-to-talk (not always listening)</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-green-600 font-bold mr-3 text-xl">✓</span>
-                      <span className="text-gray-700">LED indicators show when active</span>
+                      <span className="text-green-600 font-bold mr-3 text-lg">✓</span>
+                      <span className="text-gray-700 font-geo text-sm">LED indicators show when active</span>
                     </li>
                   </ul>
                 </Card>
@@ -239,10 +239,10 @@ export default function Home() {
         {/* CTA Section */}
         <section className="border-t-4 border-black py-20">
           <div className="container mx-auto px-4 text-center">
-            <h3 className="text-5xl font-bold mb-8 retro-text text-black">
+            <h2 className="text-3xl font-geo font-bold mb-8 sub-heading text-black">
               Ready to Create Magic?
-            </h3>
-            <p className="text-xl mb-10 text-gray-800 max-w-2xl mx-auto leading-relaxed">
+            </h2>
+            <p className="text-lg mb-10 text-gray-800 max-w-2xl mx-auto leading-relaxed font-geo">
               Join thousands of creators bringing joy to children through safe, intelligent toys.
             </p>
             <Link href="/auth">
@@ -251,7 +251,7 @@ export default function Home() {
                 textColor="white"
                 borderColor="black"
                 shadow="#8b5fa3"
-                className="px-10 py-5 text-xl font-bold"
+                className="px-8 py-4 text-lg font-geo font-bold"
               >
                 Start Creating Your First Toy
               </Button>
@@ -267,11 +267,11 @@ export default function Home() {
             <div className="mb-4 md:mb-0">
               <div className="flex items-center gap-2 mb-2">
                 <img src="/pommaiicon.png" alt="Pommai Logo" className="h-6 w-6" />
-                <h4 className="text-xl font-bold">Pommai.co</h4>
+                <h4 className="text-lg font-geo font-bold">Pommai.co</h4>
               </div>
-              <p className="text-gray-400">Bringing toys to life, safely.</p>
+              <p className="text-gray-400 font-geo text-sm">Bringing toys to life, safely.</p>
             </div>
-            <nav className="flex gap-6 text-gray-400">
+            <nav className="flex gap-6 text-gray-400 font-geo text-sm">
               <Link href="/about" className="hover:text-white">About</Link>
               <Link href="/privacy" className="hover:text-white">Privacy</Link>
               <Link href="/docs" className="hover:text-white">Docs</Link>
@@ -279,7 +279,7 @@ export default function Home() {
             </nav>
           </div>
           <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400">
-            <p>© 2024 Pommai. Made with ❤️ for parents and kids.</p>
+            <p className="font-geo text-sm">© 2024 Pommai. Made with ❤️ for parents and kids.</p>
           </div>
         </div>
       </footer>
