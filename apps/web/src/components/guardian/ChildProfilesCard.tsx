@@ -14,17 +14,17 @@ interface ChildProfile {
 }
 
 interface ChildProfilesCardProps {
-  children: ChildProfile[];
+  profiles: ChildProfile[];
   selectedChildId: string | null;
   onChildSelect: (childId: string) => void;
 }
 
 export function ChildProfilesCard({ 
-  children, 
+  profiles, 
   selectedChildId, 
   onChildSelect 
 }: ChildProfilesCardProps) {
-  const selectedChild = children.find(c => c.id === selectedChildId) || children[0];
+  const selectedChild = profiles.find(c => c.id === selectedChildId) || profiles[0];
 
   return (
     <Card 
@@ -38,7 +38,7 @@ export function ChildProfilesCard({
         👨‍👩‍👧‍👦 Your Children
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {children.map((child) => (
+        {profiles.map((child) => (
           <Card
             key={child.id}
             bg={selectedChild?.id === child.id ? "#c381b5" : "#ffffff"}

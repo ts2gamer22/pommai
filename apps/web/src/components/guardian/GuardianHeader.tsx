@@ -21,7 +21,7 @@ export function GuardianHeader({ onEmergencyStop }: GuardianHeaderProps) {
             🛡️ Guardian Dashboard
           </h1>
           <p className="font-bold text-gray-700 uppercase tracking-wide">
-            Monitor and protect your children's AI interactions
+            Monitor and protect your children&apos;s AI interactions
           </p>
         </div>
       </div>

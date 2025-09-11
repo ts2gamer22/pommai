@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button, Tabs, TabsList, TabsTrigger, TabsContent, Input } from '@pommai/ui';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ToyWizard } from '@/components/dashboard/ToyWizard';
 import { MyToysGrid } from '@/components/dashboard/MyToysGrid';
 import { GuardianDashboard } from '@/components/guardian/GuardianDashboard';
@@ -30,11 +31,11 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#fefcd0] to-[#f4e5d3] dashboard-page">
       {/* Navigation Header */}
       <header className="border-b-[5px] border-black bg-white shadow-[0_4px_0_0_#c381b5]">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-[var(--spacing-md)] py-[var(--spacing-md)]">
           <div className="flex justify-between items-center">
             <Link href="/" className="flex items-center gap-3 hover-lift transition-transform">
-              <img src="/pommaiicon.png" alt="Pommai Logo" className="h-8 w-8 sm:h-10 sm:w-10 pixelated" />
-              <img src="/pommaitext.png" alt="Pommai" className="h-6 sm:h-8 pixelated" />
+              <Image src="/pommaiicon.png" alt="Pommai Logo" width={40} height={40} className="h-8 w-8 sm:h-10 sm:w-10 pixelated" />
+              <Image src="/pommaitext.png" alt="Pommai" width={140} height={32} className="h-6 sm:h-8 pixelated" />
             </Link>
             
             {/* Mobile-friendly navigation */}
@@ -75,9 +76,9 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 max-w-7xl py-4 sm:py-6 lg:py-8">
+      <div className="container mx-auto px-[var(--spacing-md)] max-w-7xl py-[var(--spacing-md)] sm:py-[var(--spacing-lg)] lg:py-[var(--spacing-xl)]">
         {/* Dashboard Header with better mobile spacing */}
-        <div className="mb-6 sm:mb-8 lg:mb-10 relative">
+        <div className="mb-[var(--spacing-lg)] sm:mb-[var(--spacing-xl)] lg:mb-[var(--spacing-2xl)] relative">
           <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
             <div className="text-center sm:text-left">
               <h1 className="font-minecraft text-lg sm:text-xl lg:text-2xl mb-2 sm:mb-4 uppercase tracking-wider text-gray-800"
@@ -96,7 +97,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Cards - Mobile-Responsive Layout */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8 sm:mb-10 lg:mb-12">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-[var(--spacing-sm)] sm:gap-[var(--spacing-md)] lg:gap-[var(--spacing-lg)] mb-[var(--spacing-xl)] sm:mb-[var(--spacing-2xl)] lg:mb-[var(--spacing-3xl)]">
           <Card 
             bg="#ffffff" 
             borderColor="black" 
@@ -172,7 +173,7 @@ export default function DashboardPage() {
         {/* Main Content Tabs - Mobile-Enhanced */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList 
-            className="mb-6 sm:mb-8 w-full flex flex-wrap justify-center gap-2 sm:gap-3 p-2" 
+            className="mb-[var(--spacing-lg)] sm:mb-[var(--spacing-xl)] w-full flex flex-wrap justify-center gap-[var(--spacing-xs)] sm:gap-[var(--spacing-sm)] p-[var(--spacing-sm)]" 
             bg="#ffffff"
             shadowColor="#c381b5"
           >
@@ -209,7 +210,7 @@ export default function DashboardPage() {
                 bg="#ffffff" 
                 borderColor="black" 
                 shadowColor="#f7931e"
-                className="p-8 text-center hover-lift"
+                className="p-[var(--spacing-xl)] text-center hover-lift"
               >
                 <h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-6 uppercase tracking-wider text-gray-800">Device Hub</h2>
                 <div className="inline-block relative mb-8">
@@ -346,7 +347,7 @@ export default function DashboardPage() {
                           bg="#ffffff"
                           borderColor="black"
                           className="font-geo font-medium"
-                          onChange={(e) => console.log('Username changed:', e.target.value)}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => console.log('Username changed:', e.target.value)}
                         />
                       </div>
                     </Card>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ChangeEvent } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -27,8 +27,20 @@ import {
 } from "lucide-react";
 import { playAudio, stopAudio, cleanupAudioResources } from "@/lib/audio";
 
+interface Voice {
+  _id?: string;
+  name: string;
+  description?: string;
+  externalVoiceId?: string;
+  voiceId?: string;
+  language?: string;
+  gender?: string;
+  accent?: string;
+  ageGroup?: string;
+}
+
 interface VoicePreviewProps {
-  voice: any;
+  voice: Voice;
   isForKids?: boolean;
 }
 
@@ -74,7 +86,6 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
   const [speed, setSpeed] = useState([100]);
   const [pitch, setPitch] = useState([100]);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentAudioId = useRef<string | null>(null);
   
   // Use Convex action for TTS
@@ -187,12 +198,15 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
             <Volume2 className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-lg">{voice.name}</h3>
+            <h3 className="retro-h3 text-base sm:text-lg">{voice.name}</h3>
             <p className="text-sm text-gray-500">{voice.description}</p>
           </div>
         </div>
         <Button
-          variant="ghost"
+          bg="#ffffff"
+          textColor="black"
+          borderColor="black"
+          shadow="#e0e0e0"
           size="sm"
           onClick={() => setShowAdvanced(!showAdvanced)}
         >
@@ -216,7 +230,14 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
               <SelectItem value="storytelling">Storytelling</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={handleRandomPhrase}>
+          <Button 
+            bg="#ffffff"
+            textColor="black"
+            borderColor="black"
+            shadow="#e0e0e0"
+            size="sm" 
+            onClick={handleRandomPhrase}
+          >
             <RefreshCw className="w-4 h-4 mr-1" />
             Random
           </Button>
@@ -226,7 +247,7 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
           <label className="text-sm font-medium">Preview Text</label>
           <Textarea
             value={textToPreview}
-            onChange={(e) => {
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
               setCustomText(e.target.value);
               setSelectedPhrase("");
             }}
@@ -235,7 +256,10 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
           />
           {customText && (
             <Button
-              variant="ghost"
+              bg="#f0f0f0"
+              textColor="black"
+              borderColor="black"
+              shadow="#d0d0d0"
               size="sm"
               onClick={() => {
                 setCustomText("");
@@ -250,11 +274,11 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
 
       {/* Advanced Settings */}
       {showAdvanced && (
-        <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+        <div className="space-y-4 p-4 rounded-lg border-2 border-black bg-[#fff6cc]">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Volume</label>
-              <span className="text-sm text-gray-500">{volume[0]}%</span>
+              <span className="text-sm text-gray-700">{volume[0]}%</span>
             </div>
             <Slider
               value={volume}
@@ -269,7 +293,7 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Speed</label>
-              <span className="text-sm text-gray-500">{speed[0]}%</span>
+              <span className="text-sm text-gray-700">{speed[0]}%</span>
             </div>
             <Slider
               value={speed}
@@ -284,7 +308,7 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Pitch</label>
-              <span className="text-sm text-gray-500">{pitch[0]}%</span>
+              <span className="text-sm text-gray-700">{pitch[0]}%</span>
             </div>
             <Slider
               value={pitch}
@@ -331,7 +355,14 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
             </>
           )}
         </Button>
-        <Button variant="outline" size="lg" disabled={isLoading}>
+        <Button 
+          bg="#ffffff"
+          textColor="black"
+          borderColor="black"
+          shadow="#e0e0e0"
+          size="lg" 
+          disabled={isLoading}
+        >
           <Mic className="w-5 h-5 mr-2" />
           Test with Mic
         </Button>

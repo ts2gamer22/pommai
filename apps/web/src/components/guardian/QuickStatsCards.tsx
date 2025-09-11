@@ -28,7 +28,7 @@ export function QuickStatsCards({ selectedChild }: QuickStatsCardsProps) {
       >
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-black uppercase tracking-wider text-gray-700">Today's Activity</p>
+            <p className="text-sm font-black uppercase tracking-wider text-gray-700">Today&apos;s Activity</p>
             <p className="text-2xl font-black text-black">{selectedChild.currentUsage} min</p>
           </div>
           <Clock className="w-8 h-8 text-blue-500" />

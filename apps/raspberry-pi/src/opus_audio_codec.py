@@ -16,8 +16,12 @@ from enum import Enum
 try:
     import opuslib
 except ImportError:
-    # Fallback to pyopus if opuslib not available
-    import pyopus as opuslib
+    try:
+        # Fallback to pyopus if opuslib not available
+        import pyopus as opuslib
+    except ImportError:
+        # Neither library available - we'll handle this in __init__
+        opuslib = None
 
 import numpy as np
 
@@ -63,12 +67,32 @@ class OpusAudioCodec:
     
     def __init__(self, config: Optional[OpusConfig] = None):
         self.config = config or OpusConfig()
-        self._setup_codec()
+        self.encoder = None
+        self.decoder = None
+        self.initialized = False
+        
+        # Check if we're using PCM16 format
+        import os
+        audio_format = os.getenv('AUDIO_SEND_FORMAT', 'opus').lower()
+        
+        if audio_format == 'pcm16':
+            logger.info("PCM16 format configured, skipping Opus codec initialization")
+        else:
+            try:
+                self._setup_codec()
+                self.initialized = True
+            except Exception as e:
+                logger.error(f"Failed to initialize Opus codec: {e}")
+                logger.info("Will use PCM16 format instead")
+        
         self._setup_buffers()
         self._setup_metrics()
         
     def _setup_codec(self):
         """Initialize Opus encoder and decoder"""
+        if opuslib is None:
+            raise ImportError("No Opus library available (opuslib or pyopus)")
+        
         try:
             # Create encoder
             self.encoder = opuslib.Encoder(
@@ -77,10 +101,20 @@ class OpusAudioCodec:
                 opuslib.APPLICATION_VOIP  # Optimized for voice
             )
             
-            # Configure encoder
+            # Configure encoder with proper value passing
             self.encoder.bitrate = self.config.bitrate
             self.encoder.complexity = self.config.complexity
-            self.encoder.inband_fec = self.config.enable_fec
+            
+            # Handle the FEC setting issue
+            try:
+                self.encoder.inband_fec = self.config.enable_fec
+            except TypeError:
+                # Some versions need the value passed differently
+                if hasattr(self.encoder, '_set_inband_fec'):
+                    self.encoder._set_inband_fec(1 if self.config.enable_fec else 0)
+                else:
+                    logger.warning("Could not set inband_fec")
+            
             self.encoder.packet_loss_perc = self.config.packet_loss_perc
             
             if hasattr(self.encoder, 'dtx'):
@@ -95,8 +129,9 @@ class OpusAudioCodec:
                 self.config.channels
             )
             
-            logger.info(f"Opus codec initialized: {self.config.bitrate}bps, "
-                       f"{self.config.frame_size_ms}ms frames")
+            logger.info(f"Opus (pylibopus) codec initialized: {self.config.bitrate}bps, "
+                       f"{self.config.frame_size_ms}ms frames, "
+                       f"FEC={self.config.enable_fec}, DTX={self.config.enable_dtx}")
             
         except Exception as e:
             logger.error(f"Failed to initialize Opus codec: {e}")
@@ -138,6 +173,10 @@ class OpusAudioCodec:
         Returns:
             Compressed Opus data with header
         """
+        if not self.initialized or self.encoder is None:
+            # Codec not initialized, return None to indicate PCM16 should be used
+            return None
+            
         try:
             # Validate input length
             expected_bytes = self.config.frame_size_bytes
@@ -180,6 +219,10 @@ class OpusAudioCodec:
         Returns:
             PCM audio data (16-bit, mono)
         """
+        if not self.initialized or self.decoder is None:
+            # Codec not initialized, return None
+            return None
+            
         try:
             # Extract header
             if len(opus_data) < 4:
@@ -332,15 +375,18 @@ class OpusAudioCodec:
             self.metrics['network_quality'] = NetworkQuality.POOR
             new_bitrate = 12000  # Minimum quality
         
-        # Update encoder settings
-        if new_bitrate != self.encoder.bitrate:
-            self.encoder.bitrate = new_bitrate
-            self.metrics['current_bitrate'] = new_bitrate
-            logger.info(f"Adapted bitrate to {new_bitrate}bps "
-                       f"(quality: {self.metrics['network_quality'].value})")
-        
-        # Adjust FEC
-        self.encoder.packet_loss_perc = int(packet_loss * 100)
+        # Update encoder settings if initialized
+        if self.encoder and new_bitrate != self.metrics['current_bitrate']:
+            try:
+                self.encoder.bitrate = new_bitrate
+                self.metrics['current_bitrate'] = new_bitrate
+                logger.info(f"Adapted bitrate to {new_bitrate}bps "
+                           f"(quality: {self.metrics['network_quality'].value})")
+                
+                # Adjust FEC
+                self.encoder.packet_loss_perc = int(packet_loss * 100)
+            except Exception as e:
+                logger.warning(f"Could not adapt bitrate: {e}")
     
     def get_compression_ratio(self) -> float:
         """Calculate current compression ratio"""

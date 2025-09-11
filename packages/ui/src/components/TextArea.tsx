@@ -1,4 +1,4 @@
-import React, { TextareaHTMLAttributes, forwardRef, useMemo } from "react";
+import { TextareaHTMLAttributes, forwardRef, useMemo } from "react";
 
 export interface TextAreaProps
   extends TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -7,6 +7,12 @@ export interface TextAreaProps
   borderColor?: string;
 }
 
+/**
+ * TextArea
+ *
+ * Pixel-styled multi-line input.
+ * - No font is forced; apply font-geo via className.
+ */
 export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
   ({ className = "", bg, textColor, borderColor, style, ...props }, ref) => {
     const svgString = useMemo(() => {

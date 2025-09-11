@@ -1,18 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { Card, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger } from '@pommai/ui';
+import { Id } from '../../../convex/_generated/dataModel';
+import { Card, Button, Input } from '@pommai/ui';
 import Calendar from 'react-calendar';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { 
   Search, 
   Filter, 
   Calendar as CalendarIcon,
-  MessageSquare,
-  Clock,
-  TrendingUp,
   AlertCircle,
   Download,
   ChevronDown,
@@ -41,7 +39,7 @@ export function ConversationViewer({ toyId, isGuardianMode = false }: Conversati
   
   // Filter states
   const [filters, setFilters] = useState<ConversationFilters>({
-    toyId: toyId as any,
+    toyId,
     searchQuery: '',
     sentiment: [],
     hasFlaggedMessages: undefined,
@@ -65,14 +63,21 @@ export function ConversationViewer({ toyId, isGuardianMode = false }: Conversati
   // Fetch conversations with filters
   const conversations = useQuery(
     api.conversations.getFilteredConversationHistory,
-    filters as any
+    {
+      toyId: (filters.toyId as unknown as Id<"toys"> | undefined),
+      sentiment: filters.sentiment,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+      hasFlaggedMessages: filters.hasFlaggedMessages,
+      searchQuery: filters.searchQuery,
+    }
   );
 
   // Fetch analytics
   const analytics = useQuery(
     api.conversations.getConversationAnalytics,
     {
-      toyId: toyId as any,
+      toyId: (toyId as unknown as Id<"toys"> | undefined),
       dateFrom: filters.dateFrom,
       dateTo: filters.dateTo,
     }
@@ -160,7 +165,7 @@ export function ConversationViewer({ toyId, isGuardianMode = false }: Conversati
               <Input
                 placeholder="Search conversations..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                 bg="#fefcd0"
                 borderColor="black"
                 className="pl-10 font-medium"
@@ -207,9 +212,10 @@ export function ConversationViewer({ toyId, isGuardianMode = false }: Conversati
             >
               <Calendar
                 selectRange
-                onChange={(value: any) => {
-                  if (Array.isArray(value)) {
-                    setDateRange([value[0], value[1]]);
+                onChange={(value) => {
+                  const range = value as Date | Date[];
+                  if (Array.isArray(range)) {
+                    setDateRange([range[0] ?? null, range[1] ?? null]);
                     setShowCalendar(false);
                   }
                 }}
@@ -235,8 +241,8 @@ export function ConversationViewer({ toyId, isGuardianMode = false }: Conversati
                     <label key={key} className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={filters.sentiment?.includes(key as any) || false}
-                        onChange={() => handleSentimentToggle(key as any)}
+                        checked={filters.sentiment?.includes(key as 'positive' | 'neutral' | 'negative') || false}
+                        onChange={() => handleSentimentToggle(key as 'positive' | 'neutral' | 'negative')}
                         className="w-4 h-4 border-2 border-black"
                       />
                       <Icon className={`w-4 h-4 ${color}`} />
@@ -270,7 +276,7 @@ export function ConversationViewer({ toyId, isGuardianMode = false }: Conversati
                   shadow="#d0d0d0"
                   onClick={() => {
                     setFilters({
-                      toyId: toyId as any,
+                      toyId,
                       searchQuery: '',
                       sentiment: [],
                       hasFlaggedMessages: undefined,

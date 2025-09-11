@@ -16,7 +16,13 @@ export interface InputProps
   };
 }
 
-export const Input = ({
+/**
+ * Input
+ *
+ * Pixel-styled input with optional right-side icon button.
+ * - No font is forced; apply font-geo or other font classes via className on the wrapper.
+ */
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ 
   className = "",
   icon,
   onIconClick,
@@ -26,7 +32,7 @@ export const Input = ({
   fontSize,
   style,
   ...props
-}: InputProps): JSX.Element => {
+}, ref): JSX.Element => {
   const svgString = useMemo(() => {
     const color = borderColor || "currentColor";
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><path d="M3 1h1v1h-1zM4 1h1v1h-1zM2 2h1v1h-1zM5 2h1v1h-1zM1 3h1v1h-1zM6 3h1v1h-1zM1 4h1v1h-1zM6 4h1v1h-1zM2 5h1v1h-1zM5 5h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1z" fill="${color}"/></svg>`;
@@ -48,6 +54,7 @@ export const Input = ({
       style={customStyle}
     >
       <input
+        ref={ref}
         className="pixel-input w-full pr-7"
         {...props}
       />
@@ -62,4 +69,6 @@ export const Input = ({
       )}
     </div>
   );
-};
+});
+
+Input.displayName = "Input";

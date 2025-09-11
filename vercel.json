@@ -4,5 +4,8 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "devCommand": "npm run dev",
-  "root": "apps/web"
+  "root": "apps/web",
+  "env": {
+    "NEXT_PUBLIC_CONVEX_URL": "@convex_url"
+  }
 }

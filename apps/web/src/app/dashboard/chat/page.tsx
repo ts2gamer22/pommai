@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
@@ -10,13 +10,26 @@ import { Card } from '@/components/ui/card';
 import { ArrowLeft, Bot, MessageSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@pommai/ui';
 
+/**
+ * Chat Page
+ * - Pixel page title; supporting text stays Work Sans.
+ * - Spacing tokens used in containers.
+ */
 export default function ChatPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChatPageInner />
+    </Suspense>
+  );
+}
+
+function ChatPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toyName = searchParams.get('toy');
   
   // Get user's toys
-  const toys = useQuery(api.toys.getUserToys, {});
+  const toys = useQuery(api.toys.getMyToys);
   const [selectedToyId, setSelectedToyId] = useState<string | null>(null);
   
   // Find toy by name or select first available
@@ -39,7 +52,7 @@ export default function ChatPage() {
 
   if (!toys || toys.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-[var(--spacing-md)] py-[var(--spacing-xl)]">
         <Card className="max-w-2xl mx-auto p-8 text-center">
           <Bot className="w-16 h-16 mx-auto mb-4 text-gray-400" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">No Toys Created Yet</h2>
@@ -55,7 +68,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-[var(--spacing-md)] py-[var(--spacing-xl)]">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -70,7 +83,7 @@ export default function ChatPage() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard
             </Button>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 className="font-minecraft text-base sm:text-lg lg:text-xl font-black text-gray-900 flex items-center gap-2">
               <MessageSquare className="w-8 h-8" />
               Chat Simulator
             </h1>

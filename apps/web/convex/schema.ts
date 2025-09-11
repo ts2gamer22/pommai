@@ -30,6 +30,7 @@ const schema = defineSchema({
     voiceId: v.string(),
     personalityPrompt: v.string(),
     knowledgeBaseId: v.optional(v.id("knowledgeBases")),
+    agentThreadId: v.optional(v.string()),
     
     // Guardian Mode specific fields (only when isForKids = true)
     guardianId: v.optional(v.id("users")), // Parent managing the toy
@@ -139,7 +140,8 @@ const schema = defineSchema({
     createdAt: v.string(),
   })
     .index("by_uploader", ["uploadedBy"])
-    .index("is_public", ["isPublic"]),
+    .index("is_public", ["isPublic"]) 
+    .index("by_external", ["externalVoiceId"]),
   
   // Toy assignment to devices/children
   toyAssignments: defineTable({

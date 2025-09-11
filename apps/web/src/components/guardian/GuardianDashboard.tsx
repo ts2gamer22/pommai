@@ -36,7 +36,7 @@ export function GuardianDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
 
   // Mock data - in production, these would come from Convex queries
-  const children: ChildProfile[] = [
+  const childrenProfiles: ChildProfile[] = [
     {
       id: "child-1",
       name: "Emma",
@@ -91,7 +91,7 @@ export function GuardianDashboard() {
     // In production, this would mark the alert as resolved
   };
 
-  const selectedChild = children.find(c => c.id === selectedChildId) || children[0];
+  const selectedChild = childrenProfiles.find(c => c.id === selectedChildId) || childrenProfiles[0];
   const activeAlerts = safetyAlerts.filter(a => !a.resolved);
   const childAlerts = safetyAlerts.filter(a => a.childId === selectedChild.id);
 
@@ -105,8 +105,8 @@ export function GuardianDashboard() {
         <ActiveAlertsCard activeAlerts={activeAlerts} />
 
         {/* Child Profiles */}
-        <ChildProfilesCard 
-          children={children}
+          <ChildProfilesCard 
+          profiles={childrenProfiles}
           selectedChildId={selectedChildId}
           onChildSelect={setSelectedChildId}
         />

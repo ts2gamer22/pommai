@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "./_generated/server";
+import { mutation, query, action, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
 
@@ -24,7 +24,7 @@ export const createConversation = mutation({
     const conversationId = await ctx.db.insert("conversations", {
       toyId: args.toyId,
       sessionId: args.sessionId,
-      startTime: Date.now().toString(),
+      startTime: new Date().toISOString(),
       userId: user?._id,
       duration: 0,
       messageCount: 0,
@@ -52,8 +52,8 @@ export const endConversation = mutation({
     if (!conversation) throw new Error("Conversation not found");
 
     await ctx.db.patch(args.conversationId, {
-      endTime: Date.now().toString(),
-      duration: Math.floor((Date.now() - parseInt(conversation.startTime)) / 1000),
+      endTime: new Date().toISOString(),
+      duration: Math.floor((Date.now() - new Date(conversation.startTime).getTime()) / 1000),
     });
   },
 });
@@ -126,7 +126,49 @@ export const getConversationHistory = query({
   },
 });
 
-// Get conversation details with messages
+// Get active conversations for monitoring
+export const getActiveConversations = query({
+  args: {
+    isForKids: v.optional(v.boolean()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    // Allow public test mode for development
+    const allowUnauthTests = (process.env.ALLOW_UNAUTH_TESTS || "true").toLowerCase() === "true";
+    if (!identity && !allowUnauthTests) return [];
+
+    let query = ctx.db.query("conversations");
+    
+    // Filter by toys that are for kids if specified
+    const conversations = await query
+      .order("desc")
+      .take(args.limit || 20);
+    
+    // Fetch toy details and filter by isForKids if needed
+    const conversationsWithToys = await Promise.all(
+      conversations.map(async (conv) => {
+        const toy = await ctx.db.get(conv.toyId);
+        if (args.isForKids && toy && !toy.isForKids) {
+          return null;
+        }
+        return { ...conv, toy };
+      })
+    );
+    
+    // Filter out nulls and return active conversations
+    return conversationsWithToys
+      .filter(conv => conv !== null)
+      .filter(conv => {
+        // Consider a conversation active if it had messages in the last hour
+        const oneHourAgo = Date.now() - (60 * 60 * 1000);
+        const lastActivity = parseInt((conv as any).lastMessageAt || (conv as any).startedAt || "0");
+        return lastActivity > oneHourAgo;
+      });
+  },
+});
+
+// Get conversation with messages
 export const getConversationWithMessages = query({
   args: {
     conversationId: v.id("conversations"),
@@ -352,5 +394,82 @@ export const getConversationAnalytics = query({
       // TODO: Add topic analysis when we have topic extraction
       topTopics: [],
     };
+  },
+});
+
+/**
+ * Get the active conversation for the current user and toy.
+ * Returns the most recent conversation for this toy owned by the user.
+ */
+export const getActiveConversation = query({
+  args: {
+    toyId: v.id("toys"),
+  },
+  handler: async (ctx, { toyId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    // Find the app user record from auth identity.
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", identity.email!))
+      .first();
+
+    if (!user) return null;
+
+    // Get latest conversation for this user and toy.
+    const conversations = await ctx.db
+      .query("conversations")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .order("desc")
+      .collect();
+
+    const conv = conversations.find((c) => c.toyId === toyId) || null;
+    return conv;
+  },
+});
+
+/**
+ * Internal helper to get or create a conversation by sessionId.
+ * - Does not require client auth.
+ * - Links the conversation's userId to the toy creator for Guardian Mode.
+ */
+export const getOrCreate = internalMutation({
+  args: {
+    toyId: v.id("toys"),
+    sessionId: v.string(),
+    location: v.optional(v.union(v.literal("toy"), v.literal("web"), v.literal("app"))),
+    deviceId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Try to find an existing conversation for this session.
+    const existing = await ctx.db
+      .query("conversations")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+
+    if (existing && existing.toyId === args.toyId) {
+      return existing._id;
+    }
+
+    // Create a new conversation linked to the toy's creator as the user.
+    const toy = await ctx.db.get(args.toyId);
+    const userId = toy?.creatorId;
+
+    const conversationId = await ctx.db.insert("conversations", {
+      toyId: args.toyId,
+      userId,
+      sessionId: args.sessionId,
+      startTime: new Date().toISOString(),
+      duration: 0,
+      messageCount: 0,
+      flaggedMessages: 0,
+      sentiment: "neutral",
+      topics: [],
+      location: args.location || "toy",
+      deviceId: args.deviceId,
+    });
+
+    return conversationId;
   },
 });

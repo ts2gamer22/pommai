@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { Card, Button, Input } from "@pommai/ui";
 import {
   Select,
@@ -107,7 +107,7 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
       >
         <div className="flex items-center gap-2 mb-4">
           <Filter className="w-5 h-5 text-blue-600" />
-          <h3 className="text-lg font-black uppercase tracking-wider text-black">
+          <h3 className="retro-h3 text-base sm:text-lg text-black">
             🔎 Content Filtering
           </h3>
         </div>
@@ -118,7 +118,7 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
             <label className="block text-sm font-black uppercase tracking-wider text-black mb-2">
               Content Filter Strictness
             </label>
-            <Select value={strictnessLevel} onValueChange={(value: any) => setStrictnessLevel(value)}>
+            <Select value={strictnessLevel} onValueChange={(value) => setStrictnessLevel(value as "low" | "medium" | "high")}>
               <SelectTrigger className="w-full border-2 border-black font-bold">
                 <SelectValue />
               </SelectTrigger>
@@ -154,8 +154,8 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
               <Input
                 placeholder="Add blocked topic..."
                 value={newBlockedTopic}
-                onChange={(e) => setNewBlockedTopic(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleAddBlockedTopic()}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setNewBlockedTopic(e.target.value)}
+                onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => e.key === "Enter" && handleAddBlockedTopic()}
                 bg="#ffffff"
                 borderColor="black"
                 className="font-bold flex-1"
@@ -196,8 +196,8 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
               <Input
                 placeholder="Add encouraged topic..."
                 value={newAllowedTopic}
-                onChange={(e) => setNewAllowedTopic(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleAddAllowedTopic()}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setNewAllowedTopic(e.target.value)}
+                onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => e.key === "Enter" && handleAddAllowedTopic()}
                 bg="#ffffff"
                 borderColor="black"
                 className="font-bold flex-1"
@@ -240,7 +240,7 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
       >
         <div className="flex items-center gap-2 mb-4">
           <Clock className="w-5 h-5 text-green-600" />
-          <h3 className="text-lg font-black uppercase tracking-wider text-black">
+          <h3 className="retro-h3 text-base sm:text-lg text-black retro-shadow-green">
             ⏰ Time Controls
           </h3>
         </div>
@@ -336,7 +336,7 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
       >
         <div className="flex items-center gap-2 mb-4">
           <Bell className="w-5 h-5 text-purple-600" />
-          <h3 className="text-lg font-black uppercase tracking-wider text-black">
+          <h3 className="retro-h3 text-base sm:text-lg text-black retro-shadow-orange">
             🔔 Notification Preferences
           </h3>
         </div>
@@ -364,7 +364,7 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
                 📅 Daily Summary
               </label>
               <p className="text-sm font-bold text-gray-600">
-                Receive a daily report of your child's activity
+                Receive a daily report of your child&apos;s activity
               </p>
             </div>
             <Switch
@@ -394,7 +394,7 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
             <label className="block text-sm font-black uppercase tracking-wider text-black mb-2">
               🎯 Alert Severity Threshold
             </label>
-            <Select value={severityThreshold} onValueChange={(value: any) => setSeverityThreshold(value)}>
+            <Select value={severityThreshold} onValueChange={(value) => setSeverityThreshold(value as "all" | "medium" | "high")}>
               <SelectTrigger className="border-2 border-black font-bold">
                 <SelectValue />
               </SelectTrigger>

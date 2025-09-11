@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useToyWizardStore } from '@/stores/toyWizardStore';
 import { Input, Button, Card } from '@pommai/ui';
 import { 
@@ -73,18 +73,18 @@ export function SafetyStep() {
   if (!toyConfig.isForKids) {
     return (
       <div className="space-y-6">
-        <div className="text-center py-12">
+      <div className="text-center py-12">
           <div className="w-20 h-20 border-4 border-black bg-[#f0f0f0] mx-auto mb-4 flex items-center justify-center">
             <Shield className="w-10 h-10 text-gray-400" />
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black mb-2 uppercase tracking-wider text-black"
+          <h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-2 uppercase tracking-wider text-gray-800"
             style={{
               textShadow: '2px 2px 0 #c381b5'
             }}
           >
             🛡️ Safety Settings
           </h2>
-          <p className="font-bold text-gray-700 max-w-md mx-auto uppercase tracking-wide">
+          <p className="font-geo font-medium text-gray-700 max-w-md mx-auto">
             Guardian Mode safety settings are only available when creating toys for children. 
             {toyConfig.name} will have standard safety measures for general use.
           </p>
@@ -150,14 +150,14 @@ export function SafetyStep() {
   return (
     <div className="space-y-6">
       <div className="text-center sm:text-left">
-        <h2 className="text-2xl sm:text-3xl font-black mb-2 uppercase tracking-wider text-black"
+        <h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-2 uppercase tracking-wider text-gray-800"
           style={{
             textShadow: '2px 2px 0 #c381b5'
           }}
         >
           🛡️ Configure Guardian Mode Safety
         </h2>
-        <p className="font-bold text-gray-700 uppercase tracking-wide">
+        <p className="font-geo font-medium text-gray-700">
           Set up safety features to ensure {toyConfig.name} provides a safe and age-appropriate experience.
         </p>
       </div>
@@ -169,7 +169,7 @@ export function SafetyStep() {
         shadowColor="#c381b5"
         className="p-4 sm:p-6"
       >
-        <h3 className="font-black text-lg uppercase tracking-wider text-black mb-4">📊 Safety Level</h3>
+        <h3 className="retro-h3 text-lg text-black mb-4">📊 Safety Level</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {SAFETY_LEVELS.map((level) => (
             <motion.label
@@ -200,7 +200,7 @@ export function SafetyStep() {
                 name="safetyLevel"
                 value={level.id}
                 checked={currentSettings.safetyLevel === level.id}
-                onChange={(e) => handleSafetyLevelChange(e.target.value as 'strict' | 'moderate' | 'relaxed')}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handleSafetyLevelChange(e.target.value as 'strict' | 'moderate' | 'relaxed')}
                 className="sr-only"
               />
               <div className="space-y-3">
@@ -236,7 +236,7 @@ export function SafetyStep() {
         shadowColor="#92cd41"
         className="p-4 sm:p-6"
       >
-        <h3 className="font-black text-lg uppercase tracking-wider text-black mb-4">🛡️ Content Filters</h3>
+        <h3 className="retro-h3 text-lg text-black mb-4">🛡️ Content Filters</h3>
         <p className="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide">Choose which types of content to filter</p>
         
         <div className="space-y-3">
@@ -274,9 +274,9 @@ export function SafetyStep() {
           <div className="flex gap-2">
             <Input
               value={newBlockedTopic}
-              onChange={(e) => setNewBlockedTopic(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setNewBlockedTopic(e.target.value)}
               placeholder="Add a topic to block..."
-              onKeyPress={(e) => e.key === 'Enter' && addBlockedTopic()}
+              onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addBlockedTopic()}
               bg="#ffffff"
               borderColor="black"
               className="font-bold flex-1"
@@ -344,7 +344,7 @@ export function SafetyStep() {
         >
           <p className="text-sm font-bold text-white uppercase tracking-wide">
             <strong>📊 Recommended for {toyConfig.ageGroup}:</strong> Based on the selected age group, 
-            we've pre-configured the safety level to "{currentSettings.safetyLevel}". 
+            we&apos;ve pre-configured the safety level to &quot;{currentSettings.safetyLevel}&quot;. 
             You can adjust this if needed.
           </p>
         </Card>

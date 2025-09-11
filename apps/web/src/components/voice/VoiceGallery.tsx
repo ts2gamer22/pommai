@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useQuery } from "convex/react";
+import { useState, useMemo, type ChangeEvent, type MouseEvent } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -19,16 +20,29 @@ import {
   Play,
   Pause,
   Volume2,
-  Star,
   Check,
   Upload,
   Search,
   Filter,
 } from "lucide-react";
 
+interface Voice {
+  _id: string;
+  name: string;
+  description?: string;
+  previewUrl: string;
+  provider?: string;
+  gender?: string;
+  language?: string;
+  accent?: string;
+  isPremium?: boolean;
+  tags: string[];
+  uploadedBy?: string;
+}
+
 interface VoiceGalleryProps {
   selectedVoiceId?: string;
-  onSelectVoice: (voice: any) => void;
+  onSelectVoice: (voice: Voice) => void;
   onUploadClick?: () => void;
   isForKids?: boolean;
 }
@@ -51,20 +65,21 @@ export function VoiceGallery({
     isForKids ? api.voices.getKidsFriendlyVoices : api.voices.getPublicVoices,
     genderFilter !== "all" || languageFilter !== "all" || ageGroupFilter !== "all"
       ? {
-          gender: genderFilter !== "all" ? (genderFilter as any) : undefined,
+          gender: genderFilter !== "all" ? (genderFilter as 'male' | 'female' | 'neutral') : undefined,
           language: languageFilter !== "all" ? languageFilter : undefined,
           ageGroup: ageGroupFilter !== "all" ? ageGroupFilter : undefined,
         }
       : {}
-  );
+  ) as Voice[] | undefined;
 
-  const myVoices = useQuery(api.voices.getMyVoices);
+  const myVoices = useQuery(api.voices.getMyVoices) as Voice[] | undefined;
+  const deleteVoiceMutation = useMutation(api.voices.deleteVoice);
 
   // Search functionality
   const searchResults = useQuery(
     api.voices.searchVoices,
     searchTerm.length > 2 ? { searchTerm } : "skip"
-  );
+  ) as Voice[] | undefined;
 
   // Combine and filter voices
   const allVoices = useMemo(() => {
@@ -83,7 +98,7 @@ export function VoiceGallery({
     return combined;
   }, [publicVoices, myVoices, searchResults, searchTerm]);
 
-  const handlePlayPreview = (voice: any) => {
+  const handlePlayPreview = (voice: Voice) => {
     // Stop any currently playing audio
     if (playingVoiceId) {
       const currentAudio = audioElements.get(playingVoiceId);
@@ -114,12 +129,22 @@ export function VoiceGallery({
     setPlayingVoiceId(voice._id);
   };
 
-  const getVoiceCardClass = (voice: any) => {
+  const handleDeleteVoice = async (voice: Voice, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await deleteVoiceMutation({ voiceId: voice._id as Id<"voices"> });
+    } catch (err) {
+      console.error('Failed to delete voice', err);
+    }
+  };
+
+  const getVoiceCardClass = (voice: Voice) => {
     const isSelected = selectedVoiceId === voice._id;
     const isCustom = voice.provider === "custom";
     
     if (isSelected) {
-      return "border-2 border-blue-500 bg-blue-50 dark:bg-blue-950";
+      // Light retro highlight with strong outline; avoid any dark blue backgrounds
+      return "border-2 border-black bg-[#fff6cc]";
     }
     if (isCustom) {
       return "border-dashed border-purple-300 dark:border-purple-700";
@@ -153,12 +178,18 @@ export function VoiceGallery({
             <Input
               placeholder="Search voices by name or tags..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
           {onUploadClick && (
-            <Button onClick={onUploadClick} variant="outline">
+            <Button 
+              onClick={onUploadClick} 
+              bg="#ffffff"
+              textColor="black"
+              borderColor="black"
+              shadow="#e0e0e0"
+            >
               <Upload className="w-4 h-4 mr-2" />
               Upload Voice
             </Button>
@@ -212,7 +243,7 @@ export function VoiceGallery({
       {/* Custom Voices Section */}
       {myVoices && myVoices.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold mb-3">My Custom Voices</h3>
+          <h3 className="retro-h3 text-base sm:text-lg mb-3">My Custom Voices</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             {myVoices.map((voice) => (
               <Card
@@ -228,7 +259,7 @@ export function VoiceGallery({
                     </p>
                   </div>
                   {selectedVoiceId === voice._id && (
-                    <Check className="w-5 h-5 text-blue-500 ml-2" />
+                    <Check className="w-5 h-5 text-black ml-2" />
                   )}
                 </div>
 
@@ -242,24 +273,29 @@ export function VoiceGallery({
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePlayPreview(voice);
-                    }}
-                  >
-                    {playingVoiceId === voice._id ? (
-                      <Pause className="w-4 h-4 mr-1" />
-                    ) : (
-                      <Play className="w-4 h-4 mr-1" />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={(e: MouseEvent) => {
+                        e.stopPropagation();
+                        handlePlayPreview(voice);
+                      }}
+                    >
+                      {playingVoiceId === voice._id ? (
+                        <Pause className="w-4 h-4 mr-1" />
+                      ) : (
+                        <Play className="w-4 h-4 mr-1" />
+                      )}
+                      Preview
+                    </Button>
+                    {voice.uploadedBy && (
+                      <Button
+                        size="sm"
+onClick={(e: MouseEvent) => handleDeleteVoice(voice, e)}
+                      >
+                        Delete
+                      </Button>
                     )}
-                    Preview
-                  </Button>
-                  <div className="flex items-center gap-1 text-sm text-gray-500">
-                    <Volume2 className="w-4 h-4" />
-                    {voice.usageCount}
                   </div>
                 </div>
               </Card>
@@ -270,7 +306,7 @@ export function VoiceGallery({
 
       {/* Public Voices */}
       <div>
-        <h3 className="text-lg font-semibold mb-3">
+        <h3 className="retro-h3 text-base sm:text-lg mb-3">
           {isForKids ? "Kid-Friendly Voices" : "Voice Library"}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -288,7 +324,7 @@ export function VoiceGallery({
                   </p>
                 </div>
                 {selectedVoiceId === voice._id && (
-                  <Check className="w-5 h-5 text-blue-500 ml-2" />
+                  <Check className="w-5 h-5 text-black ml-2" />
                 )}
               </div>
 
@@ -308,14 +344,13 @@ export function VoiceGallery({
                 )}
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-start">
                 <Button
                   size="sm"
-                  variant="ghost"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePlayPreview(voice);
-                  }}
+onClick={(e: MouseEvent) => {
+                        e.stopPropagation();
+                        handlePlayPreview(voice);
+                      }}
                 >
                   {playingVoiceId === voice._id ? (
                     <Pause className="w-4 h-4 mr-1" />
@@ -324,16 +359,6 @@ export function VoiceGallery({
                   )}
                   Preview
                 </Button>
-                <div className="flex items-center gap-3 text-sm text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    {voice.averageRating.toFixed(1)}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Volume2 className="w-4 h-4" />
-                    {voice.usageCount}
-                  </div>
-                </div>
               </div>
             </Card>
           ))}
@@ -345,7 +370,14 @@ export function VoiceGallery({
           <Volume2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p>No voices found matching your criteria.</p>
           {onUploadClick && (
-            <Button onClick={onUploadClick} variant="outline" className="mt-4">
+            <Button 
+              onClick={onUploadClick} 
+              bg="#ffffff"
+              textColor="black"
+              borderColor="black"
+              shadow="#e0e0e0"
+              className="mt-4"
+            >
               <Upload className="w-4 h-4 mr-2" />
               Upload Your Own Voice
             </Button>

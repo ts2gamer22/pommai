@@ -1,0 +1,47 @@
+# Production FastRTC Relay Gateway
+# Optimized for deployment on Fly.io or Cloudflare Workers
+# Pure WebSocket relay - no local AI processing
+
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install only essential system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements_relay.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements_relay.txt
+
+# Install aiohttp for TTS streaming (if not in requirements)
+RUN pip install --no-cache-dir aiohttp
+
+# Copy application files
+COPY server_relay_with_tts.py server_relay.py
+COPY tts_providers.py .
+
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Environment variables with production defaults
+ENV PORT=8080
+ENV HOST=0.0.0.0
+ENV PYTHONUNBUFFERED=1
+ENV LOG_LEVEL=INFO
+
+# Expose port (Fly.io uses 8080 by default)
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
+
+# Run the relay server
+CMD ["python", "server_relay.py"]

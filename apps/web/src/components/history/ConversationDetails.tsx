@@ -54,7 +54,7 @@ export function ConversationDetails({
 
   const handleExportTranscript = () => {
     const transcript = conversation.messages
-      .map((msg: any) => `[${format(new Date(msg.timestamp), 'HH:mm:ss')}] ${msg.role === 'user' ? 'User' : conversation.toy?.name || 'Toy'}: ${msg.content}`)
+      .map((msg: { timestamp: number | string | Date; role: string; content: string }) => `[${format(new Date(msg.timestamp), 'HH:mm:ss')}] ${msg.role === 'user' ? 'User' : conversation.toy?.name || 'Toy'}: ${msg.content}`)
       .join('\n');
     
     const blob = new Blob([transcript], { type: 'text/plain' });
@@ -135,7 +135,7 @@ export function ConversationDetails({
         {/* Messages Container */}
         <div className="flex-1 h-[400px] overflow-y-auto border-2 border-black bg-[#fefcd0] p-4">
           <div className="space-y-4">
-            {conversation.messages.map((message: any) => (
+            {conversation.messages.map((message) => (
               <div
                 key={message._id}
                 className={`flex gap-3 ${

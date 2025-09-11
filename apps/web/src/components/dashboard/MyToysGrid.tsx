@@ -33,8 +33,9 @@ export function MyToysGrid({ onCreateToy }: MyToysGridProps) {
   const duplicateToy = useMutation(api.toys.duplicateToy);
   const deleteToy = useMutation(api.toys.deleteToy);
 
+  interface Toy { _id: string; name: string; type: string; status: 'active' | 'paused' | 'archived'; }
   // Filter toys
-  const filteredToys = toys?.filter((toy: any) => {
+  const filteredToys = toys?.filter((toy: Toy) => {
     const matchesSearch = toy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          toy.type.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus === 'all' || toy.status === filterStatus;
@@ -140,7 +141,7 @@ export function MyToysGrid({ onCreateToy }: MyToysGridProps) {
       <AnimatePresence mode="popLayout">
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {filteredToys?.map((toy: any) => (
+            {filteredToys?.map((toy) => (
               <ToyGridItem
                 key={toy._id}
                 toy={toy}
@@ -154,7 +155,7 @@ export function MyToysGrid({ onCreateToy }: MyToysGridProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredToys?.map((toy: any) => (
+            {filteredToys?.map((toy) => (
               <ToyListItem
                 key={toy._id}
                 toy={toy}

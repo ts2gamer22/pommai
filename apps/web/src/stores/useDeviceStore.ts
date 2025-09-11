@@ -163,9 +163,10 @@ export const useDeviceStore = create<DeviceState>()(
             }, 2000);
           }, 3000);
           
-        } catch (error: any) {
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Pairing failed';
           set({ 
-            error: error.message || 'Pairing failed',
+            error: message,
             pairingStep: 'error',
             isPairing: false
           });
@@ -190,9 +191,10 @@ export const useDeviceStore = create<DeviceState>()(
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           get().updateDevice(deviceId, { status: 'connected' });
-        } catch (error: any) {
+        } catch (error: unknown) {
           get().updateDevice(deviceId, { status: 'error' });
-          set({ error: error.message || 'Failed to connect device' });
+          const message = error instanceof Error ? error.message : 'Failed to connect device';
+          set({ error: message });
         }
       },
       
@@ -200,8 +202,9 @@ export const useDeviceStore = create<DeviceState>()(
         try {
           // TODO: Implement actual disconnection logic
           get().updateDevice(deviceId, { status: 'disconnected' });
-        } catch (error: any) {
-          set({ error: error.message || 'Failed to disconnect device' });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Failed to disconnect device';
+          set({ error: message });
         }
       },
       
@@ -209,16 +212,18 @@ export const useDeviceStore = create<DeviceState>()(
         try {
           // TODO: Send toy configuration to device
           get().updateDevice(deviceId, { toyId });
-        } catch (error: any) {
-          set({ error: error.message || 'Failed to assign toy to device' });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Failed to assign toy to device';
+          set({ error: message });
         }
       },
       
       unassignToyFromDevice: async (deviceId: string) => {
         try {
           get().updateDevice(deviceId, { toyId: undefined });
-        } catch (error: any) {
-          set({ error: error.message || 'Failed to unassign toy from device' });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Failed to unassign toy from device';
+          set({ error: message });
         }
       },
       

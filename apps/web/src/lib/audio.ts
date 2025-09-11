@@ -182,7 +182,7 @@ export function stopAudio(id: string): void {
  * Stop all playing audio
  */
 export function stopAllAudio(): void {
-  activeAudioElements.forEach((audio, id) => {
+  activeAudioElements.forEach((audio, _id) => {
     audio.pause();
     audio.currentTime = 0;
   });

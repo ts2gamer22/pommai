@@ -10,7 +10,32 @@ import time
 import logging
 from enum import Enum
 from typing import Optional, Dict, Tuple
-import RPi.GPIO as GPIO
+import os
+try:
+    import RPi.GPIO as GPIO
+except Exception:
+    class _GPIOStub:
+        BCM = 'BCM'
+        OUT = 'OUT'
+        IN = 'IN'
+        LOW = 0
+        HIGH = 1
+        class PWM:
+            def __init__(self, *args, **kwargs):
+                pass
+            def start(self, *args, **kwargs):
+                pass
+            def ChangeDutyCycle(self, *args, **kwargs):
+                pass
+            def stop(self, *args, **kwargs):
+                pass
+    GPIO = _GPIOStub()
+
+# Try to import spidev for APA102 control (ReSpeaker v2)
+try:
+    import spidev  # type: ignore
+except Exception:
+    spidev = None
 
 
 class LEDPattern(Enum):
@@ -59,15 +84,65 @@ class ColorMixer:
         return r, g, b
 
 
+class PixelAPA102:
+    """Minimal APA102 (DotStar) driver over spidev for ReSpeaker v2 LEDs."""
+    def __init__(self, led_count: int = 2, spi_bus: int = 0, spi_dev: int = 0, max_mhz: int = 8):
+        if spidev is None:
+            raise RuntimeError("spidev not available")
+        self.led_count = max(1, led_count)
+        self.spi = spidev.SpiDev()
+        self.spi.open(spi_bus, spi_dev)
+        # Max clock speed (Hz). APA102 can handle high speeds; 8MHz is safe
+        self.spi.max_speed_hz = max_mhz * 1_000_000
+        self.spi.mode = 0b00
+
+    def _frame(self, colors, brightness: float):
+        # APA102 protocol: start frame (4x0x00), then per-LED: 0xE0 | brightness(5 bits) + B,G,R, end frame
+        start = [0x00, 0x00, 0x00, 0x00]
+        bval = max(1, min(31, int(31 * max(0.0, min(1.0, brightness)))))
+        led_frames = []
+        for (r, g, b) in colors:
+            led_frames += [0xE0 | bval, b & 0xFF, g & 0xFF, r & 0xFF]
+        end_len = (self.led_count + 15) // 16  # per spec
+        end = [0xFF] * max(1, end_len)
+        return start + led_frames + end
+
+    def set_all(self, r: int, g: int, b: int, brightness: float = 0.5):
+        frame = self._frame([(r, g, b)] * self.led_count, brightness)
+        self.spi.xfer2(frame)
+
+    def clear(self):
+        self.set_all(0, 0, 0, 0.0)
+
+    def close(self):
+        try:
+            self.clear()
+        except Exception:
+            pass
+        self.spi.close()
+
+
 class LEDController:
     """Main LED controller with async pattern support"""
     
-    def __init__(self, pwm_controllers: Dict[str, GPIO.PWM]):
-        self.pwm_controllers = pwm_controllers
+    def __init__(self, pwm_controllers: Optional[Dict[str, GPIO.PWM]] = None):
+        self.pwm_controllers = pwm_controllers or {}
+        self.apa: Optional[PixelAPA102] = None
         self.current_pattern = None
         self.pattern_task: Optional[asyncio.Task] = None
         self.brightness_scale = 1.0  # Global brightness control
         self.low_power_mode = False
+        
+        # Try to initialize APA102 over SPI if available
+        if spidev is not None:
+            try:
+                led_count = int(os.getenv('RESPEAKER_LED_COUNT', '2'))
+                spi_bus = int(os.getenv('SPI_BUS', '0'))
+                spi_dev = int(os.getenv('SPI_DEV', '0'))
+                self.apa = PixelAPA102(led_count=led_count, spi_bus=spi_bus, spi_dev=spi_dev)
+                logging.info("APA102 LED driver initialized (count=%d, bus=%d, dev=%d)", led_count, spi_bus, spi_dev)
+            except Exception as e:
+                logging.warning("APA102 init failed, falling back to PWM LEDs: %s", e)
         
     async def set_pattern(self, pattern: LEDPattern, **kwargs):
         """Set LED pattern with smooth transitions"""
@@ -132,13 +207,25 @@ class LEDController:
     
     async def _set_color(self, r: int, g: int, b: int):
         """Set LED color with brightness adjustment"""
-        duty_cycles = ColorMixer.rgb_to_duty_cycle(r, g, b)
-        for color, duty in duty_cycles.items():
-            adjusted_duty = self._apply_brightness(duty)
-            self.pwm_controllers[color].ChangeDutyCycle(adjusted_duty)
+        if self.apa is not None:
+            # Map brightness_scale (0-1) to APA global brightness (0-1)
+            self.apa.set_all(r, g, b, brightness=self.brightness_scale)
+        elif self.pwm_controllers:
+            duty_cycles = ColorMixer.rgb_to_duty_cycle(r, g, b)
+            for color, duty in duty_cycles.items():
+                adjusted_duty = self._apply_brightness(duty)
+                self.pwm_controllers[color].ChangeDutyCycle(adjusted_duty)
+        else:
+            # No LED hardware available
+            pass
     
     async def _all_leds_off(self):
         """Turn off all LEDs"""
+        if self.apa is not None:
+            try:
+                self.apa.clear()
+            except Exception:
+                pass
         for pwm in self.pwm_controllers.values():
             pwm.ChangeDutyCycle(0)
     

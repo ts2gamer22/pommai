@@ -1,0 +1,19 @@
+# FastRTC Relay Gateway Requirements
+# Minimal dependencies for pure WebSocket relay (no AI processing)
+
+# Web framework and async
+aiohttp==3.9.1
+
+# Convex integration
+convex==0.6.0
+python-dotenv==1.0.0
+
+# TTS Providers
+# Official ElevenLabs Python SDK for streaming TTS
+# Pin loosely to avoid breakage; adjust as needed
+ElevenLabs
+requests==2.31.0
+
+# Optional: For development and testing
+pytest==7.4.3
+pytest-asyncio==0.23.2

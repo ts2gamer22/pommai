@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, Button } from '@pommai/ui';
+import { Card } from '@pommai/ui';
 import { 
   BarChart, 
   Bar, 
@@ -22,8 +22,6 @@ import {
   TrendingUp, 
   AlertCircle,
   Smile,
-  Frown,
-  Meh,
   Calendar
 } from 'lucide-react';
 import { ConversationAnalytics as AnalyticsType } from '@/types/history';

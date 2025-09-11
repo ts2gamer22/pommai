@@ -129,7 +129,7 @@ export const useToysStore = create<ToysState>()(
     filteredToys: () => {
       const { toys, filters, sortBy, sortOrder } = get();
       
-      let filtered = toys.filter(toy => {
+      const filtered = toys.filter(toy => {
         // Search filter
         if (filters.search) {
           const searchLower = filters.search.toLowerCase();

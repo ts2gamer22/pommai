@@ -1,22 +1,50 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useToyWizardStore } from '@/stores/toyWizardStore';
 import { VoiceGallery } from '@/components/voice/VoiceGallery';
 import { VoicePreview } from '@/components/voice/VoicePreview';
 import { VoiceUploader } from '@/components/voice/VoiceUploader';
-import { Button, Card, Tabs, Popup } from '@pommai/ui';
-import { Volume2 } from 'lucide-react';
+import { Button, Card, Popup } from '@pommai/ui';
+import { Volume2, Upload } from 'lucide-react';
+import { useAction } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
 
+/**
+ * VoiceStep
+ *
+ * Lets users pick or upload a voice.
+ * - Primary headings use font-minecraft (pixel) with compact sizes.
+ * - Body and helper text use font-geo for readability.
+ */
 export function VoiceStep() {
   const { toyConfig, updateToyConfig } = useToyWizardStore();
-  const [selectedVoice, setSelectedVoice] = useState<any>(null);
+  const [selectedVoice, setSelectedVoice] = useState<{ _id?: string; externalVoiceId?: string; name: string } | null>(null);
   const [showUploader, setShowUploader] = useState(false);
   const [activeTab, setActiveTab] = useState<'preset' | 'custom'>('preset');
 
-  const handleSelectVoice = (voice: any) => {
+  // Ensure default voices are available for selection
+  const syncDefaultVoices = useAction(api.aiServices.syncDefaultVoices);
+  const hasSeededRef = (typeof window !== 'undefined') 
+    ? ((window as unknown as { __pommaiSeededVoicesRef?: { value: boolean } }).__pommaiSeededVoicesRef ??= { value: false }) 
+    : { value: false };
+  useEffect(() => {
+    if (hasSeededRef.value) return;
+    hasSeededRef.value = true;
+    (async () => {
+      try { 
+        await syncDefaultVoices({}); 
+      } catch (error) { 
+        console.error('Failed to sync default voices:', error);
+      }
+    })();
+  }, [syncDefaultVoices, hasSeededRef]);
+
+  const handleSelectVoice = (voice: { externalVoiceId?: string; name: string; _id?: string }) => {
     setSelectedVoice(voice);
-    updateToyConfig('voiceId', voice.externalVoiceId);
+    if (voice.externalVoiceId) {
+      updateToyConfig('voiceId', voice.externalVoiceId);
+    }
     updateToyConfig('voiceName', voice.name);
   };
 
@@ -33,81 +61,92 @@ export function VoiceStep() {
           style={{
             textShadow: '2px 2px 0 #c381b5'
           }}
-        >
-          🎤 Choose {toyConfig.name}'s Voice
+>
+          🎤 Choose {toyConfig.name}&apos;s Voice
         </h2>
         <p className="font-geo text-sm font-medium text-gray-600 tracking-wide leading-relaxed">
-          Select a voice that matches {toyConfig.name}'s personality, or create your own custom voice.
+          Select a voice that matches {toyConfig.name}&apos;s personality, or create your own custom voice.
         </p>
       </div>
 
-      {/* Voice Selection Tabs */}
+      {/* Voice Selection (no Tabs) */}
       <Card
         bg="#ffffff"
         borderColor="black"
         shadowColor="#c381b5"
-        className="p-4 sm:p-6"
+        className="p-[var(--spacing-lg)] sm:p-[var(--spacing-xl)]"
       >
         <div className="space-y-4">
-          {/* Tab Headers */}
-          <div className="flex gap-2">
-            <Button
-              bg={activeTab === 'preset' ? "#c381b5" : "#ffffff"}
-              textColor={activeTab === 'preset' ? "white" : "black"}
-              borderColor="black"
-              shadow={activeTab === 'preset' ? "#8b5fa3" : "#e0e0e0"}
-              onClick={() => setActiveTab('preset')}
-              className="flex-1 py-2 px-4 font-minecraft font-black uppercase tracking-wider hover-lift"
-            >
-              🎧 Preset Voices
-            </Button>
-            <Button
-              bg={activeTab === 'custom' ? "#c381b5" : "#ffffff"}
-              textColor={activeTab === 'custom' ? "white" : "black"}
-              borderColor="black"
-              shadow={activeTab === 'custom' ? "#8b5fa3" : "#e0e0e0"}
-              onClick={() => setActiveTab('custom')}
-              className="flex-1 py-2 px-4 font-minecraft font-black uppercase tracking-wider hover-lift"
-            >
-              🎤 Custom Voice
-            </Button>
+          {/* Segmented control + Upload */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex gap-2">
+              <Button
+                bg={activeTab === 'preset' ? '#c381b5' : '#f8f8f8'}
+                textColor={activeTab === 'preset' ? 'white' : 'black'}
+                borderColor="black"
+                shadow={activeTab === 'preset' ? '#8b5fa3' : '#e0e0e0'}
+                onClick={() => setActiveTab('preset')}
+                className="py-2 px-3 font-minecraft font-black uppercase tracking-wider hover-lift text-xs sm:text-sm"
+              >
+                🎧 Preset Voices
+              </Button>
+              <Button
+                bg={activeTab === 'custom' ? '#c381b5' : '#f8f8f8'}
+                textColor={activeTab === 'custom' ? 'white' : 'black'}
+                borderColor="black"
+                shadow={activeTab === 'custom' ? '#8b5fa3' : '#e0e0e0'}
+                onClick={() => setActiveTab('custom')}
+                className="py-2 px-3 font-minecraft font-black uppercase tracking-wider hover-lift text-xs sm:text-sm"
+              >
+                🎤 Custom Voice
+              </Button>
+            </div>
+            {activeTab === 'preset' && (
+              <Button
+                bg="#ffffff"
+                textColor="black"
+                borderColor="black"
+                shadow="#e0e0e0"
+                onClick={() => setShowUploader(true)}
+                className="py-2 px-3 font-minecraft font-black uppercase tracking-wider hover-lift text-xs sm:text-sm"
+              >
+                <Upload className="w-3 h-3 mr-2" /> Upload Voice
+              </Button>
+            )}
           </div>
 
-          {/* Tab Content */}
+          {/* Content */}
           {activeTab === 'preset' && (
             <div className="space-y-4">
-              {/* Selected Voice Preview */}
               {selectedVoice && (
                 <Card
-                  bg="#fefcd0"
+                  bg="#ffffff"
                   borderColor="black"
                   shadowColor="#c381b5"
-                  className="p-4"
+                  className="p-[var(--spacing-lg)]"
                 >
-                  <h3 className="font-minecraft font-black text-base uppercase tracking-wider text-gray-800 mb-3">🎵 Selected Voice</h3>
+                  <h3 className="retro-h3 text-base text-gray-800 mb-3">🎵 Selected Voice</h3>
                   <VoicePreview voice={selectedVoice} isForKids={toyConfig.isForKids} />
                 </Card>
               )}
 
-              {/* Voice Gallery */}
               <VoiceGallery
                 selectedVoiceId={selectedVoice?._id}
                 onSelectVoice={handleSelectVoice}
-                onUploadClick={() => setShowUploader(true)}
                 isForKids={toyConfig.isForKids}
               />
             </div>
           )}
 
           {activeTab === 'custom' && (
-            <div className="text-center py-8">
+            <div className="text-center py-[var(--spacing-xl)]">
               <div className="max-w-md mx-auto space-y-6">
-                <div className="w-20 h-20 border-4 border-black bg-gradient-to-br from-[#c381b5] to-[#f7931e] mx-auto flex items-center justify-center">
-                  <Volume2 className="w-10 h-10 text-white" />
+                <div className="w-14 h-14 border-4 border-black bg-gradient-to-br from-[#c381b5] to-[#f7931e] mx-auto flex items-center justify-center">
+                  <Volume2 className="w-7 h-7 text-white" />
                 </div>
                 
                 <div>
-                  <h3 className="font-minecraft font-black text-base uppercase tracking-wider text-gray-800 mb-3">
+                  <h3 className="retro-h3 text-base text-gray-800 mb-3">
                     Create a Custom Voice
                   </h3>
                   <p className="font-geo text-sm font-medium text-gray-600 leading-relaxed">

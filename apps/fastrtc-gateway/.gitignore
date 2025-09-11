@@ -1,0 +1,73 @@
+# Environment files (contain secrets)
+.env
+.env.local
+.env.production
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Docker
+docker-compose.override.yml
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# Old/deprecated files (to be deleted)
+server.py               # Old server with local AI
+requirements.txt       # Heavy dependencies
+Dockerfile            # Old Docker image
+Dockerfile.relay      # Replaced by Dockerfile.production
+test_*.py            # Move to tests/ directory
+
+# Production files to keep
+!.env.example
+!requirements_relay.txt
+!server_relay_with_tts.py
+!tts_providers.py
+!Dockerfile.production
+!fly.toml
+!prepare_production.sh

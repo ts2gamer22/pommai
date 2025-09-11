@@ -1,7 +1,8 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { Card, Button, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@pommai/ui';
+import { Card, Button } from '@pommai/ui';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu';
 import { 
   MoreVertical, 
   Play, 
@@ -132,20 +133,18 @@ export function ToyListItem({
                 <MessageSquare className="w-4 h-4" />
               </Button>
               <DropdownMenu>
-                <DropdownMenuTrigger
-                  bg="#ffffff"
-                  textColor="black"
-                  borderColor="black"
-                  shadow="#e0e0e0"
-                  className="py-2 px-3 font-minecraft font-black hover-lift"
-                >
-                  <MoreVertical className="w-4 h-4" />
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    bg="#ffffff"
+                    textColor="black"
+                    borderColor="black"
+                    shadow="#e0e0e0"
+                    className="py-2 px-3 font-minecraft font-black hover-lift"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  bg="#ffffff"
-                  borderColor="black"
-                  shadowColor="#e0e0e0"
-                >
+                <DropdownMenuContent>
                   <button 
                     onClick={() => onChat(toy._id)}
                     className="w-full text-left px-3 py-2 hover:bg-gray-100 font-minecraft font-black uppercase tracking-wider text-sm flex items-center gap-2"

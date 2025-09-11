@@ -404,29 +404,83 @@ export const assignToyToDevice = mutation({
     }
 
     // Check if device already has this toy
-    if (toy.assignedDevices.includes(args.deviceId)) {
-      return args.toyId;
+    const alreadyAssigned = (toy.assignedDevices || []).includes(args.deviceId);
+    if (!alreadyAssigned) {
+      await ctx.db.patch(args.toyId, {
+        assignedDevices: [...(toy.assignedDevices || []), args.deviceId],
+        lastModifiedAt: new Date().toISOString(),
+      });
+
+      // Create assignment record
+      await ctx.db.insert("toyAssignments", {
+        toyId: args.toyId,
+        deviceId: args.deviceId,
+        childId: undefined,
+        assignedAt: new Date().toISOString(),
+        assignedBy: user._id,
+        isActive: true,
+      });
     }
-
-    // Update toy's assigned devices
-    await ctx.db.patch(args.toyId, {
-      assignedDevices: [...toy.assignedDevices, args.deviceId],
-      lastModifiedAt: new Date().toISOString(),
-    });
-
-    // Create assignment record
-    await ctx.db.insert("toyAssignments", {
-      toyId: args.toyId,
-      deviceId: args.deviceId,
-      childId: undefined,
-      assignedAt: new Date().toISOString(),
-      assignedBy: user._id,
-      isActive: true,
-    });
 
     return args.toyId;
   },
 });
+
+/**
+ * Duplicate a toy with a new name
+ */
+export const duplicateToy = mutation({
+  args: {
+    toyId: v.id("toys"),
+    newName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const originalToy = await ctx.db.get(args.toyId);
+    if (!originalToy) {
+      throw new Error("Toy not found");
+    }
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", identity.email!))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (originalToy.creatorId !== user._id && !originalToy.isPublic) {
+      throw new Error("Can only duplicate your own toys or public toys");
+    }
+
+    const now = new Date().toISOString();
+    const { _id, _creationTime, ...toyData } = originalToy as any;
+
+    const newToyId = await ctx.db.insert("toys", {
+      ...toyData,
+      name: args.newName,
+      creatorId: user._id,
+      guardianId: originalToy.isForKids ? user._id : undefined,
+      assignedDevices: [],
+      usageCount: 0,
+      status: "active",
+      createdAt: now,
+      lastActiveAt: now,
+      lastModifiedAt: now,
+    } as any);
+
+    return newToyId;
+  },
+});
+
+/**
+ * Delete a toy (creator or guardian only)
+ */
 
 /**
  * Remove toy from device
@@ -486,55 +540,6 @@ export const removeToyFromDevice = mutation({
 /**
  * Duplicate a toy
  */
-export const duplicateToy = mutation({
-  args: {
-    toyId: v.id("toys"),
-    newName: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const originalToy = await ctx.db.get(args.toyId);
-    if (!originalToy) {
-      throw new Error("Toy not found");
-    }
-
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    // Get user from auth
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-    
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    if (originalToy.creatorId !== user._id && !originalToy.isPublic) {
-      throw new Error("Can only duplicate your own toys or public toys");
-    }
-
-    const now = new Date().toISOString();
-
-    // Create a copy with new name
-    const { _id, _creationTime, ...toyData } = originalToy;
-    const newToyId = await ctx.db.insert("toys", {
-      ...toyData,
-      name: args.newName,
-      creatorId: user._id,
-      guardianId: originalToy.isForKids ? user._id : undefined,
-      assignedDevices: [], // Start with no device assignments
-      usageCount: 0,
-      createdAt: now,
-      lastActiveAt: now,
-      lastModifiedAt: now,
-    });
-
-    return newToyId;
-  },
-});
 
 /**
  * Delete a toy (soft delete by archiving)
@@ -564,12 +569,7 @@ export const deleteToy = mutation({
       throw new Error("Only the creator or guardian can delete this toy");
     }
 
-    // Archive instead of hard delete
-    await ctx.db.patch(args.toyId, {
-      status: "archived",
-      lastModifiedAt: new Date().toISOString(),
-    });
-
-    return args.toyId;
+    await ctx.db.delete(args.toyId);
+    return { success: true };
   },
 });

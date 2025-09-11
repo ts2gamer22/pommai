@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { Bluetooth, Wifi, QrCode, Smartphone, Info, CheckCircle2 } from 'lucide-react';
 import { Button, Input, Card } from '@pommai/ui';
 import { motion } from 'framer-motion';
@@ -14,7 +14,6 @@ export function DeviceStep() {
     isPairing,
     pairingStep,
     selectedDevice,
-    devices,
     error,
     startPairing,
     stopPairing,
@@ -46,19 +45,19 @@ export function DeviceStep() {
         stopPairing();
       }
     };
-  }, []);
+  }, [isPairing, stopPairing]);
 
   return (
     <div className="space-y-6">
       <div className="text-center sm:text-left">
-        <h2 className="text-2xl sm:text-3xl font-black mb-2 uppercase tracking-wider text-black"
+        <h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-2 uppercase tracking-wider text-gray-800"
           style={{
             textShadow: '2px 2px 0 #c381b5'
           }}
         >
           📱 Connect Your Device
         </h2>
-        <p className="font-bold text-gray-700 uppercase tracking-wide">
+        <p className="font-geo font-medium text-gray-700 tracking-wide">
           Pair your toy device to bring it to life. You can also skip this step and pair later.
         </p>
       </div>
@@ -114,7 +113,7 @@ export function DeviceStep() {
           <div className="w-20 h-20 border-4 border-black bg-[#92cd41] mx-auto mb-4 flex items-center justify-center">
             <CheckCircle2 className="w-10 h-10 text-white" />
           </div>
-          <h3 className="text-xl font-black uppercase tracking-wider text-black mb-2">
+          <h3 className="retro-h3 text-xl text-black mb-2">
             🎉 Device Paired Successfully!
           </h3>
           <p className="font-bold text-gray-700 uppercase tracking-wide mb-4">
@@ -196,7 +195,7 @@ export function DeviceStep() {
                 <Bluetooth className="w-10 h-10 text-white" />
               </motion.div>
               
-              <h3 className="font-black text-lg uppercase tracking-wider text-black mb-2">
+              <h3 className="retro-h3 text-lg text-black mb-2">
                 📡 Bluetooth Pairing
               </h3>
               <p className="text-sm font-bold text-gray-700 mb-6 uppercase tracking-wide">
@@ -253,11 +252,11 @@ export function DeviceStep() {
                 <div className="w-20 h-20 border-4 border-black bg-[#f7931e] mx-auto mb-4 flex items-center justify-center">
                   <Wifi className="w-10 h-10 text-white" />
                 </div>
-                <h3 className="font-black text-lg uppercase tracking-wider text-black mb-2">
+                <h3 className="retro-h3 text-lg text-black mb-2">
                   📦 WiFi Connection
                 </h3>
                 <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-                  Enter the 6-digit code shown on your toy's display
+                  Enter the 6-digit code shown on your toy&apos;s display
                 </p>
               </div>
 
@@ -269,7 +268,7 @@ export function DeviceStep() {
                       type="text"
                       placeholder="123456"
                       value={pairingCode}
-                      onChange={(e) => setPairingCode(e.target.value.slice(0, 6))}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setPairingCode(e.target.value.slice(0, 6))}
                       maxLength={6}
                       bg="#ffffff"
                       borderColor="black"

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useMutation } from "convex/react";
+import { useState, useRef, type ChangeEvent } from "react";
+import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -69,7 +68,6 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [voiceData, setVoiceData] = useState({
     name: "",
@@ -87,7 +85,7 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const createCustomVoice = useMutation(api.voices.createCustomVoice);
+const cloneVoice = useAction(api.aiServices.cloneElevenVoiceFromBase64);
 
   const startRecording = async () => {
     try {
@@ -174,17 +172,38 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
 
   const saveVoice = async () => {
     try {
-      // In production, you would upload the audio file to storage and get a URL
-      const previewUrl = audioUrl || ""; // This would be the actual uploaded URL
-      const externalVoiceId = `voice_${Date.now()}`; // This would come from 11Labs
-      
-      const voiceId = await createCustomVoice({
-        ...voiceData,
-        previewUrl,
-        externalVoiceId,
+      if (!audioBlob) throw new Error("No audio to upload");
+      // Convert Blob to base64 via FileReader
+      const base64Audio: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = reader.result as string;
+          const b64 = res?.split(',')[1] || '';
+          resolve(b64);
+        };
+        reader.onerror = () => reject(new Error('Failed to read audio file'));
+        reader.readAsDataURL(audioBlob);
       });
-      
-      onComplete(voiceId);
+
+      const result = await cloneVoice({
+        name: voiceData.name,
+        description: voiceData.description,
+        language: voiceData.language,
+        accent: voiceData.accent || undefined,
+        ageGroup: voiceData.ageGroup,
+        gender: voiceData.gender,
+        tags: voiceData.tags,
+        isPublic: voiceData.isPublic,
+        fileBase64: base64Audio,
+        mimeType: audioBlob.type || 'audio/webm',
+      }) as unknown as { externalVoiceId?: string };
+
+      // Pass back the external voice id so backend TTS can use it immediately
+      if (result?.externalVoiceId) {
+        onComplete(result.externalVoiceId);
+      } else {
+        throw new Error('Voice cloning succeeded but no externalVoiceId returned');
+      }
     } catch (error) {
       console.error("Error saving voice:", error);
       alert("Failed to save voice. Please try again.");
@@ -275,7 +294,14 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
                           <span className="font-medium">Recording... {formatTime(recordingTime)}</span>
                         </div>
                         <Progress value={(recordingTime / 300) * 100} className="h-2" />
-                        <Button onClick={stopRecording} variant="destructive" className="w-full">
+                        <Button 
+                          bg="#ff6b6b"
+                          textColor="white"
+                          borderColor="black"
+                          shadow="#e84545"
+                          onClick={stopRecording}
+                          className="w-full"
+                        >
                           <Square className="w-4 h-4 mr-2" />
                           Stop Recording
                         </Button>
@@ -313,7 +339,10 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
                   
                   <Button
                     onClick={() => fileInputRef.current?.click()}
-                    variant="outline"
+                    bg="#ffffff"
+                    textColor="black"
+                    borderColor="black"
+                    shadow="#e0e0e0"
                     className="w-full"
                     disabled={!!audioBlob}
                   >
@@ -341,7 +370,10 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
                 
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
+                    bg="#f0f0f0"
+                    textColor="black"
+                    borderColor="black"
+                    shadow="#d0d0d0"
                     onClick={() => {
                       setAudioBlob(null);
                       setAudioUrl(null);
@@ -361,7 +393,13 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
             
             {!audioBlob && (
               <div className="flex justify-between">
-                <Button variant="outline" onClick={onCancel}>
+                <Button 
+                  bg="#f0f0f0"
+                  textColor="black"
+                  borderColor="black"
+                  shadow="#d0d0d0"
+                  onClick={onCancel}
+                >
                   Cancel
                 </Button>
               </div>
@@ -376,7 +414,7 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
               <Loader2 className="w-12 h-12 animate-spin mx-auto text-blue-500" />
               <h2 className="text-2xl font-bold">Processing Your Voice</h2>
               <p className="text-gray-600">
-                This may take a few minutes. Please don't close this window.
+                This may take a few minutes. Please don&apos;t close this window.
               </p>
               
               <div className="max-w-md mx-auto space-y-3">
@@ -421,7 +459,7 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
                 <Input
                   id="name"
                   value={voiceData.name}
-                  onChange={(e) => setVoiceData({ ...voiceData, name: e.target.value })}
+onChange={(e: ChangeEvent<HTMLInputElement>) => setVoiceData({ ...voiceData, name: e.target.value })}
                   placeholder="e.g., My Natural Voice"
                 />
               </div>
@@ -431,7 +469,7 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
                 <Textarea
                   id="description"
                   value={voiceData.description}
-                  onChange={(e) => setVoiceData({ ...voiceData, description: e.target.value })}
+onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setVoiceData({ ...voiceData, description: e.target.value })}
                   placeholder="Describe the voice characteristics..."
                   rows={3}
                 />
@@ -463,7 +501,7 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
                   <Input
                     id="accent"
                     value={voiceData.accent}
-                    onChange={(e) => setVoiceData({ ...voiceData, accent: e.target.value })}
+onChange={(e: ChangeEvent<HTMLInputElement>) => setVoiceData({ ...voiceData, accent: e.target.value })}
                     placeholder="e.g., British, Southern US"
                   />
                 </div>
@@ -474,7 +512,7 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
                   <Label htmlFor="gender">Gender</Label>
                   <Select
                     value={voiceData.gender}
-                    onValueChange={(value: any) => setVoiceData({ ...voiceData, gender: value })}
+                    onValueChange={(value) => setVoiceData({ ...voiceData, gender: value as 'male' | 'female' | 'neutral' })}
                   >
                     <SelectTrigger id="gender">
                       <SelectValue />
@@ -522,7 +560,13 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
             </div>
             
             <div className="flex justify-between">
-              <Button variant="outline" onClick={onCancel}>
+              <Button 
+                bg="#f0f0f0"
+                textColor="black"
+                borderColor="black"
+                shadow="#d0d0d0"
+                onClick={onCancel}
+              >
                 Cancel
               </Button>
               <Button

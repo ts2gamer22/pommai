@@ -5,67 +5,142 @@ import { action, mutation, query, internalAction } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
 
-// Simple mock language model that satisfies the interface
-// In a real implementation, this would integrate with our AI services
+// Create a factory function for the language model that accepts context
+function createToyLanguageModel(ctx: any) {
+  return {
+    specificationVersion: 'v2' as const,
+    provider: 'openrouter',
+    modelId: 'openai/gpt-oss-120b',
+    supportedUrls: {},
+    
+    async doGenerate(options: any) {
+      // Extract messages and system prompt
+      const messages: any[] = [];
+      if (options.system) {
+        messages.push({ role: 'system', content: options.system });
+      }
+      if (options.prompt) {
+        messages.push({ role: 'user', content: options.prompt });
+      }
+      // Add any previous messages from options
+      if (options.messages && Array.isArray(options.messages)) {
+        messages.push(...options.messages);
+      }
+      
+      try {
+        // Use the Convex context to call our AI services directly
+        const result = await ctx.runAction(api.aiServices.generateResponse, {
+          messages,
+          model: options.model || 'openai/gpt-oss-120b',
+          temperature: options.temperature || 0.7,
+          maxTokens: options.maxTokens || 500,
+        });
+        
+        return {
+          content: [{
+            type: 'text' as const,
+            text: result.content || "I'm having trouble understanding. Can you try again?",
+          }],
+          finishReason: 'stop' as const,
+          usage: {
+            inputTokens: result.usage?.prompt_tokens || 0,
+            outputTokens: result.usage?.completion_tokens || 0,
+            totalTokens: result.usage?.total_tokens || 0,
+          },
+          warnings: [],
+        };
+      } catch (error) {
+        console.error('Language model error:', error);
+        // Return a safe fallback response
+        return {
+          content: [{
+            type: 'text' as const,
+            text: "I'm having a little trouble right now. Can you ask me again?",
+          }],
+          finishReason: 'error' as const,
+          usage: {
+            inputTokens: 0,
+            outputTokens: 0,
+            totalTokens: 0,
+          },
+          warnings: [String(error)],
+        };
+      }
+    },
+  
+    async doStream(options: any) {
+      // For streaming, we need to handle it differently
+      // Since Convex doesn't directly support streaming from actions,
+      // we'll simulate streaming by breaking the response into chunks
+      const fullResponse = await this.doGenerate(options);
+      const text = fullResponse.content[0]?.text || "";
+      const words = text.split(' ');
+      
+      const stream = new ReadableStream({
+        start(controller) {
+          let index = 0;
+          const pushNext = () => {
+            if (index < words.length) {
+              controller.enqueue({
+                type: 'text-delta' as const,
+                delta: words[index] + (index < words.length - 1 ? ' ' : ''),
+              });
+              index++;
+              // Faster streaming for better UX
+              setTimeout(pushNext, 30);
+            } else {
+              controller.enqueue({
+                type: 'finish' as const,
+                finishReason: fullResponse.finishReason,
+                usage: fullResponse.usage,
+              });
+              controller.close();
+            }
+          };
+          pushNext();
+        },
+      });
+      
+      return {
+        stream,
+        warnings: fullResponse.warnings,
+      };
+    },
+  };
+}
+
+// Default language model for backward compatibility
 const toyLanguageModel = {
   specificationVersion: 'v2' as const,
-  provider: 'pommai',
-  modelId: 'mock-gpt',
+  provider: 'openrouter',
+  modelId: 'openai/gpt-oss-120b',
   supportedUrls: {},
   
   async doGenerate(options: any) {
-    // Mock response for now - in production this would call our AI services
+    console.warn('Using default language model without context - responses will be limited');
     return {
       content: [{
         type: 'text' as const,
-        text: "I'm a friendly AI toy! How can I help you today?",
+        text: "I need to be properly connected to help you. Please check my configuration.",
       }],
       finishReason: 'stop' as const,
-      usage: {
-        inputTokens: 10,
-        outputTokens: 15,
-        totalTokens: 25,
-      },
-      warnings: [],
+      usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      warnings: ['No context available'],
     };
   },
   
   async doStream(options: any) {
-    // Mock streaming response
-    const mockText = "I'm a friendly AI toy! How can I help you today?";
-    const words = mockText.split(' ');
-    
-    const stream = new ReadableStream({
-      start(controller) {
-        let index = 0;
-        const pushNext = () => {
-          if (index < words.length) {
-            controller.enqueue({
-              type: 'text-delta' as const,
-              delta: words[index] + (index < words.length - 1 ? ' ' : ''),
-            });
-            index++;
-            setTimeout(pushNext, 50);
-          } else {
-            controller.enqueue({
-              type: 'finish' as const,
-              finishReason: 'stop' as const,
-              usage: {
-                inputTokens: 10,
-                outputTokens: 15,
-                totalTokens: 25,
-              },
-            });
-            controller.close();
-          }
-        };
-        setTimeout(pushNext, 100);
-      },
-    });
-    
+    const response = await this.doGenerate(options);
+    const text = response.content[0]?.text || "";
     return {
-      stream,
-      warnings: [],
+      stream: new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: 'text-delta' as const, delta: text });
+          controller.enqueue({ type: 'finish' as const, finishReason: 'stop' as const, usage: response.usage });
+          controller.close();
+        },
+      }),
+      warnings: response.warnings,
     };
   },
 };
@@ -73,7 +148,7 @@ const toyLanguageModel = {
 // Define the main toy agent - using basic configuration for now
 export const toyAgent = new Agent(components.agent, {
   name: "ToyAgent",
-  languageModel: toyLanguageModel,
+  languageModel: toyLanguageModel as any, // Type casting for compatibility
   // Default system prompt (will be overridden per toy)
   instructions: "You are a friendly AI toy assistant. Be helpful, safe, and age-appropriate.",
 });
@@ -107,6 +182,33 @@ export const createToyThread = mutation({
         createdAt: Date.now(),
       },
     };
+  },
+});
+
+// Get or create thread for a toy (canonical thread)
+export const getOrCreateToyThread = mutation({
+  args: {
+    toyId: v.id("toys"),
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, { toyId, userId }): Promise<{ threadId: string }> => {
+    const toy = await ctx.db.get(toyId);
+    if (!toy) throw new Error("Toy not found");
+
+    // If toy already has a canonical agent thread, return it
+    if ((toy as any).agentThreadId) {
+      return { threadId: (toy as any).agentThreadId as string };
+    }
+
+    // Otherwise, create a new thread and persist its id on the toy
+    const { threadId } = await toyAgent.createThread(ctx, {
+      userId: userId?.toString(),
+      title: toy.name,
+      summary: `Toy thread for ${toy.name}`,
+    });
+
+    await ctx.db.patch(toyId, { agentThreadId: threadId, lastModifiedAt: new Date().toISOString() });
+    return { threadId };
   },
 });
 
@@ -190,7 +292,7 @@ export const generateToyResponse = internalAction({
     // Build system prompt with toy personality
     const systemPrompt = buildToySystemPrompt(toy);
 
-    // Configure agent for this specific toy
+    // Configure safety instructions for kids
     const safetyInstructions: string = toy.isForKids ? `
 
 CRITICAL SAFETY RULES FOR CHILDREN:
@@ -203,26 +305,65 @@ CRITICAL SAFETY RULES FOR CHILDREN:
 - Use sound effects and expressions to be engaging
 ` : "";
 
-    // Generate response with toy-specific configuration using the Agent API
-    const result: any = await toyAgent.generateText(
-      ctx,
-      { threadId },
-      {
-        promptMessageId,
-        prompt,
-        system: systemPrompt + safetyInstructions,
+    // Instead of using the mock toyAgent, directly call the AI service
+    try {
+      // Build messages array for context
+      const messages: Array<{ role: "system" | "user"; content: string }> = [
+        { role: "system", content: systemPrompt + safetyInstructions },
+      ];
+      
+      if (prompt) {
+        messages.push({ role: "user", content: prompt });
+      }
+      
+      // Call the real AI service
+      const aiResponse = await ctx.runAction(api.aiServices.generateResponse, {
+        messages,
+        model: "openai/gpt-oss-120b",
         temperature: toy.personalityTraits?.behavior?.imaginationLevel
           ? toy.personalityTraits.behavior.imaginationLevel / 10
           : 0.7,
+        maxTokens: toy.isForKids ? 150 : 500,
+      });
+      
+      // Save the response to the thread if we have the Agent component
+      let messageId: string | undefined;
+      try {
+        // Try to use the Agent to save the message
+        const agentWithContext = new Agent(components.agent, {
+          name: "ToyAgent",
+          languageModel: createToyLanguageModel(ctx) as any,
+          instructions: systemPrompt,
+        });
+        
+        const saveResult = await agentWithContext.saveMessage(ctx, {
+          threadId,
+          prompt: aiResponse.content || "I'm having trouble responding right now.",
+          metadata: {} as any,
+        });
+        messageId = saveResult.messageId;
+      } catch (e) {
+        console.log("Could not save to Agent thread:", e);
       }
-    );
-
-    return {
-      text: result.text,
-      messageId: result.promptMessageId,
-      usage: result.usage,
-      finishReason: result.finishReason,
-    };
+      
+      return {
+        text: aiResponse.content || "I'm having trouble responding right now.",
+        messageId,
+        usage: aiResponse.usage,
+        finishReason: aiResponse.finishReason || "stop",
+      };
+    } catch (error) {
+      console.error("Error generating toy response:", error);
+      // Fallback to a safe response
+      return {
+        text: toy.isForKids 
+          ? "Oops! Let me think about that differently. What's your favorite game?"
+          : "I'm having trouble understanding. Could you try asking in a different way?",
+        messageId: undefined,
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        finishReason: "error",
+      };
+    }
   },
 });
 
@@ -253,6 +394,20 @@ export const streamToyResponse = internalAction({
         temperature: toy.personalityTraits?.behavior?.imaginationLevel
           ? toy.personalityTraits.behavior.imaginationLevel / 10
           : 0.7,
+      },
+      {
+        contextOptions: {
+          excludeToolMessages: true,
+          recentMessages: 50,
+          searchOptions: {
+            limit: 10,
+            textSearch: true,
+            vectorSearch: false,
+            messageRange: { before: 2, after: 1 },
+          },
+          searchOtherThreads: false,
+        },
+        saveStreamDeltas: true,
       }
     );
 
@@ -420,11 +575,11 @@ export const saveKnowledgeMessage = mutation({
     }),
   },
   handler: async (ctx, { threadId, content, metadata }) => {
-    // Save message with knowledge metadata
+    // Save message with knowledge metadata and generate embeddings
     const { messageId } = await toyAgent.saveMessage(ctx, {
       threadId,
       prompt: content,
-      metadata: {},
+      metadata: metadata as any,
       skipEmbeddings: false, // Important: Generate embeddings for RAG
     });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Send, 
   Mic, 
@@ -18,7 +18,6 @@ import {
   VolumeX,
   AlertCircle,
   Loader2,
-  Bot,
   User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,12 +25,12 @@ import { format } from 'date-fns';
 
 interface ChatInterfaceProps {
   toyId: Id<"toys">;
-  toy: any; // Toy data from parent
+  toy: { name?: string; type?: string; isForKids?: boolean };
   isGuardianMode?: boolean;
   onFlagMessage?: (messageId: string, reason: string) => void;
 }
 
-export function ChatInterface({ toyId, toy, isGuardianMode = false, onFlagMessage }: ChatInterfaceProps) {
+export function ChatInterface({ toyId, toy, isGuardianMode: _isGuardianMode = false, onFlagMessage: _onFlagMessage }: ChatInterfaceProps) {
   const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -64,13 +63,14 @@ export function ChatInterface({ toyId, toy, isGuardianMode = false, onFlagMessag
       if (!activeConversation && toyId) {
         await createConversation({
           toyId,
-          userId: toy.creatorId, // TODO: Get current user ID properly
-          mode: 'text',
+          sessionId: `web-${Date.now()}`,
+          location: 'web',
+          deviceId: 'web-simulator',
         });
       }
     };
     initConversation();
-  }, [toyId, activeConversation]);
+  }, [toyId, activeConversation, createConversation]);
 
   const handleSendMessage = async () => {
     if (!message.trim() || !activeConversation) return;
@@ -119,7 +119,7 @@ export function ChatInterface({ toyId, toy, isGuardianMode = false, onFlagMessag
       robot: '🤖',
       magical: '✨',
     };
-    return avatarMap[toy?.type] || '🎁';
+    return toy && toy.type ? (avatarMap[toy.type] || '🎁') : '🎁';
   };
 
   return (
@@ -133,7 +133,7 @@ export function ChatInterface({ toyId, toy, isGuardianMode = false, onFlagMessag
             </AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="font-semibold text-gray-900">{toy?.name || 'AI Toy'}</h3>
+            <h3 className="retro-h3 text-base sm:text-lg text-gray-900">{toy?.name || 'AI Toy'}</h3>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -161,7 +161,7 @@ export function ChatInterface({ toyId, toy, isGuardianMode = false, onFlagMessag
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="space-y-4">
-          {messages?.map((msg, index) => (
+          {messages?.map((msg) => (
             <AnimatePresence key={msg._id}>
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -188,7 +188,14 @@ export function ChatInterface({ toyId, toy, isGuardianMode = false, onFlagMessag
                     </div>
                     
                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>{format(new Date(msg.timestamp), 'HH:mm')}</span>
+                      <span>
+                        {msg.timestamp && !isNaN(new Date(msg.timestamp).getTime()) 
+                          ? format(new Date(msg.timestamp), 'HH:mm')
+                          : msg._creationTime 
+                            ? format(new Date(msg._creationTime), 'HH:mm')
+                            : 'now'
+                        }
+                      </span>
                       {msg.metadata?.flagged && (
                         <Badge variant="destructive" className="text-xs">
                           <AlertCircle className="w-3 h-3 mr-1" />
@@ -239,8 +246,8 @@ export function ChatInterface({ toyId, toy, isGuardianMode = false, onFlagMessag
           <Input
             ref={inputRef}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setMessage(e.target.value)}
+            onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleSendMessage()}
             placeholder="Type a message..."
             disabled={isTyping || isRecording}
             className="flex-1"

@@ -2,6 +2,7 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import OpenAI from "openai";
 import { ElevenLabs, ElevenLabsClient } from "elevenlabs";
+import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
 
 // Initialize clients lazily to avoid environment variable issues during module loading
@@ -42,6 +43,31 @@ function getOpenRouter() {
 }
 
 // Speech-to-Text with Whisper
+// Internal helper to perform Whisper transcription from a buffer
+async function transcribeWithOpenAI(audioBuffer: Buffer, language?: string, prompt?: string) {
+const audioFile = new File([new Uint8Array(audioBuffer)], 'audio.wav', { type: 'audio/wav' });
+  const transcription = await getOpenAI().audio.transcriptions.create({
+    file: audioFile,
+    model: "whisper-1",
+    language: language || "en",
+    prompt,
+    response_format: "verbose_json",
+    temperature: 0.2,
+  } as any);
+  return {
+    text: (transcription as any).text,
+    language: (transcription as any).language,
+    duration: (transcription as any).duration,
+    segments: (transcription as any).segments,
+    confidence: calculateConfidence((transcription as any).segments),
+  };
+}
+
+/**
+ * Transcribe base64-encoded WAV audio using OpenAI Whisper API.
+ * - Decodes base64 safely (no data: URL fetch).
+ * - Adds timing logs to aid debugging latency and failures.
+ */
 export const transcribeAudio = action({
   args: {
     audioData: v.string(), // Base64 encoded audio
@@ -49,89 +75,163 @@ export const transcribeAudio = action({
     prompt: v.optional(v.string()), // Optional prompt for better accuracy
   },
   handler: async (ctx, args) => {
+    const t0 = Date.now();
+    const base64Len = args.audioData.length;
     try {
-      // Convert base64 to buffer
-      const audioBuffer = Buffer.from(args.audioData, 'base64');
-      
-      // Create a File object from buffer
-      const audioFile = new File([audioBuffer], 'audio.wav', { 
-        type: 'audio/wav' 
-      });
-      
-      // Transcribe with Whisper
+      // Avoid fetch on data: URL; decode base64 directly
+      const wavBytes = base64ToUint8Array(args.audioData);
+      const wavBuffer = wavBytes.buffer.slice(
+        wavBytes.byteOffset,
+        wavBytes.byteOffset + wavBytes.byteLength
+      );
+      const file = new File([wavBuffer as ArrayBuffer], 'audio.wav', { type: 'audio/wav' });
       const transcription = await getOpenAI().audio.transcriptions.create({
-        file: audioFile,
+        file,
         model: "whisper-1",
         language: args.language || "en",
         prompt: args.prompt,
         response_format: "verbose_json",
-        temperature: 0.2, // Lower temperature for more accurate transcription
-      });
-      
+        temperature: 0.2,
+      } as any);
+      const dt = Date.now() - t0;
+      console.log(`Whisper transcription ok in ${dt}ms (base64Len=${base64Len}, bytes=${wavBytes.byteLength})`);
       return {
-        text: transcription.text,
-        language: transcription.language,
-        duration: transcription.duration,
-        segments: transcription.segments,
-        confidence: calculateConfidence(transcription.segments),
+        text: (transcription as any).text,
+        language: (transcription as any).language,
+        duration: (transcription as any).duration,
+        segments: (transcription as any).segments,
+        confidence: calculateConfidence((transcription as any).segments),
       };
     } catch (error: unknown) {
+      const dt = Date.now() - t0;
       const errMsg = error instanceof Error ? error.message : String(error);
-      console.error("Whisper transcription error:", errMsg);
+      console.error(`Whisper transcription error after ${dt}ms (base64Len=${base64Len}):`, errMsg);
       throw new Error(`Transcription failed: ${errMsg}`);
     }
   },
 });
 
-// Text-to-Speech with ElevenLabs
+// Text-to-Speech with ElevenLabs or Minimax
 export const synthesizeSpeech = action({
   args: {
     text: v.string(),
     voiceId: v.string(),
+    provider: v.optional(v.union(v.literal("elevenlabs"), v.literal("minimax"))),
     modelId: v.optional(v.string()),
     voiceSettings: v.optional(v.object({
       stability: v.number(),
       similarityBoost: v.number(),
       style: v.optional(v.number()),
       useSpeakerBoost: v.optional(v.boolean()),
+      // Minimax-specific settings
+      speed: v.optional(v.number()),
+      volume: v.optional(v.number()),
+      pitch: v.optional(v.number()),
+      emotion: v.optional(v.string()),
     })),
     outputFormat: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const provider = args.provider || "elevenlabs";
+    
     try {
-      // Generate speech with ElevenLabs
-      const audioStream = await getElevenLabs().generate({
-        voice: args.voiceId,
-        text: args.text,
-        model_id: args.modelId || "eleven_multilingual_v2",
-        voice_settings: {
-          stability: args.voiceSettings?.stability || 0.5,
-          similarity_boost: args.voiceSettings?.similarityBoost || 0.75,
-          style: args.voiceSettings?.style || 0,
-          use_speaker_boost: args.voiceSettings?.useSpeakerBoost || true,
-        },
-        output_format: (args.outputFormat as any) || "mp3_44100_128",
-      });
-      
-      // Collect audio chunks
-      const chunks: Buffer[] = [];
-      for await (const chunk of audioStream) {
-        chunks.push(Buffer.from(chunk));
+      if (provider === "minimax") {
+        // Minimax TTS implementation
+        const apiKey = process.env.MINIMAX_API_KEY;
+        const groupId = process.env.MINIMAX_GROUP_ID;
+        
+        if (!apiKey || !groupId) {
+          throw new Error("MINIMAX_API_KEY or MINIMAX_GROUP_ID not configured");
+        }
+        
+        const body = {
+          model: "speech-01-turbo",
+          text: args.text,
+          group_id: groupId,
+          voice_setting: {
+            voice_id: args.voiceId || "female-shaonv",
+            speed: args.voiceSettings?.speed ?? 1.0,
+            vol: args.voiceSettings?.volume ?? 1.0,
+            pitch: args.voiceSettings?.pitch ?? 0,
+            emotion: args.voiceSettings?.emotion ?? "happy",
+          },
+          audio_setting: {
+            format: "mp3",
+            sample_rate: 16000,
+            channel: 1,
+            bits_per_sample: 16,
+          },
+        };
+        
+        const resp = await fetch("https://api.minimax.chat/v1/t2a_v2", {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
+        
+        if (!resp.ok) {
+          const text = await resp.text();
+          throw new Error(`Minimax TTS failed: ${resp.status} ${resp.statusText} ${text}`);
+        }
+        
+        const data = await resp.json();
+        const audioData = data.audio_file || data.audio || "";
+        
+        return {
+          audioData,
+          format: "mp3",
+          duration: data.duration || 0,
+          byteSize: audioData.length * 0.75, // Estimate from base64
+        };
+      } else {
+        // ElevenLabs TTS implementation (default)
+        const apiKey = process.env.ELEVENLABS_API_KEY || "";
+        if (!apiKey) throw new Error("ELEVENLABS_API_KEY not configured");
+        
+        const body = {
+          text: args.text,
+          model_id: args.modelId || "eleven_turbo_v2_5",
+          voice_settings: {
+            stability: args.voiceSettings?.stability ?? 0.5,
+            similarity_boost: args.voiceSettings?.similarityBoost ?? 0.75,
+            style: args.voiceSettings?.style ?? 0.5,
+            use_speaker_boost: args.voiceSettings?.useSpeakerBoost ?? true,
+          },
+          output_format: args.outputFormat || "mp3_22050_32",
+          optimize_streaming_latency: 3,
+        } as any;
+        
+        const resp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${args.voiceId}`, {
+          method: 'POST',
+          headers: {
+            'xi-api-key': apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        } as any);
+        
+        if (!resp.ok) {
+          const text = await resp.text();
+          throw new Error(`ElevenLabs TTS failed: ${resp.status} ${resp.statusText} ${text}`);
+        }
+        
+        const ab = await resp.arrayBuffer();
+        const byteSize = ab.byteLength;
+        const audioData = arrayBufferToBase64(ab);
+        
+        return {
+          audioData,
+          format: args.outputFormat || "mp3_22050_32",
+          duration: estimateAudioDurationBytes(byteSize, args.outputFormat || "mp3_22050_32"),
+          byteSize,
+        };
       }
-      
-      // Combine chunks and convert to base64
-      const audioBuffer = Buffer.concat(chunks);
-      const audioData = audioBuffer.toString('base64');
-      
-      return {
-        audioData,
-        format: args.outputFormat || "mp3_44100_128",
-        duration: estimateAudioDuration(audioBuffer, args.outputFormat || "mp3_44100_128"),
-        byteSize: audioBuffer.length,
-      };
     } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : String(error);
-      console.error("ElevenLabs TTS error:", errMsg);
+      console.error(`${provider} TTS error:`, errMsg);
       throw new Error(`Speech synthesis failed: ${errMsg}`);
     }
   },
@@ -154,7 +254,18 @@ export const generateResponse = action({
   },
   handler: async (ctx, args) => {
     try {
-      const model = args.model || "openai/gpt-oss-120b";
+      // Use OpenAI OSS models available on OpenRouter
+      let model = args.model || "openai/gpt-oss-120b";
+      
+      // Fallback models if the primary fails
+      const modelFallbacks = [
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b"
+      ];
+      
+      if (!args.model) {
+        model = modelFallbacks[0];
+      }
       
       if (args.stream) {
         // Streaming response
@@ -184,16 +295,41 @@ export const generateResponse = action({
           chunks,
         };
       } else {
-        // Non-streaming response
-        const completion = await getOpenRouter().chat.completions.create({
-          model,
-          messages: args.messages,
-          temperature: args.temperature || 0.7,
-          max_tokens: args.maxTokens || 2000,
-          top_p: args.topP || 1,
-          frequency_penalty: args.frequencyPenalty || 0,
-          presence_penalty: args.presencePenalty || 0,
-        });
+        // Non-streaming response with fallback
+        let completion;
+        let lastError;
+        
+        // Try primary model first, then fallbacks
+        const modelsToTry = args.model ? [args.model] : modelFallbacks;
+        
+        for (const tryModel of modelsToTry) {
+          try {
+            completion = await getOpenRouter().chat.completions.create({
+              model: tryModel,
+              messages: args.messages,
+              temperature: args.temperature || 0.7,
+              max_tokens: args.maxTokens || 2000,
+              top_p: args.topP || 1,
+              frequency_penalty: args.frequencyPenalty || 0,
+              presence_penalty: args.presencePenalty || 0,
+            });
+            
+            console.log(`Successfully used model: ${tryModel}`);
+            break; // Success, exit loop
+          } catch (error) {
+            lastError = error;
+            console.error(`Failed with model ${tryModel}:`, error);
+            if (tryModel === modelsToTry[modelsToTry.length - 1]) {
+              // Last model in list, throw the error
+              throw lastError;
+            }
+            // Otherwise, try next model
+          }
+        }
+        
+        if (!completion) {
+          throw lastError || new Error("Failed to get completion from any model");
+        }
         
         return {
           type: 'completion',
@@ -305,7 +441,7 @@ function calculateConfidence(segments: any[] | undefined): number {
 }
 
 // Helper function to estimate audio duration
-function estimateAudioDuration(audioBuffer: Buffer, format: string): number {
+function estimateAudioDurationBytes(byteLength: number, format: string): number {
   // Rough estimation based on format and buffer size
   const bitrates: Record<string, number> = {
     "mp3_44100_128": 128000,
@@ -316,9 +452,67 @@ function estimateAudioDuration(audioBuffer: Buffer, format: string): number {
   };
   
   const bitrate = bitrates[format] || 128000;
-  const durationSeconds = (audioBuffer.length * 8) / bitrate;
+  const durationSeconds = (byteLength * 8) / bitrate;
   
   return Math.round(durationSeconds * 1000) / 1000; // Round to 3 decimal places
+}
+
+function arrayBufferToBase64(ab: ArrayBuffer): string {
+  let binary = '';
+  const bytes = new Uint8Array(ab);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+  // @ts-ignore
+  return btoa(binary);
+}
+
+// Convert a base64 string to a Uint8Array without using Node Buffer or data: URLs
+function base64ToUint8Array(base64: string): Uint8Array {
+  // Remove any non-base64 characters (newlines, spaces)
+  base64 = base64.replace(/[^A-Za-z0-9+/=]/g, '');
+
+  // Prefer atob if available
+  // @ts-ignore
+  if (typeof atob === 'function') {
+    // @ts-ignore
+    const binaryString: string = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  // Fallback: manual decoder
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+  const lookup = new Uint8Array(256);
+  for (let i = 0; i < chars.length; i++) lookup[chars.charCodeAt(i)] = i;
+
+  const len = base64.length;
+  let bufferLength = (len / 4) * 3;
+  if (base64.charAt(len - 1) === '=') bufferLength--;
+  if (base64.charAt(len - 2) === '=') bufferLength--;
+
+  const bytes = new Uint8Array(bufferLength);
+  let p = 0;
+
+  for (let i = 0; i < len; i += 4) {
+    const encoded1 = lookup[base64.charCodeAt(i)];
+    const encoded2 = lookup[base64.charCodeAt(i + 1)];
+    const encoded3 = lookup[base64.charCodeAt(i + 2)];
+    const encoded4 = lookup[base64.charCodeAt(i + 3)];
+
+    bytes[p++] = (encoded1 << 2) | (encoded2 >> 6);
+    if (base64.charAt(i + 2) !== '=') {
+      bytes[p++] = ((encoded2 & 63) << 4) | (encoded3 >> 2);
+    }
+    if (base64.charAt(i + 3) !== '=') {
+      bytes[p++] = ((encoded3 & 3) << 6) | encoded4;
+    }
+  }
+
+  return bytes;
 }
 
 // Batch transcription for multiple audio chunks
@@ -334,10 +528,26 @@ export const batchTranscribe = action({
     const results: any[] = await Promise.all(
       args.audioChunks.map(async (chunk): Promise<any> => {
         try {
-          const result: any = await ctx.runAction(api.aiServices.transcribeAudio, {
-            audioData: chunk.audioData,
-            language: args.language,
-          });
+          const wavBytes = base64ToUint8Array(chunk.audioData);
+          const wavBuffer = wavBytes.buffer.slice(
+            wavBytes.byteOffset,
+            wavBytes.byteOffset + wavBytes.byteLength
+          ) as ArrayBuffer;
+          const file = new File([wavBuffer], 'audio.wav', { type: 'audio/wav' });
+          const transcription = await getOpenAI().audio.transcriptions.create({
+            file,
+            model: "whisper-1",
+            language: args.language || "en",
+            response_format: "verbose_json",
+            temperature: 0.2,
+          } as any);
+          const result: any = {
+            text: (transcription as any).text,
+            language: (transcription as any).language,
+            duration: (transcription as any).duration,
+            segments: (transcription as any).segments,
+            confidence: calculateConfidence((transcription as any).segments),
+          };
           return {
             id: chunk.id,
             success: true,
@@ -396,5 +606,167 @@ export const checkAPIHealth = action({
     }
     
     return health;
+  },
+});
+
+/**
+ * Sync three default ElevenLabs premade voices into the voices table.
+ * Prefers Rachel, Antoni, Bella; falls back to first premade voices available.
+ */
+export const syncDefaultVoices = action({
+  args: {
+    names: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const targetNames = new Set((args.names || ["Rachel", "Antoni", "Bella"]).map(n => n.toLowerCase()));
+      const result = await getElevenLabs().voices.getAll();
+      // SDK returns shape { voices: Voice[] }
+      const allVoices: any[] = (result as any).voices || (result as any) || [];
+      const premade = allVoices.filter(v => (v.category || v.labels?.category) === "premade" || v.category === "cloned" || v.category === "generated");
+
+      const selected: any[] = [];
+      // First add by preferred names
+      for (const vInfo of premade) {
+        if (selected.length >= 3) break;
+        if (vInfo?.name && targetNames.has(String(vInfo.name).toLowerCase())) {
+          selected.push(vInfo);
+        }
+      }
+      // Fill up remaining slots
+      if (selected.length < 3) {
+        for (const vInfo of premade) {
+          if (selected.length >= 3) break;
+          if (!selected.find(s => s.voice_id === vInfo.voice_id)) {
+            selected.push(vInfo);
+          }
+        }
+      }
+
+      let inserted = 0;
+      for (const vInfo of selected) {
+        // Check if voice already exists by provider+externalVoiceId
+        const existing = await ctx.runQuery(api.voices.getByExternalVoiceId, { externalVoiceId: vInfo.voice_id });
+        if (existing) continue;
+
+        const previewUrl = vInfo.preview_url || vInfo.preview?.url || (vInfo.samples?.[0]?.preview_url) || "";
+        try {
+          await ctx.runMutation(api.voices.upsertProviderVoice, {
+            name: vInfo.name || "ElevenLabs Voice",
+            description: vInfo.description || "Premade voice from ElevenLabs",
+            language: "en",
+            accent: undefined as any,
+            ageGroup: "child",  // Mark default voices as child-friendly
+            gender: (vInfo.gender === "male" || vInfo.gender === "female") ? vInfo.gender : "neutral",
+            previewUrl: previewUrl,
+            provider: "11labs",
+            externalVoiceId: vInfo.voice_id,
+            tags: Array.isArray(vInfo.labels) 
+              ? [...vInfo.labels, "kids-friendly", "child-safe"]  // Add kid-friendly tags
+              : ["kids-friendly", "child-safe"],
+            isPremium: false,
+            isPublic: true,
+            // uploadedBy omitted for default library voices
+          } as any);
+          inserted += 1;
+        } catch (e: any) {
+          // Ignore write conflicts from concurrent seed attempts
+          const msg = e?.message || String(e);
+          if (!msg.includes('Documents read from or written to the "voices" table changed')) throw e;
+        }
+      }
+
+      return { inserted };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error("syncDefaultVoices error:", msg);
+      throw new Error(`Failed to sync default voices: ${msg}`);
+    }
+  },
+});
+
+/**
+ * Clone a new ElevenLabs voice from a base64-encoded audio file and store it in the voices table.
+ * Returns the external voice_id for use in TTS, and the created DB document id.
+ */
+export const cloneElevenVoiceFromBase64 = action({
+  args: {
+    name: v.string(),
+    description: v.string(),
+    language: v.optional(v.string()),
+    accent: v.optional(v.string()),
+    ageGroup: v.string(),
+    gender: v.union(v.literal("male"), v.literal("female"), v.literal("neutral")),
+    tags: v.array(v.string()),
+    isPublic: v.boolean(),
+    fileBase64: v.string(),
+    mimeType: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<{ voiceDocId: Id<"voices">; externalVoiceId: string; previewUrl: string }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) throw new Error("ELEVENLABS_API_KEY is not configured");
+
+    // Prepare multipart form-data without Node Buffer or data: URL fetch
+    const bytes = base64ToUint8Array(args.fileBase64);
+    const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const blob = new Blob([buf], { type: args.mimeType || 'audio/webm' });
+    const form = new FormData();
+    form.append('name', args.name);
+    form.append('files', blob, 'voice_sample.webm');
+    if (args.description) form.append('description', args.description);
+
+    // Call ElevenLabs Voice Cloning API
+    const res = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+      method: 'POST',
+      headers: {
+        'xi-api-key': apiKey,
+      },
+      body: form as any,
+    } as any);
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`ElevenLabs clone failed: ${res.status} ${res.statusText} ${errText}`);
+    }
+
+    const data: any = await res.json();
+    const externalVoiceId: string = data?.voice_id || data?.voiceId || data?.id;
+    if (!externalVoiceId) throw new Error("Missing voice_id from ElevenLabs response");
+
+    // Try to fetch voice details to get preview URL
+    let previewUrl = "";
+    try {
+      const detailsRes = await fetch(`https://api.elevenlabs.io/v1/voices/${externalVoiceId}`, {
+        headers: { 'xi-api-key': apiKey },
+      });
+      if (detailsRes.ok) {
+        const details: any = await detailsRes.json();
+        previewUrl = details?.preview_url || details?.preview?.url || details?.samples?.[0]?.preview_url || "";
+      }
+    } catch (e) {
+      // best-effort only
+    }
+
+    // Store in DB via mutation
+    const insertedId = await ctx.runMutation(api.voices.upsertProviderVoice, {
+      name: args.name,
+      description: args.description,
+      language: args.language || "en",
+      accent: args.accent,
+      ageGroup: args.ageGroup,
+      gender: args.gender,
+      previewUrl,
+      provider: "11labs",
+      externalVoiceId,
+      tags: args.tags,
+      isPremium: false,
+      isPublic: args.isPublic,
+      uploadedBy: identity.subject as any,
+    } as any) as Id<"voices">;
+
+    return { voiceDocId: insertedId, externalVoiceId, previewUrl };
   },
 });

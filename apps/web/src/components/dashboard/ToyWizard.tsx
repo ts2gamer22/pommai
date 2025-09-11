@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToyWizardStore, type WizardStep } from '@/stores/toyWizardStore';
 import { useToysStore } from '@/stores/useToysStore';
 import { Button, ProgressBar, Card, Popup } from '@pommai/ui';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 // Import step components (to be created)
 import { WelcomeStep } from './steps/WelcomeStep';
@@ -65,48 +67,72 @@ export function ToyWizard() {
   
   const {
     currentStep,
-    completedSteps,
     toyConfig,
     setCurrentStep,
     markStepCompleted,
-    canProceedToStep,
     resetWizard,
     setIsCreating,
   } = useToyWizardStore();
   
-  const { addToy } = useToysStore();
+
+  const createToy = useMutation(api.toys.createToy);
+  const upsertKnowledgeBase = useMutation(api.knowledgeBase.upsertKnowledgeBase);
 
   const currentStepIndex = WIZARD_STEPS.indexOf(currentStep);
   const progressPercentage = ((currentStepIndex + 1) / WIZARD_STEPS.length) * 100;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     // Special handling for review step - actually create the toy
     if (currentStep === 'review') {
-      setIsCreating(true);
-      
-      // Create the toy object
-      const newToy = {
-        _id: `toy_${Date.now()}`, // Generate a temporary ID
-        name: toyConfig.name,
-        type: toyConfig.type as any,
-        status: 'active' as const,
-        isForKids: toyConfig.isForKids,
-        voiceId: toyConfig.voiceId,
-        voiceName: toyConfig.voiceName,
-        personalityPrompt: toyConfig.personalityPrompt,
-        isPublic: toyConfig.isPublic,
-        tags: toyConfig.tags,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        conversationCount: 0,
-        messageCount: 0,
-        lastActiveAt: undefined,
-        deviceId: undefined,
-      };
-      
-      // Add toy to the store
-      addToy(newToy);
-      setIsCreating(false);
+      try {
+        setIsCreating(true);
+
+        // Map safety settings to mutation args
+        const safetyLevel = toyConfig.safetySettings?.safetyLevel;
+        const contentFilters = toyConfig.safetySettings?.contentFilters;
+
+        // Persist the toy in Convex
+        const toyId = await createToy({
+          name: toyConfig.name,
+          type: toyConfig.type,
+          isForKids: toyConfig.isForKids,
+          ageGroup: toyConfig.ageGroup,
+          voiceId: toyConfig.voiceId,
+          personalityPrompt: toyConfig.personalityPrompt,
+          personalityTraits: toyConfig.personalityTraits,
+          safetyLevel,
+          contentFilters,
+          isPublic: toyConfig.isPublic,
+          tags: toyConfig.tags,
+        });
+
+        // Optionally upsert knowledge base if provided by the wizard
+        if (toyConfig.knowledgeBase) {
+          const kb = toyConfig.knowledgeBase;
+          const hasContent = (
+            (kb.toyBackstory.origin?.trim()?.length ?? 0) > 0 ||
+            (kb.toyBackstory.personality?.trim()?.length ?? 0) > 0 ||
+            (kb.toyBackstory.specialAbilities?.length ?? 0) > 0 ||
+            (kb.toyBackstory.favoriteThings?.length ?? 0) > 0 ||
+            (kb.customFacts?.length ?? 0) > 0 ||
+            (kb.familyInfo?.members?.length ?? 0) > 0 ||
+            (kb.familyInfo?.pets?.length ?? 0) > 0 ||
+            (kb.familyInfo?.importantDates?.length ?? 0) > 0
+          );
+          if (hasContent) {
+            await upsertKnowledgeBase({
+              toyId,
+              toyBackstory: kb.toyBackstory,
+              familyInfo: kb.familyInfo,
+              customFacts: kb.customFacts ?? [],
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to create toy:', err);
+      } finally {
+        setIsCreating(false);
+      }
     }
     
     markStepCompleted(currentStep);
@@ -164,11 +190,11 @@ export function ToyWizard() {
   const CurrentStepComponent = StepComponent[currentStep];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#fefcd0] to-[#f4e5d3] py-6 sm:py-8 toy-wizard">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#fefcd0] to-[#f4e5d3] py-[var(--spacing-lg)] sm:py-[var(--spacing-xl)] toy-wizard">
+      <div className="max-w-4xl mx-auto px-[var(--spacing-md)]">
         {/* Header */}
-        <div className="mb-8 sm:mb-10">
-          <div className="flex items-center justify-between mb-6 sm:mb-8">
+        <div className="mb-[var(--spacing-xl)] sm:mb-[var(--spacing-2xl)]">
+          <div className="flex items-center justify-between mb-[var(--spacing-lg)] sm:mb-[var(--spacing-xl)]">
             <div className="text-center sm:text-left">
               <h1 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-3 uppercase tracking-wider text-gray-800"
                 style={{
@@ -211,11 +237,11 @@ export function ToyWizard() {
         </div>
 
         {/* Main content */}
-        <Card 
+          <Card 
           bg="#ffffff" 
           borderColor="black" 
           shadowColor="#c381b5"
-          className="p-6 sm:p-8 lg:p-10 hover-lift transition-transform"
+          className="p-[var(--spacing-lg)] sm:p-[var(--spacing-xl)] lg:p-[var(--spacing-2xl)] hover-lift transition-transform"
         >
           <AnimatePresence mode="wait">
             <motion.div
@@ -232,7 +258,7 @@ export function ToyWizard() {
 
         {/* Navigation buttons */}
         {currentStep !== 'completion' && (
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row justify-between gap-4">
+          <div className="mt-[var(--spacing-xl)] sm:mt-[var(--spacing-2xl)] flex flex-col sm:flex-row justify-between gap-[var(--spacing-md)]">
             <Button
               bg={currentStepIndex === 0 ? "#f0f0f0" : "#ffffff"}
               textColor={currentStepIndex === 0 ? "#999" : "black"}

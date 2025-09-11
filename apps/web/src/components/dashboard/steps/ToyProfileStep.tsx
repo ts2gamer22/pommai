@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { useToyWizardStore } from '@/stores/toyWizardStore';
 import { Input, TextArea, Card } from '@pommai/ui';
 import { 
@@ -66,12 +66,12 @@ export function ToyProfileStep() {
   return (
     <div className="space-y-6 step-component">
       <div className="text-center sm:text-left">
-        <h2 className="font-minecraft text-base sm:text-lg font-black mb-2 uppercase tracking-wider text-gray-800"
+        <h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-2 uppercase tracking-wider text-gray-800"
           style={{
             textShadow: '2px 2px 0 #c381b5'
           }}
         >
-          👾 Let's start with the basics
+          👾 Let&apos;s start with the basics
         </h2>
         <p className="font-geo font-medium text-gray-600 tracking-wide">
           Give your AI toy a name and choose what type of companion it will be.
@@ -86,7 +86,7 @@ export function ToyProfileStep() {
         </label>
         <Input
           value={toyConfig.name}
-          onChange={(e) => handleNameChange(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => handleNameChange(e.target.value)}
           placeholder="e.g., Buddy, Luna, Max"
           bg={errors.name ? "#ffe4e1" : "#ffffff"}
           borderColor={errors.name ? "red" : "black"}
@@ -96,7 +96,7 @@ export function ToyProfileStep() {
           <p className="font-geo text-sm text-red-500 font-semibold uppercase tracking-wider">{errors.name}</p>
         )}
         <p className="font-geo text-sm font-medium text-gray-600 tracking-wide">
-          Choose a friendly name that's easy to remember and pronounce
+          Choose a friendly name that&apos;s easy to remember and pronounce
         </p>
       </div>
 
@@ -133,7 +133,7 @@ export function ToyProfileStep() {
                 name="toyType"
                 value={type.id}
                 checked={toyConfig.type === type.id}
-                onChange={(e) => handleTypeChange(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handleTypeChange(e.target.value)}
                 className="sr-only"
               />
               <type.icon className={`w-6 h-6 sm:w-8 sm:h-8 mb-2 ${
@@ -166,7 +166,7 @@ export function ToyProfileStep() {
         </div>
         <Input
           value={tags}
-          onChange={(e) => handleTagsChange(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => handleTagsChange(e.target.value)}
           placeholder="e.g., educational, storyteller, friend"
           bg="#ffffff"
           borderColor="black"
@@ -206,7 +206,7 @@ export function ToyProfileStep() {
             <input
               type="checkbox"
               checked={toyConfig.isPublic}
-              onChange={(e) => updateToyConfig('isPublic', e.target.checked)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => updateToyConfig('isPublic', e.target.checked)}
               className="pixel-checkbox"
             />
           </label>

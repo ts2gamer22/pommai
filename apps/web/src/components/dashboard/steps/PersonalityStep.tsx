@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useToyWizardStore } from '@/stores/toyWizardStore';
 import { TextArea, Button, Input, Card } from '@pommai/ui';
 import { 
@@ -103,7 +103,7 @@ export function PersonalityStep() {
             textShadow: '2px 2px 0 #c381b5'
           }}
         >
-          ✨ Design {toyConfig.name}'s Personality
+          ✨ Design {toyConfig.name}&apos;s Personality
         </h2>
         <p className="font-geo text-sm font-medium text-gray-600 tracking-wide leading-relaxed">
           Create a unique personality that will make {toyConfig.name} special and engaging.
@@ -118,7 +118,7 @@ export function PersonalityStep() {
         </label>
         <TextArea
           value={toyConfig.personalityPrompt}
-          onChange={(e) => handlePersonalityPromptChange(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => handlePersonalityPromptChange(e.target.value)}
           placeholder={`Describe ${toyConfig.name}'s personality in detail. For example: "${toyConfig.name} is a cheerful and curious companion who loves to tell stories about space adventures..."`}
           rows={4}
           bg="#ffffff"
@@ -228,9 +228,9 @@ export function PersonalityStep() {
           <div className="flex gap-2">
             <Input
               value={newCatchPhrase}
-              onChange={(e) => setNewCatchPhrase(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setNewCatchPhrase(e.target.value)}
               placeholder="Add a catch phrase..."
-              onKeyPress={(e) => e.key === 'Enter' && addCatchPhrase()}
+              onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addCatchPhrase()}
               bg="#ffffff"
               borderColor="black"
               className="font-geo font-medium flex-1"
@@ -287,7 +287,7 @@ export function PersonalityStep() {
               <input
                 type="checkbox"
                 checked={false}
-                onChange={(e) => {
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
                   // For now, just handle usesSoundEffects
                   if (item.key === 'usesSoundEffects') {
                     updatePersonalityTraits({

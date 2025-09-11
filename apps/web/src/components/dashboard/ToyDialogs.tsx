@@ -1,5 +1,6 @@
 'use client';
 
+import type { ChangeEvent } from 'react';
 import { Button, Input, Popup } from '@pommai/ui';
 
 interface ToyDialogsProps {
@@ -88,7 +89,7 @@ export function ToyDialogs({
               </label>
               <Input
                 value={duplicateName}
-                onChange={(e) => onDuplicateNameChange(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => onDuplicateNameChange(e.target.value)}
                 placeholder="Enter toy name"
                 bg="#ffffff"
                 borderColor="black"

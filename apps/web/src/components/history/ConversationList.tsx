@@ -1,7 +1,7 @@
 'use client';
 
-import { Card, Button } from '@pommai/ui';
-import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
+import { Card } from '@pommai/ui';
+import { format, isToday, isYesterday } from 'date-fns';
 import { 
   MessageSquare, 
   Clock, 
@@ -11,10 +11,20 @@ import {
   Meh,
   ChevronRight
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+
+interface ConversationItem {
+  _id: string;
+  toyName: string;
+  startedAt: string | number | Date;
+  duration?: number;
+  messageCount: number;
+  flaggedMessageCount: number;
+  topics?: string[];
+  sentiment: 'positive' | 'neutral' | 'negative' | string;
+}
 
 interface ConversationListProps {
-  conversations: any[];
+  conversations: ConversationItem[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   isLoading: boolean;
@@ -55,7 +65,7 @@ export function ConversationList({
         className="p-8 text-center hover-lift"
       >
         <MessageSquare className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-        <h3 className="text-lg font-black uppercase tracking-wider text-black mb-2">No conversations found</h3>
+        <h3 className="retro-h3 text-base sm:text-lg text-black mb-2">No conversations found</h3>
         <p className="font-bold text-gray-700 uppercase tracking-wide">
           Try adjusting your filters or search criteria
         </p>
@@ -64,7 +74,7 @@ export function ConversationList({
   }
 
   // Group conversations by date
-  const groupedConversations = conversations.reduce((groups: Record<string, any[]>, conv: any) => {
+  const groupedConversations = conversations.reduce((groups: Record<string, ConversationItem[]>, conv: ConversationItem) => {
     const date = new Date(conv.startedAt);
     let dateKey: string;
     
@@ -81,7 +91,7 @@ export function ConversationList({
     }
     groups[dateKey].push(conv);
     return groups;
-  }, {} as Record<string, any[]>);
+  }, {} as Record<string, ConversationItem[]>);
 
   const getSentimentIcon = (sentiment: string) => {
     switch (sentiment) {
@@ -111,7 +121,7 @@ export function ConversationList({
         <div className="p-4 space-y-6">
           {Object.entries(groupedConversations).map(([date, convs]) => (
             <div key={date}>
-              <h3 className="text-sm font-black uppercase tracking-wider text-black mb-3">
+              <h3 className="retro-h3 text-sm text-black mb-3">
                 📅 {date}
               </h3>
               <div className="space-y-2">
@@ -149,11 +159,14 @@ export function ConversationList({
                             <Clock className="w-3 h-3" />
                             {format(new Date(conv.startedAt), 'h:mm a')}
                           </span>
-                          {conv.duration > 0 && (
-                            <span className="flex items-center gap-1">
-                              Duration: {formatDuration(conv.duration)}
-                            </span>
-                          )}
+                          {(() => {
+                            const durationMs = typeof conv.duration === 'number' ? conv.duration : 0;
+                            return durationMs > 0 ? (
+                              <span className="flex items-center gap-1">
+                                Duration: {formatDuration(durationMs)}
+                              </span>
+                            ) : null;
+                          })()}
                           <span className="flex items-center gap-1">
                             <MessageSquare className="w-3 h-3" />
                             {conv.messageCount} messages

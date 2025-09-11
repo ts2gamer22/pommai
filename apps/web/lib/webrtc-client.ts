@@ -18,6 +18,12 @@ export interface SessionInfo {
   threadId: string;
 }
 
+declare global {
+  interface Window {
+    webkitAudioContext?: typeof AudioContext;
+  }
+}
+
 export class WebRTCClient extends EventEmitter {
   private config: WebRTCClientConfig;
   private pc: RTCPeerConnection | null = null;
@@ -240,7 +246,8 @@ export class WebRTCClient extends EventEmitter {
   private setupAudioProcessing(): void {
     if (!this.localStream) return;
 
-    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const Ctx = window.AudioContext || window.webkitAudioContext!;
+    this.audioContext = new Ctx();
     const source = this.audioContext.createMediaStreamSource(this.localStream);
     
     // Create processor for audio analysis
@@ -271,7 +278,7 @@ export class WebRTCClient extends EventEmitter {
   /**
    * Handle control messages from server
    */
-  private handleControlMessage(message: any): void {
+  private handleControlMessage(message: { type: string; [key: string]: unknown }): void {
     switch (message.type) {
       case 'pong':
         // Heartbeat response
@@ -293,7 +300,7 @@ export class WebRTCClient extends EventEmitter {
   /**
    * Send control message to server
    */
-  public sendControlMessage(message: any): void {
+  public sendControlMessage(message: Record<string, unknown>): void {
     if (this.dataChannel && this.dataChannel.readyState === 'open') {
       this.dataChannel.send(JSON.stringify(message));
     } else {

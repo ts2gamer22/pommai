@@ -12,6 +12,11 @@ export interface BubbleProps {
   textColor?: string;
 }
 
+/**
+ * Bubble
+ *
+ * Speech bubble component. Typography is controlled by consumers via className.
+ */
 export const Bubble = ({
   children,
   className = "",

@@ -77,7 +77,7 @@ const SelectValue = ({ placeholder }: { placeholder?: string }) => {
   return <span className={!value ? "text-muted-foreground" : ""}>{value || placeholder}</span>
 }
 
-interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {}
+type SelectContentProps = React.HTMLAttributes<HTMLDivElement>;
 
 const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
   ({ className, children, ...props }, ref) => {

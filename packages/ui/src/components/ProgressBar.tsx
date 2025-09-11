@@ -1,21 +1,29 @@
 import React, { useMemo } from "react";
 
 export interface ProgressBarProps {
-  progress: number;
+  progress?: number;
+  value?: number; // alias for compatibility with other UI APIs
   className?: string;
   size?: "sm" | "md" | "lg";
   color?: string;
   borderColor?: string;
 }
 
+/**
+ * ProgressBar
+ *
+ * Pixel-styled progress indicator reading theme tokens.
+ */
 export const ProgressBar = ({
   progress,
+  value,
   className = "",
   size = "md",
   color,
   borderColor,
 }: ProgressBarProps): JSX.Element => {
-  const clampedProgress = Math.min(Math.max(progress, 0), 100);
+  const raw = typeof value === 'number' ? value : (progress ?? 0);
+  const clampedProgress = Math.min(Math.max(raw, 0), 100);
 
   const svgString = useMemo(() => {
     const svgColor = borderColor || "currentColor";

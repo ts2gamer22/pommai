@@ -8,31 +8,37 @@ import {
   TextArea,
   ProgressBar,
   Popup,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   Bubble,
   Accordion,
   AccordionItem,
   AccordionTrigger,
   AccordionContent
 } from '@/components';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
+/**
+ * RetroUI Demo Page
+ * - Pixel headings for demo sections; spacing tokens for page padding.
+ */
 export default function DemoPage() {
   const [popupOpen, setPopupOpen] = useState(false);
   const [progress, setProgress] = useState(50);
   const [inputValue, setInputValue] = useState('');
 
   return (
-    <div className="p-8 space-y-8 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold mb-8">RetroUI Components Demo</h1>
+<div className="p-[var(--spacing-xl)] space-y-8 bg-gray-100 min-h-screen">
+<h1 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-[var(--spacing-lg)]">RetroUI Components Demo</h1>
 
       {/* Button Component */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Button</h2>
+<h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black">Button</h2>
         <div className="flex gap-4 flex-wrap">
           <Button 
             bg="#fefcd0"
@@ -66,7 +72,7 @@ export default function DemoPage() {
 
       {/* Card Component */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Card</h2>
+<h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black">Card</h2>
         <div className="flex gap-4 flex-wrap">
           <Card 
             bg="#fefcd0" 
@@ -93,16 +99,16 @@ export default function DemoPage() {
 
       {/* Input Component */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Input</h2>
+<h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black">Input</h2>
         <div className="flex gap-4 flex-wrap">
-          <Input
-            placeholder="Enter text..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            bg="#fefcd0"
-            textColor="black"
-            borderColor="black"
-          />
+            <Input
+              placeholder="Enter text..."
+              value={inputValue}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value)}
+              bg="#fefcd0"
+              textColor="black"
+              borderColor="black"
+            />
           <Input
             placeholder="Purple themed input..."
             bg="#c381b5"
@@ -114,7 +120,7 @@ export default function DemoPage() {
 
       {/* TextArea Component */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">TextArea</h2>
+<h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black">TextArea</h2>
         <TextArea
           placeholder="Enter your message here..."
           rows={4}
@@ -127,7 +133,7 @@ export default function DemoPage() {
 
       {/* ProgressBar Component */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">ProgressBar</h2>
+<h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black">ProgressBar</h2>
         <div className="space-y-2 max-w-md">
           <ProgressBar progress={progress} size="sm" color="#92cd41" borderColor="black" />
           <ProgressBar progress={progress} size="md" color="#c381b5" borderColor="black" />
@@ -157,7 +163,7 @@ export default function DemoPage() {
 
       {/* Popup Component */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Popup</h2>
+<h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black">Popup</h2>
         <Button 
           bg="#fefcd0"
           textColor="black"
@@ -182,27 +188,19 @@ export default function DemoPage() {
 
       {/* Dropdown Component */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Dropdown</h2>
-        <DropdownMenu
-          bg="#fefcd0"
-          textColor="black"
-          borderColor="black"
-          shadowColor="#c381b5"
-        >
-          <DropdownMenuTrigger
-            bg="#fefcd0"
-            textColor="black"
-            borderColor="black"
-            shadow="#c381b5"
-          >
-            Open Menu
+<h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black">Dropdown</h2>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              bg="#fefcd0"
+              textColor="black"
+              borderColor="black"
+              shadow="#c381b5"
+            >
+              Open Menu
+            </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            bg="#fefcd0"
-            textColor="black"
-            borderColor="black"
-            shadowColor="#c381b5"
-          >
+          <DropdownMenuContent>
             <DropdownMenuLabel>Options</DropdownMenuLabel>
             <DropdownMenuItem>Profile</DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
@@ -214,7 +212,7 @@ export default function DemoPage() {
 
       {/* Bubble Component */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Bubble</h2>
+<h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black">Bubble</h2>
         <div className="flex gap-8 flex-wrap">
           <Bubble 
             direction="left" 
@@ -239,7 +237,7 @@ export default function DemoPage() {
 
       {/* Accordion Component */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-bold">Accordion</h2>
+<h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black">Accordion</h2>
         <div className="max-w-md">
           <Accordion 
             collapsible

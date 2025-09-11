@@ -28,12 +28,13 @@ C:/Users/Admin/Desktop/pommai
 │   │   │   ├── test_opus.py
 │   │   │   └── test_wake_word.py
 │   │   ├── .env.example
+│   │   ├── .env
 │   │   ├── DEPLOYMENT_GUIDE.md
 │   │   ├── README.md
 │   │   └── requirements.txt
 │   └── web
-│       ├── convex
-│       │   ├── _generated
+│       │   ├── convex
+│       │   │   ├── _generated
 │       │   │   ├── api.d.ts
 │       │   │   ├── api.js
 │       │   │   ├── dataModel.d.ts
@@ -57,6 +58,7 @@ C:/Users/Admin/Desktop/pommai
 │       │   ├── schema.ts
 │       │   ├── toys.ts
 │       │   ├── voices.ts
+│       │   ├── crons.ts
 │       │   └── tsconfig.json
 │       ├── src
 │       │   ├── app
@@ -165,6 +167,7 @@ C:/Users/Admin/Desktop/pommai
 │       ├── tsconfig.json
 │       └── vercel.json
 ├── DOCS
+│   ├── design-system.md
 │   ├── context
 │   │   ├── phase1context
 │   │   │   ├── betterauthconvex.md
@@ -186,8 +189,11 @@ C:/Users/Admin/Desktop/pommai
 │   │       ├── README.md
 │   │       └── websocket-api.md
 │   │   └── phase4context
-│   └── phase
-│       ├── phase1.md
+│   ├── ops
+│   │   └── mdns-setup.md
+│   ├── phase
+│   │   ├── apitest.md
+│   │   ├── phase1.md
 │       ├── phase2.md
 │       ├── phase3.md
 │       └── phase4.md

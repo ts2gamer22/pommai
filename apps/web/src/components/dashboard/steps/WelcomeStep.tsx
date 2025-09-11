@@ -4,6 +4,13 @@ import { motion } from 'framer-motion';
 import { Sparkles, Heart, Shield, Brain } from 'lucide-react';
 import { Card } from '@pommai/ui';
 
+/**
+ * WelcomeStep
+ *
+ * Introduces the wizard. Typography rules:
+ * - Primary title uses font-minecraft (pixel) small and responsive.
+ * - All supporting text uses font-geo.
+ */
 export function WelcomeStep() {
   const features = [
     {
@@ -49,12 +56,12 @@ export function WelcomeStep() {
           🎉 Welcome to AI Toy Creation!
         </h2>
         <p className="font-geo text-sm font-medium text-gray-600 max-w-2xl mx-auto leading-relaxed">
-          Let's create a magical AI companion together! This wizard will guide you 
-          through personalizing your toy's personality, voice, and capabilities.
+          Let&apos;s create a magical AI companion together! This wizard will guide you 
+          through personalizing your toy&apos;s personality, voice, and capabilities.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-[var(--spacing-md)] sm:gap-[var(--spacing-lg)] mt-[var(--spacing-2xl)]">
         {features.map((feature, index) => (
           <motion.div
             key={index}
@@ -66,7 +73,7 @@ export function WelcomeStep() {
               bg="#ffffff"
               borderColor="black"
               shadowColor="#c381b5"
-              className="p-4 sm:p-6 hover-lift transition-transform cursor-pointer group"
+              className="p-[var(--spacing-lg)] sm:p-[var(--spacing-xl)] hover-lift transition-transform cursor-pointer group"
             >
               <div className="flex gap-4">
                 <div className="flex-shrink-0">
@@ -75,7 +82,7 @@ export function WelcomeStep() {
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-minecraft font-black text-base uppercase tracking-wider text-gray-800 mb-2">{feature.title}</h3>
+                  <h3 className="retro-h3 text-base text-gray-800 mb-2">{feature.title}</h3>
                   <p className="font-geo text-sm font-medium text-gray-600 tracking-wide leading-relaxed">{feature.description}</p>
                 </div>
               </div>
@@ -88,7 +95,7 @@ export function WelcomeStep() {
         bg="#fefcd0"
         borderColor="black"
         shadowColor="#c381b5"
-        className="p-4 sm:p-6 mt-6"
+        className="p-[var(--spacing-lg)] sm:p-[var(--spacing-xl)] mt-[var(--spacing-xl)]"
       >
         <p className="font-geo text-sm font-medium text-gray-700">
           <strong className="font-minecraft uppercase tracking-wider">📝 Note:</strong> This process takes about 5-10 minutes. Your progress 

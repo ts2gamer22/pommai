@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useToyWizardStore } from '@/stores/toyWizardStore';
-import { useToysStore } from '@/stores/useToysStore';
+import { useToysStore, ToyType } from '@/stores/useToysStore';
 import { Button, Card } from '@pommai/ui';
 import { 
   CheckCircle2, 
@@ -16,17 +16,26 @@ import {
 import { motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
+/**
+ * CompletionStep
+ *
+ * Displays the final success screen after creating a toy.
+ * Typography rules:
+ * - Primary title uses font-minecraft (pixel) with compact responsive sizes.
+ * - All supporting text uses font-geo for readability.
+ */
 export function CompletionStep() {
   const router = useRouter();
   const { toyConfig, resetWizard } = useToyWizardStore();
   const { addToy } = useToysStore();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     // Add the newly created toy to the toys store
-    const newToy = {
+      const newToy = {
       _id: `toy_${Date.now()}`, // Generate a temporary ID
       name: toyConfig.name,
-      type: toyConfig.type as any,
+      type: toyConfig.type as unknown as ToyType,
       status: 'active' as const,
       isForKids: toyConfig.isForKids,
       voiceId: toyConfig.voiceId,
@@ -53,7 +62,7 @@ export function CompletionStep() {
       return Math.random() * (max - min) + min;
     }
 
-    const interval: any = setInterval(function() {
+    const interval: ReturnType<typeof setInterval> = setInterval(function() {
       const timeLeft = animationEnd - Date.now();
 
       if (timeLeft <= 0) {
@@ -88,7 +97,7 @@ export function CompletionStep() {
   };
 
   const getToyTypeIcon = () => {
-    const icons: Record<string, any> = {
+    const icons: Record<string, string> = {
       teddy: '🧸',
       bunny: '🐰',
       cat: '🐱',
@@ -119,7 +128,7 @@ export function CompletionStep() {
         transition={{ delay: 0.2 }}
         className="space-y-4"
       >
-        <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-black"
+        <h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black uppercase tracking-wider text-gray-800"
           style={{
             textShadow: '2px 2px 0 #c381b5'
           }}
@@ -127,7 +136,7 @@ export function CompletionStep() {
           {toyConfig.name} is Ready!
         </h2>
         <div className="text-5xl mb-4">{getToyTypeIcon()}</div>
-        <p className="text-lg font-bold text-gray-700 max-w-md mx-auto uppercase tracking-wide">
+        <p className="font-geo text-sm sm:text-base font-medium text-gray-700 max-w-md mx-auto">
           Your AI companion has been successfully created and is excited to meet you!
         </p>
       </motion.div>
@@ -141,15 +150,15 @@ export function CompletionStep() {
           bg="#fefcd0"
           borderColor="black"
           shadowColor="#c381b5"
-          className="p-6 max-w-md mx-auto"
+          className="p-[var(--spacing-xl)] max-w-md mx-auto"
         >
-          <h3 className="font-black text-lg uppercase tracking-wider text-black mb-3">What's Next?</h3>
+          <h3 className="retro-h3 text-base sm:text-lg text-black mb-3">What&apos;s Next?</h3>
           <div className="space-y-3 text-left">
             <div className="flex items-start gap-3">
               <MessageSquare className="w-5 h-5 text-[#c381b5] mt-0.5" />
               <div>
                 <p className="font-black text-black uppercase tracking-wide">Start Chatting</p>
-                <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                <p className="font-geo text-sm font-medium text-gray-700">
                   Jump right into a conversation with {toyConfig.name}
                 </p>
               </div>
@@ -158,7 +167,7 @@ export function CompletionStep() {
               <Settings className="w-5 h-5 text-[#f7931e] mt-0.5" />
               <div>
                 <p className="font-black text-black uppercase tracking-wide">Customize Further</p>
-                <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                <p className="font-geo text-sm font-medium text-gray-700">
                   Fine-tune settings anytime from the dashboard
                 </p>
               </div>
@@ -167,7 +176,7 @@ export function CompletionStep() {
               <Share2 className="w-5 h-5 text-[#92cd41] mt-0.5" />
               <div>
                 <p className="font-black text-black uppercase tracking-wide">Share with Family</p>
-                <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                <p className="font-geo text-sm font-medium text-gray-700">
                   Invite family members to interact with {toyConfig.name}
                 </p>
               </div>
@@ -216,11 +225,11 @@ export function CompletionStep() {
           bg="#f7931e"
           borderColor="black"
           shadowColor="#d67c1a"
-          className="p-4 max-w-md mx-auto"
+          className="p-[var(--spacing-lg)] max-w-md mx-auto"
         >
           <div className="inline-flex items-center gap-2 text-sm font-bold text-white uppercase tracking-wide">
             <Sparkles className="w-4 h-4" />
-            <span>Tip: Say "Hello" to {toyConfig.name} to start your first conversation!</span>
+            <span>Tip: Say &quot;Hello&quot; to {toyConfig.name} to start your first conversation!</span>
           </div>
         </Card>
       </motion.div>

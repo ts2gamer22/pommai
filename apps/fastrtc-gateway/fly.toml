@@ -1,0 +1,65 @@
+# Fly.io Configuration for Pommai FastRTC Gateway
+app = "pommai-gateway"
+primary_region = "sjc"  # San Jose, change to your preferred region
+kill_signal = "SIGINT"
+kill_timeout = 5
+
+[build]
+  dockerfile = "Dockerfile.production"
+
+[env]
+  PORT = "8080"
+  HOST = "0.0.0.0"
+  LOG_LEVEL = "INFO"
+  PYTHONUNBUFFERED = "1"
+  CONVEX_ACTION_TIMEOUT = "60"
+  SKIP_TTS = "false"  # Set to true only for testing
+
+# Secrets should be set via: fly secrets set KEY=value
+# Required secrets:
+# - CONVEX_URL
+# - CONVEX_DEPLOY_KEY
+# - ELEVENLABS_API_KEY (or MINIMAX_API_KEY + MINIMAX_GROUP_ID)
+
+[experimental]
+  auto_rollback = true
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 1000
+    soft_limit = 900
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [[services.http_checks]]
+    interval = "30s"
+    grace_period = "5s"
+    method = "get"
+    path = "/health"
+    protocol = "http"
+    timeout = "2s"
+    tls_skip_verify = false
+
+# Scale configuration
+[metrics]
+  port = 9091
+  path = "/metrics"
+
+# Resource allocation
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512  # Increased for TTS streaming buffers

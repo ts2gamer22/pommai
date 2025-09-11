@@ -2,7 +2,13 @@
 
 import { Button, Card } from '@pommai/ui';
 import Link from "next/link";
+import Image from 'next/image';
 
+/**
+ * Pricing Page
+ * - Pixel headings for primary titles; supporting text uses font-geo.
+ * - Spacing tokens applied to containers and cards.
+ */
 export default function PricingPage() {
   const plans = [
     {
@@ -65,10 +71,10 @@ export default function PricingPage() {
     <div className="min-h-screen" style={{ backgroundColor: '#fefcd0' }}>
       {/* Header Navigation */}
       <header className="border-b-4 border-black bg-white">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+<div className="container mx-auto px-[var(--spacing-md)] py-[var(--spacing-md)] flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
-            <img src="/pommaiicon.png" alt="Pommai Logo" className="h-10 w-10" />
-            <img src="/pommaitext.png" alt="Pommai" className="h-8" />
+            <Image src="/pommaiicon.png" alt="Pommai Logo" width={40} height={40} className="h-10 w-10" />
+            <Image src="/pommaitext.png" alt="Pommai" width={140} height={32} className="h-8" />
           </Link>
           <nav className="flex gap-4 items-center">
             <Link href="/" className="text-black hover:text-gray-700 font-medium">
@@ -100,12 +106,12 @@ export default function PricingPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-20">
+<main className="container mx-auto px-[var(--spacing-md)] py-[var(--spacing-3xl)]">
         <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 retro-text text-black">
+<h1 className="font-minecraft text-lg sm:text-xl lg:text-2xl font-black mb-[var(--spacing-lg)] text-black">
             Simple, Transparent Pricing
           </h1>
-          <p className="text-xl text-gray-700 max-w-2xl mx-auto">
+<p className="font-geo text-sm sm:text-base text-gray-700 max-w-2xl mx-auto">
             Choose the perfect plan for your creative journey. Start free and upgrade as you grow.
           </p>
         </div>
@@ -124,7 +130,7 @@ export default function PricingPage() {
                 bg={plan.bg}
                 borderColor="black" 
                 shadowColor={plan.shadow}
-                className={`p-8 h-full ${plan.popular ? 'border-4' : ''} ${plan.popular ? 'transform scale-105' : ''}`}
+className={`p-[var(--spacing-xl)] h-full ${plan.popular ? 'border-4' : ''} ${plan.popular ? 'transform scale-105' : ''}`}
                 style={plan.popular ? { borderColor: '#f7931e' } : {}}
               >
                 <div className="text-center">
@@ -164,7 +170,7 @@ export default function PricingPage() {
 
         {/* FAQ Section */}
         <section className="max-w-4xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-12 retro-text text-black">
+          <h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black text-center mb-[var(--spacing-xl)] text-black">
             Frequently Asked Questions
           </h2>
           <div className="space-y-6">
@@ -189,7 +195,7 @@ export default function PricingPage() {
 
         {/* CTA */}
         <section className="text-center mt-20">
-          <Card bg="#e8f4fd" borderColor="black" shadowColor="#92cd41" className="p-10 max-w-2xl mx-auto">
+          <Card bg="#e8f4fd" borderColor="black" shadowColor="#92cd41" className="p-[var(--spacing-2xl)] max-w-2xl mx-auto">
             <h3 className="text-3xl font-bold mb-4 retro-text">Ready to start?</h3>
             <p className="text-lg mb-6">Join thousands of creators bringing toys to life!</p>
             <Link href="/auth">
@@ -213,7 +219,7 @@ export default function PricingPage() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-4 md:mb-0">
               <div className="flex items-center gap-2 mb-2">
-                <img src="/pommaiicon.png" alt="Pommai Logo" className="h-6 w-6" />
+                <Image src="/pommaiicon.png" alt="Pommai Logo" width={24} height={24} className="h-6 w-6" />
                 <h4 className="text-xl font-bold">Pommai.co</h4>
               </div>
               <p className="text-gray-400">Bringing toys to life, safely.</p>

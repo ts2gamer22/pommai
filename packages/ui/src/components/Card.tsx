@@ -11,6 +11,13 @@ export interface CardProps {
   onClick?: () => void;
 }
 
+/**
+ * Card
+ *
+ * Retro pixel-styled container.
+ * - Does not enforce any font; pass font classes via className.
+ * - Reads theme variables from globals.css and supports overrides via props.
+ */
 export const Card = ({
   children,
   className = "",

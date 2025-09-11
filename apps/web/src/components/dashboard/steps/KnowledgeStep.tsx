@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useToyWizardStore } from '@/stores/toyWizardStore';
 import { Input, TextArea, Button, Card } from '@pommai/ui';
 import { 
@@ -46,11 +46,12 @@ export function KnowledgeStep() {
   };
 
   const removeSpecialAbility = (index: number) => {
-    const abilities = [...(toyConfig.knowledgeBase?.toyBackstory.specialAbilities || [])];
+    if (!toyConfig.knowledgeBase) return;
+    const abilities = [...(toyConfig.knowledgeBase.toyBackstory.specialAbilities || [])];
     abilities.splice(index, 1);
     updateKnowledgeBase({
       toyBackstory: {
-        ...toyConfig.knowledgeBase!.toyBackstory,
+        ...toyConfig.knowledgeBase.toyBackstory,
         specialAbilities: abilities,
       },
     });
@@ -71,11 +72,12 @@ export function KnowledgeStep() {
   };
 
   const removeFavoriteThing = (index: number) => {
-    const things = [...(toyConfig.knowledgeBase?.toyBackstory.favoriteThings || [])];
+    if (!toyConfig.knowledgeBase) return;
+    const things = [...(toyConfig.knowledgeBase.toyBackstory.favoriteThings || [])];
     things.splice(index, 1);
     updateKnowledgeBase({
       toyBackstory: {
-        ...toyConfig.knowledgeBase!.toyBackstory,
+        ...toyConfig.knowledgeBase.toyBackstory,
         favoriteThings: things,
       },
     });
@@ -98,15 +100,15 @@ export function KnowledgeStep() {
   return (
     <div className="space-y-6">
       <div className="text-center sm:text-left">
-        <h2 className="text-2xl sm:text-3xl font-black mb-2 uppercase tracking-wider text-black"
+        <h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-2 uppercase tracking-wider text-gray-800"
           style={{
             textShadow: '2px 2px 0 #c381b5'
           }}
         >
-          📚 Build {toyConfig.name}'s Knowledge Base
+          📚 Build {toyConfig.name}&apos;s Knowledge Base
         </h2>
-        <p className="font-bold text-gray-700 uppercase tracking-wide">
-          Add information about {toyConfig.name}'s backstory, family details, and special knowledge. This helps create more personalized interactions.
+        <p className="font-geo font-medium text-gray-700 tracking-wide">
+          Add information about {toyConfig.name}&apos;s backstory, family details, and special knowledge. This helps create more personalized interactions.
         </p>
       </div>
 
@@ -131,26 +133,27 @@ export function KnowledgeStep() {
           shadowColor="#c381b5"
           className="p-4 sm:p-6"
         >
-          <h3 className="font-black text-lg uppercase tracking-wider text-black mb-4 flex items-center gap-2">
+          <h3 className="retro-h3 text-lg text-black mb-4 flex items-center gap-2">
             <Book className="w-5 h-5" />
-            📝 {toyConfig.name}'s Backstory
+            📝 {toyConfig.name}&apos;s Backstory
           </h3>
           
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="block text-sm font-black uppercase tracking-wider text-black">Origin Story</label>
               <TextArea
-                value={toyConfig.knowledgeBase?.toyBackstory.origin || ''}
-                onChange={(e) => {
+                value={toyConfig.knowledgeBase?.toyBackstory?.origin || ''}
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
                   initializeKnowledgeBase();
+                  if (!toyConfig.knowledgeBase) return;
                   updateKnowledgeBase({
                     toyBackstory: {
-                      ...toyConfig.knowledgeBase!.toyBackstory,
+                      ...toyConfig.knowledgeBase.toyBackstory,
                       origin: e.target.value,
                     },
                   });
                 }}
-                placeholder={`Where did ${toyConfig.name} come from? What's their magical origin?`}
+                placeholder={`Where did ${toyConfig.name} come from? What&apos;s their magical origin?`}
                 rows={3}
                 bg="#ffffff"
                 borderColor="black"
@@ -161,17 +164,18 @@ export function KnowledgeStep() {
             <div className="space-y-2">
               <label className="block text-sm font-black uppercase tracking-wider text-black">Personality Background</label>
               <TextArea
-                value={toyConfig.knowledgeBase?.toyBackstory.personality || ''}
-                onChange={(e) => {
+                value={toyConfig.knowledgeBase?.toyBackstory?.personality || ''}
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
                   initializeKnowledgeBase();
+                  if (!toyConfig.knowledgeBase) return;
                   updateKnowledgeBase({
                     toyBackstory: {
-                      ...toyConfig.knowledgeBase!.toyBackstory,
+                      ...toyConfig.knowledgeBase.toyBackstory,
                       personality: e.target.value,
                     },
                   });
                 }}
-                placeholder={`What shaped ${toyConfig.name}'s personality? Any special experiences?`}
+                placeholder={`What shaped ${toyConfig.name}&apos;s personality? Any special experiences?`}
                 rows={3}
                 bg="#ffffff"
                 borderColor="black"
@@ -185,9 +189,9 @@ export function KnowledgeStep() {
               <div className="flex gap-2">
                 <Input
                   value={newAbility}
-                  onChange={(e) => setNewAbility(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setNewAbility(e.target.value)}
                   placeholder={`What special powers does ${toyConfig.name} have?`}
-                  onKeyPress={(e) => e.key === 'Enter' && addSpecialAbility()}
+                  onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addSpecialAbility()}
                   bg="#ffffff"
                   borderColor="black"
                   className="font-bold flex-1"
@@ -205,7 +209,7 @@ export function KnowledgeStep() {
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {toyConfig.knowledgeBase?.toyBackstory.specialAbilities?.map((ability, index) => (
+                {toyConfig.knowledgeBase?.toyBackstory?.specialAbilities?.map((ability, index) => (
                   <span 
                     key={index} 
                     className="px-2 py-1 text-xs font-black uppercase tracking-wider border-2 border-black bg-[#c381b5] text-white flex items-center gap-2"
@@ -228,9 +232,9 @@ export function KnowledgeStep() {
               <div className="flex gap-2">
                 <Input
                   value={newFavoriteThing}
-                  onChange={(e) => setNewFavoriteThing(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setNewFavoriteThing(e.target.value)}
                   placeholder={`What does ${toyConfig.name} love most?`}
-                  onKeyPress={(e) => e.key === 'Enter' && addFavoriteThing()}
+                  onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && addFavoriteThing()}
                   bg="#ffffff"
                   borderColor="black"
                   className="font-bold flex-1"
@@ -248,7 +252,7 @@ export function KnowledgeStep() {
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {toyConfig.knowledgeBase?.toyBackstory.favoriteThings?.map((thing, index) => (
+                {toyConfig.knowledgeBase?.toyBackstory?.favoriteThings?.map((thing, index) => (
                   <span 
                     key={index} 
                     className="px-2 py-1 text-xs font-black uppercase tracking-wider border-2 border-black bg-[#f7931e] text-white flex items-center gap-2"
@@ -285,7 +289,7 @@ export function KnowledgeStep() {
                 <label className="block text-sm font-black uppercase tracking-wider text-black">Category</label>
                 <Input
                   value={newCustomFact.category}
-                  onChange={(e) => setNewCustomFact({ ...newCustomFact, category: e.target.value })}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setNewCustomFact({ ...newCustomFact, category: e.target.value })}
                   placeholder="e.g., Hobbies, Skills, Memories"
                   bg="#ffffff"
                   borderColor="black"
@@ -296,7 +300,7 @@ export function KnowledgeStep() {
                 <label className="block text-sm font-black uppercase tracking-wider text-black">Importance</label>
                 <select
                   value={newCustomFact.importance}
-                  onChange={(e) => setNewCustomFact({ ...newCustomFact, importance: e.target.value as 'low' | 'medium' | 'high' })}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setNewCustomFact({ ...newCustomFact, importance: e.target.value as 'low' | 'medium' | 'high' })}
                   className="w-full p-2 border-2 border-black font-bold uppercase tracking-wider text-sm"
                 >
                   <option value="low">Low</option>
@@ -310,7 +314,7 @@ export function KnowledgeStep() {
               <label className="block text-sm font-black uppercase tracking-wider text-black">Fact</label>
               <TextArea
                 value={newCustomFact.fact}
-                onChange={(e) => setNewCustomFact({ ...newCustomFact, fact: e.target.value })}
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setNewCustomFact({ ...newCustomFact, fact: e.target.value })}
                 placeholder="What should your toy know or remember?"
                 rows={2}
                 bg="#ffffff"

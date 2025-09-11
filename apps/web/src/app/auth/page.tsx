@@ -1,12 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { Card, Button, Input } from '@pommai/ui';
-import { authClient } from '@/lib/auth-client';
+import { authClient } from '../../lib/auth-client';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
+/**
+ * Auth Page
+ * - Pixel headings for titles only; inputs/labels use font-geo.
+ * - Spacing tokens applied to containers.
+ */
 export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,8 +52,9 @@ export default function AuthPage() {
           },
         }
       );
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -74,8 +81,9 @@ export default function AuthPage() {
         setVerificationSent(true);
         setActiveTab('verification');
       }
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -92,8 +100,9 @@ export default function AuthPage() {
       });
       setVerificationSent(true);
       setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend verification email');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to resend verification email';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -103,16 +112,16 @@ export default function AuthPage() {
     <div className="auth-page min-h-screen flex flex-col bg-gradient-to-br from-[#fefcd0] to-[#f4e5d3]">
       {/* Header */}
       <header className="border-b-4 border-black bg-white shadow-[0_4px_0_0_#c381b5]">
-        <div className="container mx-auto px-4 py-4 sm:py-6">
+<div className="container mx-auto px-[var(--spacing-md)] py-[var(--spacing-md)] sm:py-[var(--spacing-lg)]">
           <Link href="/" className="flex items-center justify-center gap-2 sm:gap-3 hover-lift">
-            <img src="/pommaiicon.png" alt="Pommai Logo" className="h-10 w-10 sm:h-12 sm:w-12 pixelated" />
-            <img src="/pommaitext.png" alt="Pommai" className="h-8 sm:h-10 pixelated" />
+            <Image src="/pommaiicon.png" alt="Pommai Logo" width={48} height={48} className="h-10 w-10 sm:h-12 sm:w-12 pixelated" />
+            <Image src="/pommaitext.png" alt="Pommai" width={160} height={40} className="h-8 sm:h-10 pixelated" />
           </Link>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
+<main className="flex-1 flex items-center justify-center p-[var(--spacing-md)] sm:p-[var(--spacing-lg)]">
         <div className="w-full max-w-sm relative">
           {/* Decorative elements removed for cleaner UI */}
           
@@ -164,11 +173,11 @@ export default function AuthPage() {
                         type="email" 
                         placeholder="parent@example.com" 
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                         bg="#fefcd0"
                         borderColor="black"
-                        fontSize="12px"
-                        className="text-xs py-1 px-2 font-minecraft font-medium border-2 w-full"
+fontSize="12px"
+                        className="text-xs py-1 px-2 font-geo font-medium border-2 w-full"
                         required
                       />
                     </div>
@@ -181,11 +190,11 @@ export default function AuthPage() {
                         type="password" 
                         placeholder="Enter your password" 
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                         bg="#fefcd0"
                         borderColor="black"
-                        fontSize="12px"
-                        className="text-xs py-1 px-2 font-minecraft font-medium border-2 w-full"
+fontSize="12px"
+                        className="text-xs py-1 px-2 font-geo font-medium border-2 w-full"
                         required
                       />
                     </div>
@@ -251,7 +260,7 @@ export default function AuthPage() {
                     Check Your Email!
                   </h2>
                   <p className="text-xs font-geo font-semibold uppercase tracking-wide text-gray-700">
-                    We've sent a verification link to:
+                    We&apos;ve sent a verification link to:
                   </p>
                   <p className="text-sm font-minecraft font-bold text-black">
                     {email}
@@ -263,7 +272,7 @@ export default function AuthPage() {
                   </Card>
                   <div className="space-y-3 mt-6">
                     <p className="text-xs font-geo font-medium uppercase tracking-wide text-gray-600">
-                      Didn't receive the email?
+                      Didn&apos;t receive the email?
                     </p>
                     <Button
                       onClick={handleResendVerification}
@@ -312,11 +321,11 @@ export default function AuthPage() {
                         type="text" 
                         placeholder="John Doe" 
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
                         bg="#fefcd0"
                         borderColor="black"
-                        fontSize="12px"
-                        className="text-xs py-1 px-2 font-minecraft font-medium border-2 w-full"
+fontSize="12px"
+                        className="text-xs py-1 px-2 font-geo font-medium border-2 w-full"
                         required
                       />
                     </div>
@@ -329,11 +338,11 @@ export default function AuthPage() {
                         type="email" 
                         placeholder="parent@example.com" 
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                         bg="#fefcd0"
                         borderColor="black"
                         fontSize="12px"
-                        className="text-xs py-1 px-2 font-minecraft font-medium border-2 w-full"
+className="text-xs py-1 px-2 font-geo font-medium border-2 w-full"
                         required
                       />
                     </div>
@@ -346,11 +355,11 @@ export default function AuthPage() {
                         type="password" 
                         placeholder="Create a strong password" 
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                         bg="#fefcd0"
                         borderColor="black"
                         fontSize="12px"
-                        className="text-xs py-1 px-2 font-minecraft font-medium border-2 w-full"
+className="text-xs py-1 px-2 font-geo font-medium border-2 w-full"
                         required
                       />
                       <p className="text-xs font-geo font-medium uppercase tracking-wide text-gray-600">

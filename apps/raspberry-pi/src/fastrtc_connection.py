@@ -37,8 +37,8 @@ class FastRTCConfig:
     auth_token: Optional[str] = None
     reconnect_attempts: int = 5
     reconnect_delay: float = 2.0
-    ping_interval: int = 20
-    ping_timeout: int = 10
+    ping_interval: int = 30  # Increased from 20
+    ping_timeout: int = 60  # Increased from 10 to handle long AI processing
     audio_format: str = "opus"
     sample_rate: int = 16000
 
@@ -54,8 +54,9 @@ class FastRTCConnection:
         self.message_handlers: Dict[str, Callable] = {}
         self.receive_task: Optional[asyncio.Task] = None
         self.heartbeat_task: Optional[asyncio.Task] = None
-        self.audio_queue = asyncio.Queue(maxsize=100)
+        self.audio_queue = asyncio.Queue(maxsize=1000)
         self.last_activity = time.time()
+        self.last_audio_sent_time = 0  # Track when we last sent audio
         
         # Register default handlers
         self._register_default_handlers()
@@ -85,11 +86,21 @@ class FastRTCConnection:
             if self.config.auth_token:
                 headers['Authorization'] = f'Bearer {self.config.auth_token}'
             
-            logger.info(f"Connecting to FastRTC gateway at {self.config.gateway_url}")
+            # Construct proper WebSocket URL with device_id and toy_id in path
+            # Expected format: ws://host:port/ws/{device_id}/{toy_id}
+            base_url = self.config.gateway_url.rstrip('/')
+            if not base_url.endswith('/ws'):
+                if '/ws' not in base_url:
+                    base_url = f"{base_url}/ws"
+            
+            # Append device_id and toy_id to the path
+            ws_url = f"{base_url}/{self.config.device_id}/{self.config.toy_id}"
+            
+            logger.info(f"Connecting to FastRTC gateway at {ws_url}")
             
             # Establish WebSocket connection
             self.ws = await websockets.connect(
-                self.config.gateway_url,
+                ws_url,
                 extra_headers=headers,
                 ping_interval=self.config.ping_interval,
                 ping_timeout=self.config.ping_timeout
@@ -156,8 +167,8 @@ class FastRTCConnection:
     
     async def send_message(self, message: Dict[str, Any]):
         """Send JSON message through WebSocket"""
-        if not self.ws or self.ws.closed:
-            logger.error("Cannot send message: WebSocket not connected")
+        if not self.ws or self.state != ConnectionState.CONNECTED:
+            logger.error(f"Cannot send message: WebSocket not connected (state={self.state})")
             return
         
         try:
@@ -173,6 +184,27 @@ class FastRTCConnection:
             logger.warning("Cannot send audio: Not connected")
             return False
         
+        current_time = time.time()
+        
+        # Clear the audio queue when starting a new interaction
+        # This happens when we send the first chunk after a gap (new button press or wake word detection)
+        if not is_final and (current_time - self.last_audio_sent_time) > 1.5:
+            # It's been more than 1.5 seconds since last audio - this is a new interaction
+            queue_size = self.audio_queue.qsize()
+            if queue_size > 0:
+                # Clear the queue
+                cleared = 0
+                while not self.audio_queue.empty():
+                    try:
+                        self.audio_queue.get_nowait()
+                        cleared += 1
+                    except asyncio.QueueEmpty:
+                        break
+                logger.info(f"Cleared {cleared} items from audio queue for new interaction (was {queue_size})")
+        
+        # Update the last audio sent time
+        self.last_audio_sent_time = current_time
+        
         message = {
             'type': 'audio_chunk',
             'payload': {
@@ -181,7 +213,7 @@ class FastRTCConnection:
                     'isFinal': is_final,
                     'format': self.config.audio_format,
                     'sampleRate': self.config.sample_rate,
-                    'timestamp': time.time(),
+                    'timestamp': current_time,
                     **(metadata or {})
                 }
             }
@@ -215,35 +247,59 @@ class FastRTCConnection:
     
     async def _receive_messages(self):
         """Receive and process messages from gateway"""
+        logger.info("Starting receive loop")
         try:
-            async for message in self.ws:
+            while self.state == ConnectionState.CONNECTED and self.ws and not self.ws.closed:
                 try:
+                    # Use wait_for to add timeout to prevent hanging
+                    message = await asyncio.wait_for(self.ws.recv(), timeout=60)
                     data = json.loads(message)
                     await self._handle_message(data)
+                except asyncio.TimeoutError:
+                    logger.warning("WebSocket receive timeout, sending ping")
+                    try:
+                        await self.ws.ping()
+                    except Exception:
+                        logger.error("Ping failed, connection lost")
+                        break
                 except json.JSONDecodeError:
-                    logger.error(f"Invalid JSON received: {message[:100]}")
+                    logger.error(f"Invalid JSON received: {message[:100] if 'message' in locals() else 'unknown'}")
+                except websockets.exceptions.ConnectionClosed:
+                    logger.warning("WebSocket connection closed by server")
+                    break
                 except Exception as e:
                     logger.error(f"Error handling message: {e}")
-                    
-        except websockets.exceptions.ConnectionClosed:
-            logger.warning("WebSocket connection closed")
-            await self._handle_connection_error()
+                    if "connection" in str(e).lower():
+                        break
+            logger.info("Receive loop ended")
+            # Connection lost
+            if self.state == ConnectionState.CONNECTED:
+                await self._handle_connection_error()
         except Exception as e:
-            logger.error(f"Receive loop error: {e}")
+            logger.error(f"Receive loop critical error: {e}")
             await self._handle_connection_error()
     
     async def _handle_message(self, message: Dict[str, Any]):
         """Handle received message"""
         msg_type = message.get('type')
+        logger.debug(f"Received message type: {msg_type}")
+
+        # Always enqueue audio chunks before user handlers
+        if msg_type == 'audio_response':
+            try:
+                await self._handle_audio_response(message)
+            except Exception as e:
+                logger.error(f"Error enqueuing audio chunk: {e}")
         
         if msg_type in self.message_handlers:
+            logger.debug(f"Found handler for {msg_type}, calling it")
             handler = self.message_handlers[msg_type]
             try:
                 await handler(message)
             except Exception as e:
                 logger.error(f"Handler error for {msg_type}: {e}")
         else:
-            logger.debug(f"Unhandled message type: {msg_type}")
+            logger.debug(f"Unhandled message type: {msg_type} (registered: {list(self.message_handlers.keys())})")
         
         self.last_activity = time.time()
     
@@ -285,8 +341,22 @@ class FastRTCConnection:
         
         # Clean up old connection
         if self.ws:
-            await self.ws.close()
+            try:
+                await self.ws.close()
+            except Exception:
+                pass
             self.ws = None
+        # Cancel background tasks before reconnecting
+        if self.receive_task:
+            try:
+                self.receive_task.cancel()
+            except Exception:
+                pass
+        if self.heartbeat_task:
+            try:
+                self.heartbeat_task.cancel()
+            except Exception:
+                pass
         
         # Attempt reconnection
         await self.connect()
@@ -309,13 +379,34 @@ class FastRTCConnection:
             # Convert hex string back to bytes
             audio_bytes = bytes.fromhex(audio_data)
             
-            # Add to audio queue for playback
-            await self.audio_queue.put({
-                'data': audio_bytes,
-                'metadata': metadata
-            })
-            
-            logger.debug(f"Received audio chunk: {len(audio_bytes)} bytes")
+            # Add to audio queue for playback (non-blocking)
+            try:
+                self.audio_queue.put_nowait({
+                    'data': audio_bytes,
+                    'metadata': metadata
+                })
+                logger.info(f"Queued audio chunk: {len(audio_bytes)} bytes, format={metadata.get('format')}, queue_size={self.audio_queue.qsize()}")
+            except asyncio.QueueFull:
+                logger.error("Audio queue full - dropping chunk")
+        else:
+            # Enqueue a final marker so consumers can stop cleanly
+            if metadata.get('isFinal', False):
+                try:
+                    self.audio_queue.put_nowait({
+                        'data': b'',
+                        'metadata': metadata
+                    })
+                    logger.info("Queued final audio marker")
+                except asyncio.QueueFull:
+                    logger.error("Audio queue full - dropping final marker")
+                
+                # IMPORTANT: Trigger playback when final marker is received
+                if self.audio_queue.qsize() > 0:
+                    logger.info("TRIGGER: Audio chunks ready for playback (queue has %d items)", self.audio_queue.qsize())
+                    # Send a synthetic audio_ready message to trigger playback
+                    # Call the handler directly if it exists
+                    if 'audio_ready' in self.message_handlers:
+                        await self.message_handlers['audio_ready']({'type': 'audio_ready', 'trigger': 'final_marker'})
     
     async def _handle_error(self, message: Dict):
         """Handle error message from server"""

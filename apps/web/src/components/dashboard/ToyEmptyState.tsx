@@ -21,7 +21,7 @@ export function ToyEmptyState({ onCreateToy }: ToyEmptyStateProps) {
       >
         No Toys Yet!
       </h3>
-      <p className="text-xl font-bold text-gray-700 mb-8 uppercase tracking-wide">Let's create your first AI companion</p>
+      <p className="text-xl font-bold text-gray-700 mb-8 uppercase tracking-wide">Let&apos;s create your first AI companion</p>
       <Button 
         bg="#92cd41"
         textColor="white"

@@ -3,12 +3,22 @@ import { Resend } from "@convex-dev/resend";
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
-// Initialize Resend with test mode for development
-// Set testMode to false in production
+// Initialize Resend with explicit test mode control
+// Priority:
+// 1) RESEND_TEST_MODE env ("true"/"false")
+// 2) Fallback: enable test mode when SITE_URL points to localhost
+const inferLocal = () => {
+  const site = process.env.SITE_URL || "";
+  return site.includes("localhost") || site.includes("127.0.0.1");
+};
+const parsedTestMode = (() => {
+  const v = process.env.RESEND_TEST_MODE;
+  if (typeof v === "string") return v.toLowerCase() === "true";
+  return inferLocal();
+})();
+
 export const resend = new Resend(components.resend, {
-  // testMode defaults to true for safety
-  // In production, set this to false via environment variable
-  testMode: process.env.NODE_ENV !== "production",
+  testMode: parsedTestMode,
 });
 
 /**
@@ -74,13 +84,11 @@ export const sendVerificationEmail = internalMutation({
 
     const text = `Welcome to ${APP_NAME}! Please verify your email by visiting: ${verificationUrl}. This link will expire in 1 hour.`;
 
-    // Use the correct FROM email based on environment
-    const fromEmail = process.env.NODE_ENV === "production" 
-      ? "noreply@pommai.com" // Update with your verified domain
-      : "delivered@resend.dev"; // Test email for development
+    // Use playpommai.com for all environments
+    const fromHeader = `${APP_NAME} <noreply@playpommai.com>`;
 
     const emailId = await resend.sendEmail(ctx, {
-      from: `${APP_NAME} <${fromEmail}>`,
+      from: fromHeader,
       to: email,
       subject: `🧸 Verify your email for ${APP_NAME}`,
       html,
@@ -160,12 +168,11 @@ export const sendPasswordResetEmail = internalMutation({
 
     const text = `Password reset requested for your ${APP_NAME} account. Reset your password by visiting: ${resetUrl}. This link will expire in 1 hour.`;
 
-    const fromEmail = process.env.NODE_ENV === "production" 
-      ? "noreply@pommai.com" // Update with your verified domain
-      : "delivered@resend.dev"; // Test email for development
+    // Use playpommai.com for all environments
+    const fromHeader = `${APP_NAME} <noreply@playpommai.com>`;
 
     const emailId = await resend.sendEmail(ctx, {
-      from: `${APP_NAME} <${fromEmail}>`,
+      from: fromHeader,
       to: email,
       subject: `🔒 Password Reset Request - ${APP_NAME}`,
       html,
@@ -187,7 +194,7 @@ export const sendWelcomeEmail = internalMutation({
   },
   handler: async (ctx, { email, name }) => {
     const APP_NAME = "Pommai";
-    const APP_URL = process.env.SITE_URL || "https://pommai.com";
+    const APP_URL = process.env.SITE_URL || "http://localhost:3000";
     
     const html = `
       <!DOCTYPE html>
@@ -248,12 +255,11 @@ export const sendWelcomeEmail = internalMutation({
 
     const text = `Welcome to ${APP_NAME}! Your email has been verified and your account is ready. Visit ${APP_URL}/dashboard to get started.`;
 
-    const fromEmail = process.env.NODE_ENV === "production" 
-      ? "noreply@pommai.com" // Update with your verified domain
-      : "delivered@resend.dev"; // Test email for development
+    // Use playpommai.com for all environments
+    const fromHeader = `${APP_NAME} <noreply@playpommai.com>`;
 
     const emailId = await resend.sendEmail(ctx, {
-      from: `${APP_NAME} <${fromEmail}>`,
+      from: fromHeader,
       to: email,
       subject: `🎉 Welcome to ${APP_NAME} - Your Account is Ready!`,
       html,

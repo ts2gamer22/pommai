@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { Card, Button, Input } from '@pommai/ui';
-import { authClient } from '@/lib/auth-client';
+import { authClient } from '../../lib/auth-client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -24,8 +25,9 @@ export default function ForgotPasswordPage() {
         redirectTo: '/reset-password',
       });
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || 'Failed to send reset email');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to send reset email';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -37,8 +39,8 @@ export default function ForgotPasswordPage() {
       <header className="border-b-4 border-black bg-white shadow-[0_4px_0_0_#c381b5]">
         <div className="container mx-auto px-4 py-4 sm:py-6">
           <Link href="/" className="flex items-center justify-center gap-2 sm:gap-3 hover-lift">
-            <img src="/pommaiicon.png" alt="Pommai Logo" className="h-10 w-10 sm:h-12 sm:w-12 pixelated" />
-            <img src="/pommaitext.png" alt="Pommai" className="h-8 sm:h-10 pixelated" />
+            <Image src="/pommaiicon.png" alt="Pommai Logo" width={48} height={48} className="h-10 w-10 sm:h-12 sm:w-12 pixelated" />
+            <Image src="/pommaitext.png" alt="Pommai" width={160} height={40} className="h-8 sm:h-10 pixelated" />
           </Link>
         </div>
       </header>
@@ -59,7 +61,7 @@ export default function ForgotPasswordPage() {
                 Forgot Password?
               </h1>
               <p className="text-xs font-geo font-semibold uppercase tracking-wide text-gray-700">
-                No worries! We'll help you reset it
+                No worries! We&apos;ll help you reset it
               </p>
             </div>
             
@@ -67,9 +69,9 @@ export default function ForgotPasswordPage() {
             <div className="p-4 sm:p-6">
               {!success ? (
                 <form onSubmit={handleRequestReset} className="space-y-4">
-                  <p className="text-xs font-geo font-medium uppercase tracking-wide text-gray-600 text-center">
-                    Enter your email address and we'll send you a link to reset your password.
-                  </p>
+                    <p className="text-xs font-geo font-medium uppercase tracking-wide text-gray-600 text-center">
+                      Enter your email address and we&apos;ll send you a link to reset your password.
+                    </p>
                   
                   <div className="space-y-1">
                     <label className="text-xs font-geo font-semibold uppercase tracking-wider text-black">
@@ -79,7 +81,7 @@ export default function ForgotPasswordPage() {
                       type="email" 
                       placeholder="parent@example.com" 
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                       bg="#fefcd0"
                       borderColor="black"
                       fontSize="12px"
@@ -128,7 +130,7 @@ export default function ForgotPasswordPage() {
                   </h2>
                   <Card bg="#e8f6f3" borderColor="#27ae60" shadowColor="#27ae60" className="p-4">
                     <p className="text-green-700 text-xs font-geo font-semibold uppercase tracking-wide">
-                      We've sent a password reset link to:
+                      We&apos;ve sent a password reset link to:
                     </p>
                     <p className="text-sm font-minecraft font-bold text-black mt-2">
                       {email}

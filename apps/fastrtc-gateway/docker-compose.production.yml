@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  fastrtc-production:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    container_name: pommai-fastrtc-production
+    ports:
+      - "8080:8080"
+    environment:
+      # Convex Configuration
+      - CONVEX_URL=https://warmhearted-snail-998.convex.cloud
+      - CONVEX_DEPLOY_KEY=prod:warmhearted-snail-998|eyJ2MiI6ImQzMDYzMjQ5ODk5MDQzODZhZDU1NmY2MThkZGMzZmQwIn0=
+      
+      # Server Configuration
+      - PORT=8080
+      - HOST=0.0.0.0
+      - LOG_LEVEL=INFO  # Change to DEBUG for troubleshooting
+      - CONVEX_ACTION_TIMEOUT=60
+      
+      # TTS Configuration
+      # Comment out SKIP_TTS or set to false for production
+      # - SKIP_TTS=true  # Set to true to disable TTS for testing
+      
+      # ElevenLabs TTS (Primary provider - lowest latency)
+      # Get your API key from https://elevenlabs.io/
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - ELEVENLABS_OUTPUT_FORMAT=${ELEVENLABS_OUTPUT_FORMAT:-pcm_16000}
+      
+      # Minimax TTS (Alternative provider)
+      # Get your credentials from Minimax
+      - MINIMAX_API_KEY=${MINIMAX_API_KEY:-}
+      - MINIMAX_GROUP_ID=${MINIMAX_GROUP_ID:-}
+      
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - pommai-network
+    volumes:
+      # Optional: Mount .env file for easier configuration
+      - ./.env:/app/.env:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  pommai-network:
+    driver: bridge

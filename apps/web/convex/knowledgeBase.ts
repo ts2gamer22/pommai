@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 
 /**
  * Create or update knowledge base for a toy
@@ -60,6 +62,8 @@ export const upsertKnowledgeBase = mutation({
 
     const now = new Date().toISOString();
 
+    let kbId: Id<"knowledgeBases">;
+
     if (existingKb) {
       // Update existing knowledge base
       await ctx.db.patch(existingKb._id, {
@@ -77,10 +81,10 @@ export const upsertKnowledgeBase = mutation({
         });
       }
 
-      return existingKb._id;
+      kbId = existingKb._id;
     } else {
       // Create new knowledge base
-      const kbId = await ctx.db.insert("knowledgeBases", {
+      kbId = await ctx.db.insert("knowledgeBases", {
         toyId: args.toyId,
         toyBackstory: args.toyBackstory,
         familyInfo: args.familyInfo,
@@ -96,9 +100,91 @@ export const upsertKnowledgeBase = mutation({
         knowledgeBaseId: kbId,
         lastModifiedAt: now,
       });
-
-      return kbId;
     }
+
+    // --- Ingest knowledge into the Agent thread for RAG ---
+    // Ensure the toy has a canonical agent thread
+    const thread = await ctx.runMutation(api.agents.getOrCreateToyThread, {
+      toyId: args.toyId,
+      userId: toy.creatorId,
+    });
+    const threadId = thread.threadId;
+
+    // Helper to enqueue a knowledge message
+    const save = async (content: string, type: string, importance?: number, tags?: string[]) => {
+      const trimmed = content?.trim();
+      if (!trimmed) return;
+      await ctx.runMutation(api.agents.saveKnowledgeMessage, {
+        threadId,
+        content: trimmed,
+        metadata: {
+          type,
+          isKnowledge: true,
+          source: "knowledgeBase",
+          importance,
+          tags,
+        },
+      });
+    };
+
+    // Chunking helpers
+    const chunkText = (text: string, max = 500): string[] => {
+      if (!text) return [];
+      const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+      const chunks: string[] = [];
+      let current = "";
+      for (const s of sentences) {
+        if ((current + s).length > max && current) {
+          chunks.push(current.trim());
+          current = s;
+        } else {
+          current += (current ? " " : "") + s;
+        }
+      }
+      if (current) chunks.push(current.trim());
+      if (chunks.length === 0 && text.length > 0) {
+        for (let i = 0; i < text.length; i += max) chunks.push(text.slice(i, i + max));
+      }
+      return chunks;
+    };
+
+    // Backstory/personality
+    const back = args.toyBackstory;
+    const backstoryParts: string[] = [];
+    if (back.origin) backstoryParts.push(`Origin: ${back.origin}`);
+    if (back.personality) backstoryParts.push(`Personality: ${back.personality}`);
+    if (back.specialAbilities?.length) backstoryParts.push(`Special Abilities: ${back.specialAbilities.join(", ")}`);
+    if (back.favoriteThings?.length) backstoryParts.push(`Favorite Things: ${back.favoriteThings.join(", ")}`);
+    const backstoryText = backstoryParts.join("\n");
+    for (const chunk of chunkText(backstoryText)) {
+      await save(chunk, "backstory", 0.8, ["backstory"]);
+    }
+
+    // Family info
+    if (args.familyInfo) {
+      const fam = args.familyInfo;
+      for (const m of fam.members ?? []) {
+        const line = `Family Member: ${m.name} (${m.relationship}) — Facts: ${m.facts.join(", ")}`;
+        for (const chunk of chunkText(line)) await save(chunk, "relationships", 0.7, ["family", "relationships"]);
+      }
+      for (const p of fam.pets ?? []) {
+        const line = `Pet: ${p.name} (${p.type}) — Facts: ${p.facts.join(", ")}`;
+        for (const chunk of chunkText(line)) await save(chunk, "relationships", 0.6, ["pets", "relationships"]);
+      }
+      for (const d of fam.importantDates ?? []) {
+        const line = `Important Date: ${d.date} — ${d.event}`;
+        for (const chunk of chunkText(line)) await save(chunk, "memories", 0.5, ["dates"]);
+      }
+    }
+
+    // Custom facts
+    for (const f of args.customFacts ?? []) {
+      const line = `Fact [${f.category}] (${f.importance}): ${f.fact}`;
+      const imp = f.importance === "high" ? 1.0 : f.importance === "medium" ? 0.7 : 0.5;
+      for (const chunk of chunkText(line)) await save(chunk, "facts", imp, ["facts", f.category]);
+    }
+
+    return kbId;
   },
 });
 

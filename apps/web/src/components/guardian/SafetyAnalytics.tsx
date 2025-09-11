@@ -82,7 +82,7 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
     <div className="space-y-6">
       {/* Header with filters */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-black uppercase tracking-wider text-black flex items-center gap-2">
+        <h3 className="retro-h3 text-base sm:text-lg text-black flex items-center gap-2">
           <BarChart3 className="w-5 h-5" />
           📊 Safety Analytics & Insights
         </h3>

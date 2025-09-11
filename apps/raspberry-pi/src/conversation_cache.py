@@ -157,9 +157,19 @@ class ConversationCache:
                     toy_id TEXT,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                     sync_status TEXT DEFAULT 'pending',
+                    sync_attempts INTEGER DEFAULT 0,
                     metadata TEXT
                 )
             ''')
+            
+            # Add missing columns to existing tables (migration)
+            try:
+                await db.execute('ALTER TABLE usage_metrics ADD COLUMN sync_attempts INTEGER DEFAULT 0')
+                await db.commit()
+                logger.info("Added sync_attempts column to usage_metrics table")
+            except Exception:
+                # Column already exists, ignore
+                pass
             
             # Safety events table
             await db.execute('''
@@ -542,6 +552,40 @@ class ConversationCache:
                         WHERE id = ?
                     ''', (item['id'],))
             
+            await db.commit()
+
+    async def get_unsynced_metrics(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Fetch unsynced usage metrics up to limit."""
+        limit = limit or self.config.sync_batch_size
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute('''
+                SELECT id, metric_type, metric_value, toy_id, timestamp, metadata
+                FROM usage_metrics
+                WHERE sync_status = 'pending'
+                AND sync_attempts < ?
+                ORDER BY timestamp
+                LIMIT ?
+            ''', (self.config.max_sync_retries, limit))
+            results = []
+            async for row in cursor:
+                results.append({
+                    'id': row[0],
+                    'metric_type': row[1],
+                    'metric_value': row[2],
+                    'toy_id': row[3],
+                    'timestamp': row[4],
+                    'metadata': row[5]
+                })
+            return results
+
+    async def mark_metrics_synced(self, metric_ids: List[int]):
+        """Mark usage metrics as synced."""
+        if not metric_ids:
+            return
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.executemany('''
+                UPDATE usage_metrics SET sync_status = 'synced' WHERE id = ?
+            ''', [(mid,) for mid in metric_ids])
             await db.commit()
     
     async def mark_sync_failed(self, items: List[Dict[str, Any]], error: str):

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useMemo } from 'react';
+import { createContext, useContext, useState, ReactNode, useMemo } from 'react';
 
 interface TabsContextType {
   value: string;
@@ -17,6 +17,11 @@ export interface TabsProps {
   className?: string;
 }
 
+/**
+ * Tabs
+ *
+ * Simple tabs system. Typography is controlled by consumers via className.
+ */
 export const Tabs = ({ value, onValueChange, defaultValue, children, className = '' }: TabsProps) => {
   const [internalValue, setInternalValue] = useState(defaultValue || '');
   
@@ -87,7 +92,7 @@ export const TabsTrigger = ({ value, children, className = '' }: TabsTriggerProp
   return (
     <button
       onClick={() => context.onChange(value)}
-      className={`px-4 py-2 font-bold uppercase tracking-wider transition-all border-[5px] border-solid relative ${
+      className={`px-4 py-2 font-bold uppercase tracking-wider transition-all border-[5px] border-solid relative whitespace-nowrap overflow-hidden text-ellipsis ${
         isActive 
           ? 'text-white translate-y-[-2px]' 
           : 'text-black hover:translate-y-[-1px]'

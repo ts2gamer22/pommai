@@ -46,7 +46,7 @@ export function OverviewTab({
         shadowColor="#c381b5"
         className="p-4 sm:p-6"
       >
-        <h3 className="text-lg font-black mb-4 uppercase tracking-wider text-black flex items-center gap-2">
+        <h3 className="retro-h3 text-base sm:text-lg text-black mb-4 flex items-center gap-2 retro-shadow-orange">
           <AlertTriangle className="w-5 h-5" />
           ⚠️ Recent Safety Alerts
         </h3>

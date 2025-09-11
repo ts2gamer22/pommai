@@ -273,3 +273,83 @@ export const searchVoices = query({
     return matchingVoices;
   },
 });
+
+/**
+ * Lookup a voice by its provider's external voice ID
+ */
+export const getByExternalVoiceId = query({
+  args: { externalVoiceId: v.string() },
+  handler: async (ctx, args) => {
+    const match = await ctx.db
+      .query("voices")
+      .withIndex("by_external", (q) => q.eq("externalVoiceId", args.externalVoiceId))
+      .first();
+    return match ?? null;
+  },
+});
+
+/**
+ * Upsert a provider-backed voice (e.g., ElevenLabs) into the voices table
+ */
+export const upsertProviderVoice = mutation({
+  args: {
+    name: v.string(),
+    description: v.string(),
+    language: v.string(),
+    accent: v.optional(v.string()),
+    ageGroup: v.string(),
+    gender: v.union(v.literal("male"), v.literal("female"), v.literal("neutral")),
+    previewUrl: v.string(),
+    provider: v.union(v.literal("11labs"), v.literal("azure"), v.literal("custom")),
+    externalVoiceId: v.string(),
+    tags: v.array(v.string()),
+    isPremium: v.optional(v.boolean()),
+    isPublic: v.boolean(),
+    uploadedBy: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("voices")
+      .withIndex("by_external", (q) => q.eq("externalVoiceId", args.externalVoiceId))
+      .first();
+
+    if (existing) {
+      const doc = existing;
+      await ctx.db.patch(doc._id, {
+        name: args.name,
+        description: args.description,
+        language: args.language,
+        accent: args.accent,
+        ageGroup: args.ageGroup,
+        gender: args.gender,
+        previewUrl: args.previewUrl,
+        provider: args.provider,
+        tags: args.tags,
+        isPremium: args.isPremium ?? doc.isPremium,
+        isPublic: args.isPublic,
+        ...(args.uploadedBy ? { uploadedBy: args.uploadedBy } : {}),
+      });
+      return doc._id;
+    }
+
+    const insertedId = await ctx.db.insert("voices", {
+      name: args.name,
+      description: args.description,
+      language: args.language,
+      accent: args.accent,
+      ageGroup: args.ageGroup,
+      gender: args.gender,
+      previewUrl: args.previewUrl,
+      provider: args.provider,
+      externalVoiceId: args.externalVoiceId,
+      tags: args.tags,
+      isPremium: args.isPremium ?? false,
+      isPublic: args.isPublic,
+      uploadedBy: args.uploadedBy,
+      usageCount: 0,
+      averageRating: 0,
+      createdAt: new Date().toISOString(),
+    } as any);
+    return insertedId;
+  },
+});

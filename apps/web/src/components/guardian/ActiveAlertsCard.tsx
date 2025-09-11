@@ -33,7 +33,7 @@ export function ActiveAlertsCard({ activeAlerts }: ActiveAlertsCardProps) {
       <div className="flex items-start gap-3">
         <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
         <div>
-          <h3 className="font-black text-lg uppercase tracking-wider text-red-600 mb-2">
+          <h3 className="retro-h3 text-base sm:text-lg text-red-600 mb-2 retro-shadow-orange">
             ⚠️ Active Safety Alerts
           </h3>
           <p className="font-bold text-red-700 uppercase tracking-wide">

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "./_generated/server";
-import { api } from "./_generated/api";
+import { mutation, query, action, internalMutation } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
 // Send a message in a conversation
@@ -34,7 +34,7 @@ export const sendMessage = mutation({
       content: args.content,
       audioUrl: args.audioUrl,
       metadata: args.metadata,
-      timestamp: Date.now().toString(),
+      timestamp: new Date().toISOString(),
     });
 
     // Update conversation message count and flagged count if needed
@@ -92,49 +92,99 @@ export const generateAIResponse = action({
     }
 
     const toy = conversation.toy;
-    const deviceId = "web-dashboard"; // Default device ID for web
-    const sessionId = args.sessionId || `session-${Date.now()}`;
     
-    // Build conversation context from recent messages
-    const recentMessages = conversation.messages.slice(-10); // Last 10 messages for context
-    const conversationContext = recentMessages
-      .map((msg: any) => `${msg.role === "user" ? "User" : toy.name}: ${msg.content}`)
-      .join("\n");
-
-    // Use the real AI pipeline if available
     try {
-      // First, generate the text response using the AI services
-      const messages = [
-        {
-          role: "system" as const,
-          content: `You are ${toy.name}, a ${toy.type || "friendly"} toy with the following personality: ${toy.personalityPrompt || "helpful and friendly"}.
-${toy.isForKids ? `This is a conversation with a child aged ${toy.ageGroup || "young"}. Keep responses age-appropriate, educational, and safe. Be encouraging and positive.` : ""}
-${conversationContext ? `\nRecent conversation:\n${conversationContext}` : ""}
 
-Stay in character and respond naturally as ${toy.name} would. Keep responses concise and engaging.`
-        },
-        {
-          role: "user" as const,
-          content: args.userMessage
-        }
+      // Step 3: Generate response with context
+      // Get recent conversation history for context
+      const recentMessages = conversation.messages?.slice(-10) || []; // Last 10 messages
+      
+      // Build detailed system prompt with toy personality
+      const traits = toy.personalityTraits || {};
+      const systemPrompt = `You are ${toy.name}, a ${toy.type} AI toy companion.
+
+PERSONALITY:
+${toy.personalityPrompt || "Friendly and helpful"}
+
+TRAITS:
+- Main traits: ${traits.traits?.join(", ") || "friendly, curious, helpful"}
+- Speaking style: ${traits.speakingStyle?.vocabulary || "moderate"} vocabulary, ${traits.speakingStyle?.sentenceLength || "medium"} sentences
+${traits.speakingStyle?.usesSoundEffects ? "- Use fun sound effects and expressions!" : ""}
+${traits.speakingStyle?.catchPhrases?.length ? `- Catchphrases: ${traits.speakingStyle.catchPhrases.join(", ")}` : ""}
+
+INTERESTS:
+${traits.interests?.join(", ") || "games, stories, learning, adventures"}
+
+BEHAVIOR:
+${traits.behavior?.encouragesQuestions ? "- Encourage questions and curiosity" : ""}
+${traits.behavior?.tellsStories ? "- Love telling stories and adventures" : ""}
+${traits.behavior?.playsGames ? "- Enjoy playing games and activities" : ""}
+- Educational focus: ${traits.behavior?.educationalFocus || 5}/10
+- Imagination level: ${traits.behavior?.imaginationLevel || 7}/10
+
+${toy.isForKids ? `CHILD SAFETY MODE:
+- You are talking to a ${toy.ageGroup || "young"} child
+- Use simple, age-appropriate language
+- Be positive, educational, and encouraging
+- Never discuss violence, scary topics, or adult themes
+- If asked about inappropriate topics, redirect to fun activities` : ``}
+
+RULES:
+- Keep responses short and conversational (2-3 sentences max)
+- Be warm, friendly, and engaging
+- Stay in character as ${toy.name}
+- Use vocabulary appropriate for ${toy.isForKids ? "children" : "general audience"}
+- Encourage learning and creativity`;
+
+      // Build message history for context
+      const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+        { role: "system", content: systemPrompt }
       ];
+      
+      // Add recent conversation history for context (if any)
+      recentMessages.forEach(msg => {
+        if (msg.role === "user") {
+          messages.push({ role: "user", content: msg.content });
+        } else if (msg.role === "toy") {
+          messages.push({ role: "assistant", content: msg.content });
+        }
+      });
+      
+      // Add current user message
+      messages.push({ role: "user", content: args.userMessage });
 
-      // Generate text response
-      const llmResponse = await ctx.runAction(api.aiServices.generateResponse, {
+      // Call OpenRouter for response generation
+      const aiResponse = await ctx.runAction(api.aiServices.generateResponse, {
         messages,
-        model: "openai/gpt-oss-120b", // Use default model
-        temperature: 0.7, // Use default temperature
+        model: "openai/gpt-oss-120b", // Use OSS model
+        temperature: traits.behavior?.imaginationLevel 
+          ? traits.behavior.imaginationLevel / 10 
+          : 0.7,
         maxTokens: toy.isForKids ? 150 : 300,
       });
 
-      const responseText = llmResponse.content || "I'm having trouble understanding. Can you try asking in a different way?";
+      const responseText = aiResponse.content || "I'm having trouble understanding. Can you try asking in a different way?";
       
-      // Apply safety check for kids' toys
+      // Step 4: Apply safety check for kids' toys
       let finalText = responseText;
       let metadata: any = {
         safetyScore: 1.0,
         flagged: false,
       };
+      
+      if (toy.isForKids) {
+        const safetyCheck = await ctx.runAction(internal.aiPipeline.checkContentSafety, {
+          text: responseText,
+          level: "strict",
+        });
+        
+        if (!safetyCheck.passed) {
+          console.log("Output safety check failed, using fallback response");
+          finalText = "That's interesting! Let me think of something fun we can talk about instead.";
+          metadata.flagged = true;
+          metadata.safetyFlags = [safetyCheck.reason];
+        }
+      }
 
       // Generate audio if requested
       let audioData: string | undefined;
@@ -324,5 +374,84 @@ export const searchMessages = query({
     const limited = filtered.slice(0, args.limit || 100);
 
     return limited;
+  },
+});
+
+/**
+ * Internal helper to log a message without requiring client auth.
+ * Used by device/gateway pipelines to persist transcripts and replies.
+ */
+export const logMessage = internalMutation({
+  args: {
+    conversationId: v.id("conversations"),
+    content: v.string(),
+    role: v.union(v.literal("user"), v.literal("toy"), v.literal("system")),
+    audioUrl: v.optional(v.string()),
+    metadata: v.optional(v.object({
+      sentiment: v.optional(v.string()),
+      safetyScore: v.optional(v.number()),
+      flagged: v.optional(v.boolean()),
+      topics: v.optional(v.array(v.string())),
+      educationalValue: v.optional(v.number()),
+      emotionalTone: v.optional(v.string()),
+      safetyFlags: v.optional(v.array(v.string())),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) throw new Error("Conversation not found");
+
+    const messageId = await ctx.db.insert("messages", {
+      conversationId: args.conversationId,
+      role: args.role,
+      content: args.content,
+      audioUrl: args.audioUrl,
+      metadata: args.metadata,
+      timestamp: Date.now().toString(),
+    });
+
+    // Update counters on the conversation.
+    const flaggedMessages = args.metadata?.flagged ? conversation.flaggedMessages + 1 : conversation.flaggedMessages;
+    await ctx.db.patch(args.conversationId, {
+      messageCount: conversation.messageCount + 1,
+      flaggedMessages,
+    });
+
+    return messageId;
+  },
+});
+
+/**
+ * Internal maintenance job to delete messages older than 48 hours.
+ * Deletes in small batches to stay within execution limits and maintains
+ * conversation counters for integrity.
+ */
+export const deleteOldMessages = internalMutation({
+  args: {
+    batchSize: v.optional(v.number()),
+  },
+  handler: async (ctx, { batchSize }) => {
+    const BATCH = Math.max(1, Math.min(batchSize ?? 500, 1000));
+    const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+    const cutoffStr = cutoff.toString();
+
+    const oldMessages = await ctx.db
+      .query("messages")
+      .withIndex("by_timestamp", (q) => q.lt("timestamp", cutoffStr))
+      .take(BATCH);
+
+    for (const msg of oldMessages) {
+      // Adjust conversation counters if possible.
+      const conv = await ctx.db.get(msg.conversationId);
+      if (conv) {
+        await ctx.db.patch(conv._id, {
+          messageCount: Math.max(0, conv.messageCount - 1),
+          flaggedMessages: Math.max(0, conv.flaggedMessages - (msg.metadata?.flagged ? 1 : 0)),
+        });
+      }
+      await ctx.db.delete(msg._id);
+    }
+
+    return { deletedCount: oldMessages.length, cutoff: cutoff };
   },
 });

@@ -30,6 +30,12 @@ export interface DropdownMenuProps {
   style?: CSSProperties;
 }
 
+/**
+ * DropdownMenu
+ *
+ * Provides a retro-styled dropdown menu container.
+ * - Does not enforce typography.
+ */
 export const DropdownMenu = ({
   children,
   className = "",

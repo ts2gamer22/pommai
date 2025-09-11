@@ -33,6 +33,12 @@ export interface AccordionProps {
   style?: CSSProperties;
 }
 
+/**
+ * Accordion
+ *
+ * Controlled/Uncontrolled accordion with pixel styling through retroui.css.
+ * - Does not enforce typography.
+ */
 export const Accordion = ({
   children,
   collapsible = true,

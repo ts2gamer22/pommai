@@ -54,11 +54,11 @@ export interface ViewerFeatures {
     participants: string[];
   };
   analytics: {
-    conversationFrequency: any; // Chart data
-    topicDistribution: any; // PieChart data
-    sentimentTrends: any; // LineChart data
-    vocabularyGrowth: any; // ProgressChart data
-    safetyIncidents: any; // IncidentLog data
+    conversationFrequency: unknown; // Chart data
+    topicDistribution: unknown; // PieChart data
+    sentimentTrends: unknown; // LineChart data
+    vocabularyGrowth: unknown; // ProgressChart data
+    safetyIncidents: unknown; // IncidentLog data
   };
 }
 

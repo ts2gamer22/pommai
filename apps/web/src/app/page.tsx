@@ -2,8 +2,14 @@
 
 import { Button, Card } from '@pommai/ui';
 import Link from "next/link";
+import Image from 'next/image';
 import { useState } from 'react';
 
+/**
+ * Home Page
+ * - Pixel headings for primary titles; Work Sans for supporting text.
+ * - Spacing tokens applied to containers/cards.
+ */
 export default function Home() {
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
 
@@ -11,10 +17,10 @@ export default function Home() {
     <div className="min-h-screen" style={{ backgroundColor: '#fefcd0' }}>
       {/* Header Navigation */}
       <header className="border-b-4 border-black bg-white">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+<div className="container mx-auto px-[var(--spacing-md)] py-[var(--spacing-md)] flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
-            <img src="/pommaiicon.png" alt="Pommai Logo" className="h-10 w-10" />
-            <img src="/pommaitext.png" alt="Pommai" className="h-8" />
+            <Image src="/pommaiicon.png" alt="Pommai Logo" width={40} height={40} className="h-10 w-10" />
+            <Image src="/pommaitext.png" alt="Pommai" width={140} height={32} className="h-8" />
           </Link>
           <nav className="flex gap-4 items-center">
             <Link href="/pricing" className="text-black hover:text-gray-700 font-geo font-medium text-sm">
@@ -49,13 +55,13 @@ export default function Home() {
       <main>
         {/* Hero Section */}
         <section className="relative overflow-hidden">
-          <div className="container mx-auto px-4 py-20">
+<div className="container mx-auto px-[var(--spacing-md)] py-[var(--spacing-3xl)]">
             <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-3xl md:text-4xl font-minecraft font-bold mb-6 main-title text-black">
+<h1 className="font-minecraft text-lg sm:text-xl lg:text-2xl font-black mb-[var(--spacing-lg)] main-title text-black">
                 Bring Your Toys to Life
               </h1>
               <div className="text-4xl mb-8">🧸</div>
-              <p className="text-lg md:text-xl mb-10 text-gray-800 max-w-2xl mx-auto leading-relaxed font-geo">
+<p className="font-geo text-sm sm:text-base mb-[var(--spacing-2xl)] text-gray-800 max-w-2xl mx-auto leading-relaxed">
                 Create unique AI personalities for your plushies and toys.
                 Safe, magical, and completely under your control.
               </p>
@@ -87,13 +93,13 @@ export default function Home() {
           </div>
 
           {/* Toy Preview */}
-          <div className="container mx-auto px-4 pb-20">
+<div className="container mx-auto px-[var(--spacing-md)] pb-[var(--spacing-3xl)]">
             <div className="max-w-3xl mx-auto">
               <Card 
                 bg="#ffffff" 
                 borderColor="black" 
                 shadowColor="#000000"
-                className="p-8"
+className="p-[var(--spacing-xl)]"
               >
                 <div className="text-center mb-6">
                   <span className="text-xs font-geo font-bold uppercase tracking-wider text-gray-600">Your toy is saying</span>
@@ -123,9 +129,9 @@ export default function Home() {
         </section>
 
         {/* How It Works */}
-        <section id="how-it-works" className="bg-white border-y-4 border-black py-20">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-geo font-bold text-center mb-16 sub-heading text-black">
+<section id="how-it-works" className="bg-white border-y-4 border-black py-[var(--spacing-3xl)]">
+<div className="container mx-auto px-[var(--spacing-md)]">
+<h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black text-center mb-[var(--spacing-2xl)] text-black">
               How It Works
             </h2>
             <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -158,7 +164,7 @@ export default function Home() {
                     bg={hoveredCard === index ? '#f0f0f0' : '#ffffff'}
                     borderColor="black" 
                     shadowColor={hoveredCard === index ? feature.color : '#000000'}
-                    className="p-8 cursor-pointer transition-all hover:translate-y-[-4px] h-full"
+className="p-[var(--spacing-xl)] cursor-pointer transition-all hover:translate-y-[-4px] h-full"
                   >
                     <div className="text-4xl mb-6 text-center">{feature.icon}</div>
                     <h3 className="text-xl font-geo font-bold mb-3 text-black sub-heading text-center">{feature.title}</h3>
@@ -171,10 +177,10 @@ export default function Home() {
         </section>
 
         {/* Safety Section */}
-        <section className="py-20" style={{ backgroundColor: '#ffe4e1' }}>
-          <div className="container mx-auto px-4">
+<section className="py-[var(--spacing-3xl)]" style={{ backgroundColor: '#ffe4e1' }}>
+<div className="container mx-auto px-[var(--spacing-md)]">
             <div className="max-w-5xl mx-auto">
-              <h2 className="text-3xl font-geo font-bold text-center mb-16 sub-heading text-black">
+<h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black text-center mb-[var(--spacing-2xl)] text-black">
                 Safety First, Always
               </h2>
               <div className="text-center text-4xl mb-12">🛡️</div>
@@ -183,7 +189,7 @@ export default function Home() {
                   bg="#ffffff" 
                   borderColor="black" 
                   shadowColor="#000000"
-                  className="p-8"
+className="p-[var(--spacing-xl)]"
                 >
                   <h3 className="text-xl font-geo font-bold mb-6 text-black sub-heading">For Parents</h3>
                   <ul className="space-y-4 text-base">
@@ -237,9 +243,9 @@ export default function Home() {
         </section>
         
         {/* CTA Section */}
-        <section className="border-t-4 border-black py-20">
+<section className="border-t-4 border-black py-[var(--spacing-3xl)]">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl font-geo font-bold mb-8 sub-heading text-black">
+<h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-[var(--spacing-lg)] text-black">
               Ready to Create Magic?
             </h2>
             <p className="text-lg mb-10 text-gray-800 max-w-2xl mx-auto leading-relaxed font-geo">
@@ -266,7 +272,7 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-4 md:mb-0">
               <div className="flex items-center gap-2 mb-2">
-                <img src="/pommaiicon.png" alt="Pommai Logo" className="h-6 w-6" />
+                <Image src="/pommaiicon.png" alt="Pommai Logo" width={24} height={24} className="h-6 w-6" />
                 <h4 className="text-lg font-geo font-bold">Pommai.co</h4>
               </div>
               <p className="text-gray-400 font-geo text-sm">Bringing toys to life, safely.</p>

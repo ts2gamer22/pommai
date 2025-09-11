@@ -14,6 +14,7 @@ import type * as aiServices from "../aiServices.js";
 import type * as auth from "../auth.js";
 import type * as children from "../children.js";
 import type * as conversations from "../conversations.js";
+import type * as crons from "../crons.js";
 import type * as emailActions from "../emailActions.js";
 import type * as emails from "../emails.js";
 import type * as http from "../http.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   children: typeof children;
   conversations: typeof conversations;
+  crons: typeof crons;
   emailActions: typeof emailActions;
   emails: typeof emails;
   http: typeof http;

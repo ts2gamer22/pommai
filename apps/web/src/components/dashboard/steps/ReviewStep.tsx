@@ -1,6 +1,6 @@
 'use client';
 
-import { useToyWizardStore } from '@/stores/toyWizardStore';
+import { useToyWizardStore, type WizardStep } from '@/stores/toyWizardStore';
 import { Button, Card } from '@pommai/ui';
 import { 
   Check, 
@@ -15,12 +15,12 @@ import {
 export function ReviewStep() {
   const { toyConfig, setCurrentStep, isCreating } = useToyWizardStore();
 
-  const editSection = (step: any) => {
+  const editSection = (step: WizardStep) => {
     setCurrentStep(step);
   };
 
   const getToyTypeIcon = () => {
-    const icons: Record<string, any> = {
+    const icons: Record<string, string> = {
       teddy: '🧸',
       bunny: '🐰',
       cat: '🐱',
@@ -36,15 +36,15 @@ export function ReviewStep() {
   return (
     <div className="space-y-6">
       <div className="text-center sm:text-left">
-        <h2 className="text-2xl sm:text-3xl font-black mb-2 uppercase tracking-wider text-black"
+        <h2 className="font-minecraft text-base sm:text-lg lg:text-xl font-black mb-2 uppercase tracking-wider text-gray-800"
           style={{
             textShadow: '2px 2px 0 #c381b5'
           }}
         >
           📋 Review Your AI Toy
         </h2>
-        <p className="font-bold text-gray-700 uppercase tracking-wide">
-          Take a moment to review {toyConfig.name}'s configuration before creating your AI companion.
+        <p className="font-geo font-medium text-gray-700 tracking-wide">
+          Take a moment to review {toyConfig.name}&apos;s configuration before creating your AI companion.
         </p>
       </div>
 
@@ -58,7 +58,7 @@ export function ReviewStep() {
         <div className="flex items-start gap-4">
           <div className="text-4xl">{getToyTypeIcon()}</div>
           <div className="flex-1">
-            <h3 className="text-xl font-black uppercase tracking-wider text-black mb-2">{toyConfig.name}</h3>
+            <h3 className="retro-h3 text-xl text-black mb-2">{toyConfig.name}</h3>
             <p className="font-bold text-gray-700 uppercase tracking-wide mb-3">
               {toyConfig.type.charAt(0).toUpperCase() + toyConfig.type.slice(1)}
             </p>
@@ -101,7 +101,7 @@ export function ReviewStep() {
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-2">
               <Brain className="w-5 h-5" />
-              <h3 className="font-black text-lg uppercase tracking-wider text-black">Personality Configuration</h3>
+              <h3 className="retro-h3 text-lg text-black">Personality Configuration</h3>
               <Check className="w-4 h-4 text-green-600" />
             </div>
             <Button
@@ -162,7 +162,7 @@ export function ReviewStep() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <Volume2 className="w-5 h-5" />
-              <h3 className="font-black text-lg uppercase tracking-wider text-black">Voice Selection</h3>
+              <h3 className="retro-h3 text-lg text-black">Voice Selection</h3>
               <Check className="w-4 h-4 text-green-600" />
             </div>
             <Button
@@ -193,7 +193,7 @@ export function ReviewStep() {
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
-                <h3 className="font-black text-lg uppercase tracking-wider text-black">Knowledge Base</h3>
+                <h3 className="retro-h3 text-lg text-black">Knowledge Base</h3>
                 <Check className="w-4 h-4 text-green-600" />
               </div>
               <Button
