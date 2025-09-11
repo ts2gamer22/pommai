@@ -1,11 +1,28 @@
 {
-  "buildCommand": "npm run build",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "turbo run build --filter=@pommai/web",
   "outputDirectory": "apps/web/.next",
-  "installCommand": "npm install",
+  "installCommand": "pnpm install",
   "framework": "nextjs",
-  "devCommand": "npm run dev",
+  "devCommand": "turbo run dev --filter=@pommai/web",
   "root": "apps/web",
   "env": {
-    "NEXT_PUBLIC_CONVEX_URL": "@convex_url"
+    "NEXT_PUBLIC_CONVEX_URL": "@convex_url",
+    "NODE_ENV": "@node_env"
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "develop": true,
+      "staging": true
+    }
+  },
+  "github": {
+    "autoAlias": true
+  },
+  "functions": {
+    "apps/web/src/app/api/**/*.ts": {
+      "runtime": "nodejs20.x"
+    }
   }
 }
