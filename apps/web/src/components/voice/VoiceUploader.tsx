@@ -3,6 +3,7 @@
 import { useState, useRef, type ChangeEvent } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,8 +32,9 @@ import {
 } from "lucide-react";
 
 interface VoiceUploaderProps {
-  onComplete: (voiceId: string) => void;
+  onComplete: (voiceId: string, voiceName?: string) => void;
   onCancel: () => void;
+  isForKids?: boolean;
 }
 
 type UploadStep = 
@@ -62,7 +64,7 @@ Thank you for spending time with me today. I can't wait to talk with you again s
 
 Please continue reading any book or article for 3-5 minutes to provide enough voice samples.`;
 
-export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
+export function VoiceUploader({ onComplete, onCancel, isForKids = false }: VoiceUploaderProps) {
   const [step, setStep] = useState<UploadStep>("requirements");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -86,6 +88,8 @@ export function VoiceUploader({ onComplete, onCancel }: VoiceUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 const cloneVoice = useAction(api.aiServices.cloneElevenVoiceFromBase64);
+const [isProcessing, setIsProcessing] = useState(false);
+const [error, setError] = useState<string | null>(null);
 
   const startRecording = async () => {
     try {
@@ -150,30 +154,37 @@ const cloneVoice = useAction(api.aiServices.cloneElevenVoiceFromBase64);
     if (!audioBlob) return;
     
     setStep("processing");
+    setProcessingProgress(20);
+    setError(null);
     
-    // Simulate processing steps
-    const steps = [
-      { progress: 20, message: "Analyzing audio quality..." },
-      { progress: 40, message: "Detecting voice characteristics..." },
-      { progress: 60, message: "Creating voice model..." },
-      { progress: 80, message: "Optimizing for real-time synthesis..." },
-      { progress: 100, message: "Voice clone ready!" },
-    ];
-    
-    for (const step of steps) {
-      setProcessingProgress(step.progress);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      // For now, we'll go directly to the preview step
+      // The actual voice cloning happens when saving
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setProcessingProgress(50);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setProcessingProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setStep("preview");
+    } catch (error) {
+      console.error("Error processing voice:", error);
+      setError(error instanceof Error ? error.message : "Failed to process voice");
+      setStep("recordOrUpload");
     }
-    
-    // In production, this would upload to 11Labs or other voice cloning service
-    // and return the voice ID
-    setStep("preview");
   };
 
   const saveVoice = async () => {
+    if (!audioBlob || !voiceData.name || !voiceData.description) {
+      setError("Please fill in all required fields");
+      return;
+    }
+    
+    setIsProcessing(true);
+    setError(null);
+    
     try {
-      if (!audioBlob) throw new Error("No audio to upload");
-      // Convert Blob to base64 via FileReader
+      // Convert Blob to base64
       const base64Audio: string = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -185,6 +196,12 @@ const cloneVoice = useAction(api.aiServices.cloneElevenVoiceFromBase64);
         reader.readAsDataURL(audioBlob);
       });
 
+      // Add kid-friendly tags if in kids mode
+      const tags = [...voiceData.tags];
+      if (isForKids) {
+        tags.push('kids-friendly', 'child-safe');
+      }
+
       const result = await cloneVoice({
         name: voiceData.name,
         description: voiceData.description,
@@ -192,21 +209,23 @@ const cloneVoice = useAction(api.aiServices.cloneElevenVoiceFromBase64);
         accent: voiceData.accent || undefined,
         ageGroup: voiceData.ageGroup,
         gender: voiceData.gender,
-        tags: voiceData.tags,
+        tags,
         isPublic: voiceData.isPublic,
         fileBase64: base64Audio,
         mimeType: audioBlob.type || 'audio/webm',
-      }) as unknown as { externalVoiceId?: string };
+      });
 
-      // Pass back the external voice id so backend TTS can use it immediately
+      // Pass back the external voice id and name
       if (result?.externalVoiceId) {
-        onComplete(result.externalVoiceId);
+        onComplete(result.externalVoiceId, voiceData.name);
       } else {
         throw new Error('Voice cloning succeeded but no externalVoiceId returned');
       }
     } catch (error) {
       console.error("Error saving voice:", error);
-      alert("Failed to save voice. Please try again.");
+      setError(error instanceof Error ? error.message : "Failed to save voice. Please try again.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -559,6 +578,12 @@ onChange={(e: ChangeEvent<HTMLInputElement>) => setVoiceData({ ...voiceData, acc
               </div>
             </div>
             
+            {error && (
+              <div className="p-3 bg-red-50 border-2 border-red-500 text-red-700 rounded">
+                <p className="text-sm font-medium">{error}</p>
+              </div>
+            )}
+            
             <div className="flex justify-between">
               <Button 
                 bg="#f0f0f0"
@@ -566,14 +591,22 @@ onChange={(e: ChangeEvent<HTMLInputElement>) => setVoiceData({ ...voiceData, acc
                 borderColor="black"
                 shadow="#d0d0d0"
                 onClick={onCancel}
+                disabled={isProcessing}
               >
                 Cancel
               </Button>
               <Button
                 onClick={saveVoice}
-                disabled={!voiceData.name || !voiceData.description}
+                disabled={!voiceData.name || !voiceData.description || isProcessing}
               >
-                Save Voice
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating Voice...
+                  </>
+                ) : (
+                  "Save Voice"
+                )}
               </Button>
             </div>
           </Card>

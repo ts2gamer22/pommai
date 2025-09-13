@@ -132,6 +132,7 @@ interface ToyWizardState {
   // Actions
   setCurrentStep: (step: WizardStep) => void;
   markStepCompleted: (step: WizardStep) => void;
+  setToyConfig: (config: Partial<ToyConfig>) => void;
   updateToyConfig: <K extends keyof ToyConfig>(key: K, value: ToyConfig[K]) => void;
   updatePersonalityTraits: (traits: Partial<PersonalityTraits>) => void;
   updateKnowledgeBase: (kb: Partial<KnowledgeBase>) => void;
@@ -216,6 +217,27 @@ export const useToyWizardStore = create<ToyWizardState>()(
       markStepCompleted: (step) => {
         set((state) => ({
           completedSteps: [...new Set([...state.completedSteps, step])],
+        }));
+      },
+
+      setToyConfig: (config) => {
+        set((state) => ({
+          toyConfig: {
+            ...defaultToyConfig,
+            ...config,
+            personalityTraits: config.personalityTraits ? {
+              ...defaultToyConfig.personalityTraits,
+              ...config.personalityTraits,
+            } : state.toyConfig.personalityTraits,
+            safetySettings: config.safetySettings ? {
+              ...state.toyConfig.safetySettings,
+              ...config.safetySettings,
+            } : state.toyConfig.safetySettings,
+            knowledgeBase: config.knowledgeBase ? {
+              ...state.toyConfig.knowledgeBase,
+              ...config.knowledgeBase,
+            } : state.toyConfig.knowledgeBase,
+          },
         }));
       },
 

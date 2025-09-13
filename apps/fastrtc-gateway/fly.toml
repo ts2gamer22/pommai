@@ -55,7 +55,7 @@ kill_timeout = 5
 
 # Scale configuration
 [metrics]
-  port = 9091
+  port = 8080
   path = "/metrics"
 
 # Resource allocation

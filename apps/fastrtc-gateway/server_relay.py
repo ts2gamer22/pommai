@@ -17,6 +17,7 @@ import inspect
 from aiohttp import web, WSMsgType
 from convex import ConvexClient
 from dotenv import load_dotenv
+from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
 try:
     from tts_providers import TTSStreamer, TTSProvider, TTSProviderFactory
@@ -46,6 +47,18 @@ CONVEX_URL = os.getenv("CONVEX_URL", "https://your-app.convex.cloud")
 CONVEX_DEPLOY_KEY = os.getenv("CONVEX_DEPLOY_KEY")
 PORT = int(os.getenv("PORT", "8080"))
 HOST = os.getenv("HOST", "0.0.0.0")
+
+# Prometheus metrics
+SESSIONS_TOTAL = Counter('fastrtc_sessions_total', 'Total sessions started')
+ACTIVE_SESSIONS = Gauge('fastrtc_active_sessions', 'Current active sessions')
+MESSAGES_TOTAL = Counter('fastrtc_messages_total', 'Messages received by type', ['type'])
+AUDIO_BYTES_IN_TOTAL = Counter('fastrtc_audio_bytes_in_total', 'Total incoming audio bytes')
+AUDIO_BYTES_OUT_TOTAL = Counter('fastrtc_audio_bytes_out_total', 'Total outgoing audio bytes')
+CONVEX_PROCESSING_SECONDS = Histogram(
+    'fastrtc_convex_processing_seconds',
+    'Convex processing duration in seconds',
+    buckets=(0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60)
+)
 
 @dataclass
 class ClientSession:
@@ -116,6 +129,8 @@ class FastRTCRelayGateway:
         self.sessions[session_id] = session
         
         logger.info(f"Client connected: device={device_id}, toy={toy_id}, session={session_id}")
+        SESSIONS_TOTAL.inc()
+        ACTIVE_SESSIONS.inc()
         
         try:
             async for msg in ws:
@@ -131,6 +146,7 @@ class FastRTCRelayGateway:
             # Clean up session
             if len(session.audio_buffer) > 0:
                 logger.warning(f"Client disconnected with %dB buffered audio and no final marker: session=%s", len(session.audio_buffer), session_id)
+            ACTIVE_SESSIONS.dec()
             del self.sessions[session_id]
             await ws.close()
             logger.info(f"Client disconnected: session={session_id}")
@@ -154,6 +170,7 @@ class FastRTCRelayGateway:
         try:
             data = json.loads(message)
             msg_type = data.get('type')
+            MESSAGES_TOTAL.labels(msg_type or 'unknown').inc()
             
             logger.debug(f"Received message type: {msg_type} from {session.device_id}")
             
@@ -260,6 +277,7 @@ class FastRTCRelayGateway:
                 try:
                     audio_bytes = bytes.fromhex(audio_hex)
                     session.audio_buffer.extend(audio_bytes)
+                    AUDIO_BYTES_IN_TOTAL.inc(len(audio_bytes))
                     logger.debug(f"WS audio_chunk: +{len(audio_bytes)}B, total={len(session.audio_buffer)}B, final={is_final}, format={fmt}")
                 except ValueError as e:
                     logger.error(f"Invalid hex audio data: {e}")
@@ -418,7 +436,9 @@ class FastRTCRelayGateway:
             finally:
                 status_task.cancel()  # Stop sending status updates
 
-            duration_ms = (datetime.now() - started).total_seconds() * 1000
+            duration_delta = (datetime.now() - started)
+            duration_ms = duration_delta.total_seconds() * 1000
+            CONVEX_PROCESSING_SECONDS.observe(duration_delta.total_seconds())
             logger.info("Convex action result: success=%s processingTime=%s (gateway call %.0fms)", result.get('success'), result.get('processingTime'), duration_ms)
 
             if session.ws.closed:
@@ -469,6 +489,7 @@ class FastRTCRelayGateway:
                         try:
                             response_audio_bytes = base64.b64decode(response_audio_base64)
                             response_audio_hex = response_audio_bytes.hex()
+                            AUDIO_BYTES_OUT_TOTAL.inc(len(response_audio_bytes))
                             
                             response_message = {
                                 'type': 'audio_response',
@@ -546,8 +567,14 @@ async def health_check(request):
         'timestamp': datetime.now().isoformat()
     })
 
+# Metrics endpoint
+async def metrics(request):
+    output = generate_latest()
+    return web.Response(body=output, content_type=CONTENT_TYPE_LATEST)
+
 # Route configuration
 app.router.add_get('/health', health_check)
+app.router.add_get('/metrics', metrics)
 app.router.add_get('/ws/{device_id}/{toy_id}', gateway.handle_websocket)
 
 # Startup and cleanup

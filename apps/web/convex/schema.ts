@@ -171,6 +171,9 @@ const schema = defineSchema({
     topics: v.array(v.string()),
     location: v.union(v.literal("toy"), v.literal("web"), v.literal("app")),
     deviceId: v.optional(v.string()),
+    // Guardian live monitoring controls
+    isPaused: v.optional(v.boolean()),
+    isMonitored: v.optional(v.boolean()),
   })
     .index("by_toy", ["toyId"])
     .index("by_child", ["childId"])
@@ -215,6 +218,30 @@ const schema = defineSchema({
         endTime: v.string(),
       })),
     }),
+    // Guardian controls for SafetyControls UI (applies to all toys assigned to this child)
+    guardianControls: v.optional(v.object({
+      contentFilters: v.object({
+        strictnessLevel: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+        blockedTopics: v.array(v.string()),
+        allowedTopics: v.array(v.string()),
+      }),
+      timeControls: v.object({
+        dailyLimit: v.number(),
+        timeRestrictions: v.array(v.object({
+          dayType: v.union(v.literal("weekday"), v.literal("weekend")),
+          startTime: v.string(),
+          endTime: v.string(),
+        })),
+        schoolDayRules: v.boolean(),
+        weekendRules: v.boolean(),
+      }),
+      notifications: v.object({
+        realTimeAlerts: v.boolean(),
+        dailySummary: v.boolean(),
+        weeklyReport: v.boolean(),
+        severityThreshold: v.union(v.literal("all"), v.literal("medium"), v.literal("high")),
+      }),
+    })),
     createdAt: v.string(),
     updatedAt: v.string(),
   }).index("parentId", ["parentId"]),

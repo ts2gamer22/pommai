@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Audio Stream Manager for Pommai Raspberry Pi Client
-Handles real-time audio capture, compression, streaming, and playback
+BlueALSA-optimized Audio Stream Manager for Pommai Raspberry Pi Client
+Backward compatible with existing client code while fixing audio issues
 """
 
 import asyncio
@@ -37,10 +37,10 @@ class AudioConfig:
     chunk_size: int = 1024
     frame_size: int = 320  # 20ms at 16kHz
     
-    # Buffer configuration
+    # Buffer configuration - OPTIMIZED FOR BLUEALSA
     recording_buffer_size: int = 50  # ~3 seconds
-    playback_buffer_size: int = 30   # ~1.8 seconds (increased for Bluetooth)
-    min_playback_buffer: int = 10    # Start playback after 10 chunks (increased for Bluetooth stability)
+    playback_buffer_size: int = 100   # More buffer for BlueALSA
+    min_playback_buffer: int = 25     # Wait for MORE chunks before starting (was 3)
     
     # Network configuration
     frames_per_packet: int = 3       # 60ms per network packet
@@ -48,7 +48,7 @@ class AudioConfig:
     
     # Performance limits
     max_recording_buffer: int = 100  # ~6 seconds
-    max_playback_buffer: int = 50    # ~3 seconds
+    max_playback_buffer: int = 200   # More buffer for stability
 
 
 class CircularAudioBuffer:
@@ -82,47 +82,8 @@ class CircularAudioBuffer:
         return len(self.buffer)
 
 
-class JitterBuffer:
-    """Handle network jitter and packet reordering"""
-    
-    def __init__(self, target_delay_ms: int = 100):
-        self.buffer: Dict[int, bytes] = {}
-        self.target_delay = target_delay_ms
-        self.next_sequence = 0
-        self.max_buffer_size = 50
-        
-    def add_packet(self, sequence: int, data: bytes, timestamp: float):
-        """Add packet to jitter buffer"""
-        if len(self.buffer) < self.max_buffer_size:
-            self.buffer[sequence] = (data, timestamp)
-    
-    def get_packet(self) -> Optional[bytes]:
-        """Get next packet in sequence"""
-        if self.next_sequence in self.buffer:
-            data, timestamp = self.buffer.pop(self.next_sequence)
-            self.next_sequence += 1
-            
-            # Check if we've met target delay
-            current_time = time.time() * 1000
-            packet_age = current_time - timestamp
-            
-            if packet_age >= self.target_delay:
-                return data
-            else:
-                # Re-add packet if not old enough
-                self.buffer[self.next_sequence - 1] = (data, timestamp)
-                return None
-        
-        # Handle missing packet
-        if self.buffer and min(self.buffer.keys()) > self.next_sequence:
-            # Skip missing packet
-            self.next_sequence = min(self.buffer.keys())
-        
-        return None
-
-
 class AudioStreamManager:
-    """Manages audio streaming between Pi and cloud"""
+    """BlueALSA-optimized audio streaming manager with backward compatibility"""
     
     def __init__(self, hardware_controller, config: AudioConfig):
         self.hardware = hardware_controller
@@ -136,11 +97,11 @@ class AudioStreamManager:
         # Buffers
         self.recording_buffer = CircularAudioBuffer(config.recording_buffer_size)
         self.playback_buffer = CircularAudioBuffer(config.playback_buffer_size)
-        self.jitter_buffer = JitterBuffer()
         
-        # Control flags
-        self.is_recording = False
+        # CRITICAL: Single playback lock to prevent race conditions
+        self.playback_lock = asyncio.Lock()
         self.is_playing = False
+        self.is_recording = False
         self.is_streaming = False
         
         # Callbacks
@@ -153,7 +114,9 @@ class AudioStreamManager:
             'chunks_played': 0,
             'underruns': 0,
             'overruns': 0,
-            'average_latency': 0
+            'average_latency': 0,
+            'playback_starts': 0,
+            'concurrent_attempts': 0
         }
         
         # Silence detection
@@ -161,7 +124,7 @@ class AudioStreamManager:
         self.silence_duration = 0
         self.max_silence_duration = 2.0  # 2 seconds
         
-        logging.info("Audio Stream Manager initialized")
+        logging.info("BlueALSA-optimized Audio Stream Manager initialized")
     
     async def start_recording(self, streaming: bool = True) -> None:
         """Start audio recording from microphone"""
@@ -260,192 +223,218 @@ class AudioStreamManager:
         return rms < self.silence_threshold
     
     async def play_audio_stream(self, audio_chunks: AsyncGenerator[Dict[str, Any], None]):
-        """Play incoming audio stream with buffering."""
-        if self.is_playing:
-            logging.warning("Already playing audio - resetting state")
-            self.stop_playback()
-            await asyncio.sleep(0.1)
-
-        self.is_playing = True
-        self.state = AudioState.RECEIVING
-        await self.playback_buffer.clear()
+        """MAIN PLAYBACK METHOD - BlueALSA optimized with backward compatibility"""
         
-        playback_task = None
-        total_chunks = 0
-        final_received = False
+        # CRITICAL: Prevent concurrent playback
+        if self.playback_lock.locked():
+            self.stats['concurrent_attempts'] += 1
+            logging.warning("Playback already in progress - preventing concurrent execution")
+            return
+        
+        async with self.playback_lock:
+            if self.is_playing:
+                logging.warning("Already playing audio - resetting state")
+                self.is_playing = False
+                await asyncio.sleep(0.1)
 
-        try:
-            async for chunk in audio_chunks:
-                if not self.is_playing:
-                    break
-                
-                audio_data = chunk.get('data', b'')
-                is_final = chunk.get('is_final', False)
-
-                if audio_data:
-                    await self.playback_buffer.add(audio_data)
-                    total_chunks += 1
-                    logging.debug(f"Added chunk {total_chunks} to playback buffer")
-                
-                # Start playback once we have minimum buffer
-                if playback_task is None and len(self.playback_buffer) >= self.config.min_playback_buffer:
-                    self.state = AudioState.PLAYING
-                    logging.info(f"Starting playback task with {len(self.playback_buffer)} chunks buffered")
-                    # Small delay to let BlueALSA prepare for continuous streaming
-                    await asyncio.sleep(0.1)
-                    playback_task = asyncio.create_task(self._playback_loop())
-                
-                if is_final:
-                    final_received = True
-                    logging.info(f"Final marker received after {total_chunks} chunks")
-                    break
+            self.is_playing = True
+            self.state = AudioState.RECEIVING
+            self.stats['playback_starts'] += 1
             
-            # If we never started playback but have data, start now
-            if playback_task is None and len(self.playback_buffer) > 0:
-                self.state = AudioState.PLAYING
-                logging.info(f"Starting playback with {len(self.playback_buffer)} chunks (below min buffer)")
-                playback_task = asyncio.create_task(self._playback_loop())
-
-            # Wait for playback to finish
-            if playback_task:
-                # Give playback time to consume all chunks
-                max_wait = 30.0  # Maximum 30 seconds
-                start_time = time.time()
-                while self.is_playing and (time.time() - start_time) < max_wait:
-                    if len(self.playback_buffer) == 0 and final_received:
-                        # All chunks consumed and stream is done
-                        await asyncio.sleep(0.5)  # Small grace period
-                        break
-                    await asyncio.sleep(0.1)
+            # Clear playback buffer
+            await self.playback_buffer.clear()
+            
+            total_chunks = 0
+            playback_started = False
+            playback_task = None
+            
+            try:
+                logging.info(f"PLAYBACK: Starting audio stream processing")
                 
-                # Stop playback if still running
-                if self.is_playing:
-                    self.stop_playback()
-                    if playback_task and not playback_task.done():
+                # PHASE 1: Accumulate chunks until minimum buffer is reached
+                async for chunk in audio_chunks:
+                    if not self.is_playing:
+                        break
+                    
+                    audio_data = chunk.get('data', b'')
+                    is_final = chunk.get('is_final', False)
+                    
+                    if audio_data:
+                        await self.playback_buffer.add(audio_data)
+                        total_chunks += 1
+                        
+                        # Log progress every 10 chunks
+                        if total_chunks % 10 == 0:
+                            logging.debug(f"Buffered {total_chunks} chunks, queue size: {len(self.playback_buffer)}")
+                    
+                    # START PLAYBACK when we have sufficient buffer (BlueALSA optimization)
+                    if not playback_started and len(self.playback_buffer) >= self.config.min_playback_buffer:
+                        playback_started = True
+                        self.state = AudioState.PLAYING
+                        logging.info(f"Starting playback with {len(self.playback_buffer)} chunks buffered (BlueALSA optimized)")
+                        
+                        # Small delay to let BlueALSA prepare for streaming
+                        await asyncio.sleep(0.1)
+                        
+                        # Start the optimized playback loop
+                        playback_task = asyncio.create_task(self._bluealsa_optimized_playback_loop())
+                    
+                    if is_final:
+                        logging.info(f"Final marker received after {total_chunks} total chunks")
+                        break
+                
+                # Handle case where we never reached min buffer but have data
+                if not playback_started and len(self.playback_buffer) > 0:
+                    playback_started = True
+                    self.state = AudioState.PLAYING
+                    logging.info(f"Starting playback with {len(self.playback_buffer)} chunks (below min threshold)")
+                    await asyncio.sleep(0.1)
+                    playback_task = asyncio.create_task(self._bluealsa_optimized_playback_loop())
+                
+                # PHASE 2: Wait for playback to complete all chunks
+                if playback_task:
+                    max_wait = 30.0  # 30 second timeout
+                    start_wait = time.time()
+                    
+                    while self.is_playing and (time.time() - start_wait) < max_wait:
+                        # Check if playback is done
+                        if len(self.playback_buffer) == 0 and playback_task.done():
+                            break
+                        await asyncio.sleep(0.1)
+                    
+                    # Ensure playback task is complete
+                    if not playback_task.done():
+                        logging.warning("Playback task timeout - cancelling")
                         playback_task.cancel()
                         try:
                             await playback_task
                         except asyncio.CancelledError:
                             pass
-
-        except Exception as e:
-            logging.error(f"Audio stream error: {e}", exc_info=True)
-            self.state = AudioState.ERROR
-        finally:
-            self.is_playing = False
-            self.state = AudioState.IDLE
-            logging.info(f"Audio stream complete. Total chunks: {total_chunks}")
+                
+                logging.info(f"Audio stream complete. Total chunks processed: {total_chunks}")
+                
+            except Exception as e:
+                logging.error(f"Audio stream error: {e}", exc_info=True)
+                self.state = AudioState.ERROR
+            finally:
+                # Always clean up state
+                self.is_playing = False
+                self.state = AudioState.IDLE
     
-    async def _playback_loop(self):
-        """Main playback loop with BlueALSA optimization."""
+    async def _bluealsa_optimized_playback_loop(self):
+        """BlueALSA-optimized playback loop with chunk aggregation"""
         try:
-            logging.info("PLAYBACK LOOP: Starting...")
+            logging.info("PLAYBACK LOOP: Starting BlueALSA-optimized playback...")
             chunks_played = 0
             empty_reads = 0
-            aggregated_buffer = bytearray()
-            min_write_size = 8192  # 8KB minimum write for BlueALSA stability
+            
+            # BlueALSA optimization: Aggregate small chunks into larger writes
+            aggregation_buffer = bytearray()
+            min_write_size = 8192  # 8KB writes for BlueALSA stability
             
             while self.is_playing:
-                # Try to aggregate multiple chunks before writing
-                while len(aggregated_buffer) < min_write_size and self.is_playing:
+                # Collect chunks until we have enough for a good write
+                while len(aggregation_buffer) < min_write_size and self.is_playing:
                     audio_data = await self.playback_buffer.get()
                     
                     if audio_data:
-                        aggregated_buffer.extend(audio_data)
+                        aggregation_buffer.extend(audio_data)
                         empty_reads = 0
                     else:
                         empty_reads += 1
-                        if empty_reads > 10:  # 0.1 seconds of no new data
+                        if empty_reads > 20:  # 0.2 seconds of no data
                             break
                         await asyncio.sleep(0.01)
                 
-                # Write aggregated chunk if we have data
-                if len(aggregated_buffer) > 0:
+                # Write aggregated chunk to BlueALSA
+                if len(aggregation_buffer) > 0:
                     try:
-                        # Write in optimal chunks for BlueALSA
-                        write_size = min(min_write_size, len(aggregated_buffer))
-                        chunk_to_write = bytes(aggregated_buffer[:write_size])
+                        # Write optimal-sized chunk for BlueALSA
+                        write_size = min(min_write_size, len(aggregation_buffer))
+                        chunk_to_write = bytes(aggregation_buffer[:write_size])
+                        
                         self.output_stream.write(chunk_to_write)
                         
-                        # Remove written data from buffer
-                        del aggregated_buffer[:write_size]
+                        # Remove written data
+                        del aggregation_buffer[:write_size]
                         chunks_played += 1
                         self.stats['chunks_played'] = chunks_played
                         
                         if chunks_played == 1:
-                            logging.info("First chunk written to output stream")
-                        elif chunks_played % 20 == 0:
+                            logging.info("First aggregated chunk written to output stream")
+                        elif chunks_played % 10 == 0:
                             logging.debug(f"Played {chunks_played} aggregated chunks")
-                            
+                        
                         # Small delay to prevent overwhelming BlueALSA
-                        await asyncio.sleep(0.005)
+                        await asyncio.sleep(0.002)
                         
                     except Exception as e:
                         self.stats['underruns'] += 1
                         logging.warning(f"PLAYBACK: Write error: {e}")
-                        # Clear aggregated buffer on write error
-                        aggregated_buffer.clear()
+                        # Clear aggregation buffer on error
+                        aggregation_buffer.clear()
                         await asyncio.sleep(0.01)
                 else:
-                    # No data available
-                    if empty_reads > 50 and self.state != AudioState.RECEIVING:
-                        # Stream is done and buffer is empty
-                        logging.info(f"Playback complete after {chunks_played} chunks")
-                        break
+                    # No data available - check if we should stop
+                    if empty_reads > 100:  # 1 second of no data
+                        if self.state != AudioState.RECEIVING:
+                            logging.info(f"Playback complete - played {chunks_played} aggregated chunks")
+                            break
                     await asyncio.sleep(0.01)
-
+            
+            # Write any remaining data in aggregation buffer
+            if len(aggregation_buffer) > 0:
+                try:
+                    self.output_stream.write(bytes(aggregation_buffer))
+                    chunks_played += 1
+                    logging.info(f"Final chunk written - total {chunks_played} chunks")
+                except Exception as e:
+                    logging.warning(f"Final chunk write error: {e}")
+            
         except Exception as e:
             logging.error(f"Playback loop error: {e}", exc_info=True)
             self.state = AudioState.ERROR
         finally:
-            logging.info(f"PLAYBACK LOOP: Finished after playing {self.stats.get('chunks_played', 0)} chunks")
-            self.is_playing = False
-    
-    async def _playback_remaining(self):
-        """Play any remaining audio in buffer"""
-        while len(self.playback_buffer) > 0:
-            audio_data = await self.playback_buffer.get()
-            if audio_data:
-                try:
-                    self.output_stream.write(audio_data)
-                    self.stats['chunks_played'] += 1
-                except Exception as e:
-                    logging.error(f"Final playback error: {e}")
+            logging.info(f"PLAYBACK LOOP: Finished - {self.stats.get('chunks_played', 0)} chunks played")
     
     async def play_audio_data(self, audio_data: bytes):
-        """Play pre-loaded audio data"""
+        """Play pre-loaded audio data - backward compatibility method"""
         if self.is_playing:
             logging.warning("Already playing audio")
             return
         
-        self.is_playing = True
-        self.state = AudioState.PLAYING
-        
-        try:
-            # Split into chunks
-            chunk_size = self.config.chunk_size * 2  # 16-bit samples
-            chunks = [audio_data[i:i + chunk_size] for i in range(0, len(audio_data), chunk_size)]
+        async with self.playback_lock:
+            self.is_playing = True
+            self.state = AudioState.PLAYING
             
-            # Play chunks
-            for chunk in chunks:
-                if not self.is_playing:
-                    break
+            try:
+                # Split into chunks and write with BlueALSA optimization
+                chunk_size = 8192  # Larger chunks for BlueALSA
+                chunks = [audio_data[i:i + chunk_size] for i in range(0, len(audio_data), chunk_size)]
+                
+                logging.info(f"Playing {len(chunks)} pre-loaded chunks")
+                
+                for i, chunk in enumerate(chunks):
+                    if not self.is_playing:
+                        break
+                        
+                    try:
+                        self.output_stream.write(chunk)
+                        self.stats['chunks_played'] += 1
+                        if i == 0:
+                            logging.info("First pre-loaded chunk written")
+                    except Exception as e:
+                        logging.error(f"Pre-loaded playback error: {e}")
                     
-                try:
-                    self.output_stream.write(chunk)
-                    self.stats['chunks_played'] += 1
-                except Exception as e:
-                    logging.error(f"Playback error: {e}")
-                
-                # Small delay between chunks
-                await asyncio.sleep(0)
-                
-        except Exception as e:
-            logging.error(f"Audio playback error: {e}")
-            self.state = AudioState.ERROR
-        finally:
-            self.is_playing = False
-            self.state = AudioState.IDLE
+                    # Small delay between chunks
+                    await asyncio.sleep(0.005)
+                    
+            except Exception as e:
+                logging.error(f"Audio playback error: {e}")
+                self.state = AudioState.ERROR
+            finally:
+                self.is_playing = False
+                self.state = AudioState.IDLE
     
     def stop_playback(self):
         """Stop audio playback"""
@@ -454,8 +443,6 @@ class AudioStreamManager:
     
     def set_volume(self, volume: float):
         """Set output volume (0.0 to 1.0)"""
-        # This would need ALSA mixer integration
-        # For now, just log
         logging.info(f"Volume set to {volume * 100:.0f}%")
     
     def get_stats(self) -> Dict[str, Any]:
@@ -498,7 +485,7 @@ class AudioStreamManager:
         logging.info(f"Audio level test complete. Max level: {max_level}%")
         return max_level
 
-    # Convenience helpers for client compatibility
+    # Backward compatibility methods
     async def initialize(self) -> None:
         """No-op initializer for API compatibility."""
         return None
@@ -521,6 +508,6 @@ class AudioStreamManager:
 
     async def cleanup(self) -> None:
         """Cleanup hook; streams are owned by hardware controller."""
-        # Ensure playback loop is stopped
         self.is_playing = False
+        self.is_recording = False
         return None

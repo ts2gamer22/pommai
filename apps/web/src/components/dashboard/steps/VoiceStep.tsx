@@ -5,204 +5,338 @@ import { useToyWizardStore } from '@/stores/toyWizardStore';
 import { VoiceGallery } from '@/components/voice/VoiceGallery';
 import { VoicePreview } from '@/components/voice/VoicePreview';
 import { VoiceUploader } from '@/components/voice/VoiceUploader';
-import { Button, Card, Popup } from '@pommai/ui';
-import { Volume2, Upload } from 'lucide-react';
+import { Button, Card } from '@pommai/ui';
+import { Volume2, Mic, Library, ChevronLeft, AlertCircle } from 'lucide-react';
 import { useAction } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 
-/**
- * VoiceStep
- *
- * Lets users pick or upload a voice.
- * - Primary headings use font-minecraft (pixel) with compact sizes.
- * - Body and helper text use font-geo for readability.
- */
+type ViewMode = 'selection' | 'upload' | 'preview';
+
 export function VoiceStep() {
   const { toyConfig, updateToyConfig } = useToyWizardStore();
-  const [selectedVoice, setSelectedVoice] = useState<{ _id?: string; externalVoiceId?: string; name: string } | null>(null);
-  const [showUploader, setShowUploader] = useState(false);
-  const [activeTab, setActiveTab] = useState<'preset' | 'custom'>('preset');
+  const [selectedVoice, setSelectedVoice] = useState<{ 
+    _id?: string; 
+    externalVoiceId?: string; 
+    name: string;
+    description?: string;
+    gender?: string;
+    language?: string;
+    ageGroup?: string;
+  } | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('selection');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Ensure default voices are available for selection
+  // Ensure default voices are available
   const syncDefaultVoices = useAction(api.aiServices.syncDefaultVoices);
-  const hasSeededRef = (typeof window !== 'undefined') 
-    ? ((window as unknown as { __pommaiSeededVoicesRef?: { value: boolean } }).__pommaiSeededVoicesRef ??= { value: false }) 
-    : { value: false };
+  
   useEffect(() => {
-    if (hasSeededRef.value) return;
-    hasSeededRef.value = true;
-    (async () => {
-      try { 
-        await syncDefaultVoices({}); 
-      } catch (error) { 
-        console.error('Failed to sync default voices:', error);
+    const initVoices = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        await syncDefaultVoices({});
+      } catch (error) {
+        console.error('Failed to sync voices:', error);
+        setError('Failed to load default voices. Voice cloning may still work.');
+      } finally {
+        setIsLoading(false);
       }
-    })();
-  }, [syncDefaultVoices, hasSeededRef]);
+    };
+    
+    // Only run once on mount
+    if (typeof window !== 'undefined') {
+      const hasInit = (window as any).__voiceStepInit;
+      if (!hasInit) {
+        (window as any).__voiceStepInit = true;
+        initVoices();
+      }
+    }
+  }, [syncDefaultVoices]);
 
-  const handleSelectVoice = (voice: { externalVoiceId?: string; name: string; _id?: string }) => {
+  // Initialize selected voice from toyConfig
+  useEffect(() => {
+    if (toyConfig.voiceId && toyConfig.voiceName && !selectedVoice) {
+      setSelectedVoice({
+        externalVoiceId: toyConfig.voiceId,
+        name: toyConfig.voiceName,
+      });
+    }
+  }, [toyConfig.voiceId, toyConfig.voiceName, selectedVoice]);
+
+  const handleSelectVoice = (voice: any) => {
     setSelectedVoice(voice);
     if (voice.externalVoiceId) {
       updateToyConfig('voiceId', voice.externalVoiceId);
     }
     updateToyConfig('voiceName', voice.name);
+    setViewMode('preview');
   };
 
-  const handleVoiceUploaded = (voiceId: string) => {
-    // In a real app, you'd fetch the voice details here
+  const handleVoiceUploaded = (voiceId: string, voiceName?: string) => {
     updateToyConfig('voiceId', voiceId);
-    setShowUploader(false);
+    if (voiceName) {
+      updateToyConfig('voiceName', voiceName);
+    }
+    setSelectedVoice({
+      externalVoiceId: voiceId,
+      name: voiceName || 'Custom Voice',
+    });
+    setViewMode('preview');
+  };
+
+  const handleBackToSelection = () => {
+    setViewMode('selection');
+    setError(null);
+  };
+
+  const handleCancelUpload = () => {
+    setViewMode('selection');
+    setError(null);
   };
 
   return (
     <div className="space-y-6 step-component">
+      {/* Header */}
       <div className="text-center sm:text-left">
-        <h2 className="font-minecraft text-base sm:text-lg font-black mb-3 uppercase tracking-wider text-gray-800"
-          style={{
-            textShadow: '2px 2px 0 #c381b5'
-          }}
->
+        <h2 
+          className="font-minecraft text-base sm:text-lg font-black mb-3 uppercase tracking-wider text-gray-800"
+          style={{ textShadow: '2px 2px 0 #c381b5' }}
+        >
           🎤 Choose {toyConfig.name}&apos;s Voice
         </h2>
         <p className="font-geo text-sm font-medium text-gray-600 tracking-wide leading-relaxed">
-          Select a voice that matches {toyConfig.name}&apos;s personality, or create your own custom voice.
+          {viewMode === 'selection' && "Select a voice from our library or create your own"}
+          {viewMode === 'upload' && "Record or upload your voice to create a custom voice"}
+          {viewMode === 'preview' && "Test and customize the selected voice"}
         </p>
       </div>
 
-      {/* Voice Selection (no Tabs) */}
+      {/* Error Display */}
+      {error && (
+        <Card
+          bg="#fee2e2"
+          borderColor="#dc2626"
+          shadowColor="#fca5a5"
+          className="p-4"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-geo text-sm font-medium text-red-800">{error}</p>
+              <p className="font-geo text-xs text-red-600 mt-1">
+                You can continue with mock voices for testing.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Main Content Area */}
       <Card
         bg="#ffffff"
         borderColor="black"
         shadowColor="#c381b5"
-        className="p-[var(--spacing-lg)] sm:p-[var(--spacing-xl)]"
+        className="overflow-hidden"
       >
-        <div className="space-y-4">
-          {/* Segmented control + Upload */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex gap-2">
-              <Button
-                bg={activeTab === 'preset' ? '#c381b5' : '#f8f8f8'}
-                textColor={activeTab === 'preset' ? 'white' : 'black'}
-                borderColor="black"
-                shadow={activeTab === 'preset' ? '#8b5fa3' : '#e0e0e0'}
-                onClick={() => setActiveTab('preset')}
-                className="py-2 px-3 font-minecraft font-black uppercase tracking-wider hover-lift text-xs sm:text-sm"
-              >
-                🎧 Preset Voices
-              </Button>
-              <Button
-                bg={activeTab === 'custom' ? '#c381b5' : '#f8f8f8'}
-                textColor={activeTab === 'custom' ? 'white' : 'black'}
-                borderColor="black"
-                shadow={activeTab === 'custom' ? '#8b5fa3' : '#e0e0e0'}
-                onClick={() => setActiveTab('custom')}
-                className="py-2 px-3 font-minecraft font-black uppercase tracking-wider hover-lift text-xs sm:text-sm"
-              >
-                🎤 Custom Voice
-              </Button>
-            </div>
-            {activeTab === 'preset' && (
-              <Button
-                bg="#ffffff"
-                textColor="black"
-                borderColor="black"
-                shadow="#e0e0e0"
-                onClick={() => setShowUploader(true)}
-                className="py-2 px-3 font-minecraft font-black uppercase tracking-wider hover-lift text-xs sm:text-sm"
-              >
-                <Upload className="w-3 h-3 mr-2" /> Upload Voice
-              </Button>
-            )}
+        {/* View Mode Navigation */}
+        {viewMode !== 'selection' && (
+          <div className="border-b-2 border-black p-4 bg-gray-50">
+            <Button
+              bg="#ffffff"
+              textColor="black"
+              borderColor="black"
+              shadow="#e0e0e0"
+              onClick={handleBackToSelection}
+              className="font-minecraft font-black uppercase tracking-wider text-xs"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Back to Voice Library
+            </Button>
           </div>
+        )}
 
-          {/* Content */}
-          {activeTab === 'preset' && (
-            <div className="space-y-4">
-              {selectedVoice && (
+        <div className="p-[var(--spacing-lg)] sm:p-[var(--spacing-xl)]">
+          {/* Selection View */}
+          {viewMode === 'selection' && (
+            <div className="space-y-6">
+              {/* Quick Actions */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Card
-                  bg="#ffffff"
+                  bg="#f3e8ff"
                   borderColor="black"
                   shadowColor="#c381b5"
-                  className="p-[var(--spacing-lg)]"
+                  className="p-6 cursor-pointer transition-transform hover:scale-[1.02]"
+                  onClick={() => setViewMode('selection')}
                 >
-                  <h3 className="retro-h3 text-base text-gray-800 mb-3">🎵 Selected Voice</h3>
-                  <VoicePreview voice={selectedVoice} isForKids={toyConfig.isForKids} />
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-black bg-gradient-to-br from-[#c381b5] to-[#8b5fa3] flex items-center justify-center">
+                      <Library className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-minecraft font-black text-sm uppercase tracking-wider">
+                        Voice Library
+                      </h3>
+                      <p className="font-geo text-xs text-gray-600 mt-1">
+                        Choose from pre-made voices
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card
+                  bg="#fff6cc"
+                  borderColor="black"
+                  shadowColor="#f7931e"
+                  className="p-6 cursor-pointer transition-transform hover:scale-[1.02]"
+                  onClick={() => setViewMode('upload')}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-black bg-gradient-to-br from-[#f7931e] to-[#d67c1a] flex items-center justify-center">
+                      <Mic className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-minecraft font-black text-sm uppercase tracking-wider">
+                        Create Custom Voice
+                      </h3>
+                      <p className="font-geo text-xs text-gray-600 mt-1">
+                        Record or upload your voice
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Selected Voice Display */}
+              {selectedVoice && (
+                <Card
+                  bg="#e8f5e9"
+                  borderColor="black"
+                  shadowColor="#92cd41"
+                  className="p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Volume2 className="w-5 h-5 text-green-700" />
+                      <div>
+                        <p className="font-minecraft text-xs uppercase tracking-wider text-green-900">
+                          Currently Selected
+                        </p>
+                        <p className="font-geo text-sm font-bold text-green-800">
+                          {selectedVoice.name}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      bg="#92cd41"
+                      textColor="white"
+                      borderColor="black"
+                      shadow="#76a83a"
+                      size="sm"
+                      onClick={() => setViewMode('preview')}
+                    >
+                      Test Voice
+                    </Button>
+                  </div>
                 </Card>
               )}
 
-              <VoiceGallery
-                selectedVoiceId={selectedVoice?._id}
-                onSelectVoice={handleSelectVoice}
+              {/* Voice Gallery */}
+              <div>
+                <h3 className="font-minecraft font-black text-sm uppercase tracking-wider mb-4">
+                  Available Voices
+                </h3>
+                {isLoading ? (
+                  <div className="text-center py-8">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-black border-t-transparent"></div>
+                    <p className="font-geo text-sm text-gray-600 mt-3">Loading voices...</p>
+                  </div>
+                ) : (
+                  <VoiceGallery
+                    selectedVoiceId={selectedVoice?._id}
+                    onSelectVoice={handleSelectVoice}
+                    isForKids={toyConfig.isForKids}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Upload View */}
+          {viewMode === 'upload' && (
+            <div>
+              <VoiceUploader
+                onComplete={handleVoiceUploaded}
+                onCancel={handleCancelUpload}
                 isForKids={toyConfig.isForKids}
               />
             </div>
           )}
 
-          {activeTab === 'custom' && (
-            <div className="text-center py-[var(--spacing-xl)]">
-              <div className="max-w-md mx-auto space-y-6">
-                <div className="w-14 h-14 border-4 border-black bg-gradient-to-br from-[#c381b5] to-[#f7931e] mx-auto flex items-center justify-center">
-                  <Volume2 className="w-7 h-7 text-white" />
-                </div>
-                
-                <div>
-                  <h3 className="retro-h3 text-base text-gray-800 mb-3">
-                    Create a Custom Voice
-                  </h3>
-                  <p className="font-geo text-sm font-medium text-gray-600 leading-relaxed">
-                    Record your own voice or upload an audio file to create a unique voice for {toyConfig.name}
-                  </p>
-                </div>
+          {/* Preview View */}
+          {viewMode === 'preview' && selectedVoice && (
+            <div className="space-y-6">
+              <div className="text-center">
+                <h3 className="font-minecraft font-black text-base uppercase tracking-wider mb-2">
+                  Voice Preview
+                </h3>
+                <p className="font-geo text-sm text-gray-600">
+                  Test {selectedVoice.name} with different phrases and settings
+                </p>
+              </div>
 
+              <VoicePreview 
+                voice={selectedVoice} 
+                isForKids={toyConfig.isForKids} 
+              />
+
+              <div className="flex justify-center gap-4">
+                <Button
+                  bg="#f0f0f0"
+                  textColor="black"
+                  borderColor="black"
+                  shadow="#d0d0d0"
+                  onClick={() => setViewMode('selection')}
+                >
+                  Choose Different Voice
+                </Button>
                 <Button
                   bg="#92cd41"
                   textColor="white"
                   borderColor="black"
                   shadow="#76a83a"
-                  onClick={() => setShowUploader(true)}
-                  className="w-full py-3 px-6 font-minecraft font-black uppercase tracking-wider hover-lift"
+                  onClick={() => {
+                    // Voice is already saved, just show confirmation
+                    setViewMode('selection');
+                  }}
                 >
                   <Volume2 className="w-4 h-4 mr-2" />
-                  Start Voice Creation
+                  Confirm Voice Selection
                 </Button>
-
-                <Card
-                  bg="#f7931e"
-                  borderColor="black"
-                  shadowColor="#d67c1a"
-                  className="p-4 text-left"
-                >
-                  <h4 className="font-minecraft font-black text-sm text-white mb-2 uppercase tracking-wider">
-                    📝 Voice Creation Tips:
-                  </h4>
-                  <ul className="font-geo text-xs font-medium text-white space-y-1 leading-relaxed">
-                    <li>• Record in a quiet environment</li>
-                    <li>• Speak clearly and at a moderate pace</li>
-                    <li>• Record 3-5 minutes of diverse content</li>
-                    <li>• Use the provided script for best results</li>
-                  </ul>
-                </Card>
               </div>
             </div>
           )}
         </div>
       </Card>
 
-      {/* Voice Upload Popup */}
-      {showUploader && (
-        <Popup
-          isOpen={showUploader}
-          onClose={() => setShowUploader(false)}
-          title="🎤 Upload Custom Voice"
-          bg="#ffffff"
+      {/* Helper Tips */}
+      {viewMode === 'selection' && (
+        <Card
+          bg="#f7931e"
           borderColor="black"
-          className="max-w-4xl max-h-[90vh] overflow-y-auto"
+          shadowColor="#d67c1a"
+          className="p-4"
         >
-          <VoiceUploader
-            onComplete={handleVoiceUploaded}
-            onCancel={() => setShowUploader(false)}
-          />
-        </Popup>
+          <h4 className="font-minecraft font-black text-sm text-white mb-2 uppercase tracking-wider">
+            💡 Voice Selection Tips:
+          </h4>
+          <ul className="font-geo text-xs font-medium text-white space-y-1 leading-relaxed">
+            <li>• Choose a voice that matches your toy's personality</li>
+            <li>• Test the voice with different phrases before confirming</li>
+            <li>• Custom voices provide a unique, personalized experience</li>
+            <li>• All voices support multiple languages and emotions</li>
+          </ul>
+        </Card>
       )}
     </div>
   );

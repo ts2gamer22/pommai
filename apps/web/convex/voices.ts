@@ -229,19 +229,44 @@ export const incrementVoiceUsage = mutation({
  * Get popular voices for kids
  */
 export const getKidsFriendlyVoices = query({
-  handler: async (ctx) => {
+  args: {
+    language: v.optional(v.string()),
+    gender: v.optional(v.union(v.literal("male"), v.literal("female"), v.literal("neutral"))),
+    ageGroup: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
     const voices = await ctx.db
       .query("voices")
       .withIndex("is_public", (q) => q.eq("isPublic", true))
       .collect();
 
     // Filter for kid-friendly voices
-    const kidsFriendlyVoices = voices.filter(v => 
+    let kidsFriendlyVoices = voices.filter(v => 
       v.tags.includes("kids-friendly") || 
       v.tags.includes("child-safe") ||
-      v.ageGroup.includes("child") ||
-      v.ageGroup.includes("kids")
+      v.tags.includes("kids") ||
+      v.ageGroup === "child" ||
+      v.ageGroup === "kids" ||
+      v.ageGroup === "teen"
     );
+
+    // If no kid-friendly voices found, return all public voices as fallback
+    if (kidsFriendlyVoices.length === 0) {
+      kidsFriendlyVoices = voices;
+    }
+
+    // Apply additional filters if provided
+    if (args.language) {
+      kidsFriendlyVoices = kidsFriendlyVoices.filter(v => v.language === args.language);
+    }
+
+    if (args.gender) {
+      kidsFriendlyVoices = kidsFriendlyVoices.filter(v => v.gender === args.gender);
+    }
+
+    if (args.ageGroup) {
+      kidsFriendlyVoices = kidsFriendlyVoices.filter(v => v.ageGroup === args.ageGroup);
+    }
 
     // Sort by usage count
     return kidsFriendlyVoices.sort((a, b) => b.usageCount - a.usageCount);

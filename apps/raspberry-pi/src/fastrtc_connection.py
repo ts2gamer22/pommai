@@ -57,6 +57,7 @@ class FastRTCConnection:
         self.audio_queue = asyncio.Queue(maxsize=1000)
         self.last_activity = time.time()
         self.last_audio_sent_time = 0  # Track when we last sent audio
+        self._playback_triggered = False  # Track if we've triggered playback for this stream
         
         # Register default handlers
         self._register_default_handlers()
@@ -201,6 +202,8 @@ class FastRTCConnection:
                     except asyncio.QueueEmpty:
                         break
                 logger.info(f"Cleared {cleared} items from audio queue for new interaction (was {queue_size})")
+            # Reset playback trigger flag for new stream
+            self._playback_triggered = False
         
         # Update the last audio sent time
         self.last_audio_sent_time = current_time
@@ -387,7 +390,19 @@ class FastRTCConnection:
                 })
                 logger.info(f"Queued audio chunk: {len(audio_bytes)} bytes, format={metadata.get('format')}, queue_size={self.audio_queue.qsize()}")
             except asyncio.QueueFull:
-                logger.error("Audio queue full - dropping chunk")
+                # Drop oldest and retry to preserve newest data
+                try:
+                    _ = self.audio_queue.get_nowait()
+                    self.audio_queue.put_nowait({
+                        'data': audio_bytes,
+                        'metadata': metadata
+                    })
+                    logger.warning("Audio queue full - dropped oldest chunk and enqueued new")
+                except Exception:
+                    logger.error("Audio queue full - could not enqueue new chunk even after dropping oldest")
+            
+            # Do NOT trigger playback here; leave playback decisions to the client
+            # (pommai_client_fastrtc.py starts playback after text_response)
         else:
             # Enqueue a final marker so consumers can stop cleanly
             if metadata.get('isFinal', False):
@@ -398,15 +413,17 @@ class FastRTCConnection:
                     })
                     logger.info("Queued final audio marker")
                 except asyncio.QueueFull:
-                    logger.error("Audio queue full - dropping final marker")
-                
-                # IMPORTANT: Trigger playback when final marker is received
-                if self.audio_queue.qsize() > 0:
-                    logger.info("TRIGGER: Audio chunks ready for playback (queue has %d items)", self.audio_queue.qsize())
-                    # Send a synthetic audio_ready message to trigger playback
-                    # Call the handler directly if it exists
-                    if 'audio_ready' in self.message_handlers:
-                        await self.message_handlers['audio_ready']({'type': 'audio_ready', 'trigger': 'final_marker'})
+                    # Ensure final marker gets through by dropping oldest and retrying
+                    try:
+                        _ = self.audio_queue.get_nowait()
+                        self.audio_queue.put_nowait({
+                            'data': b'',
+                            'metadata': metadata
+                        })
+                        logger.warning("Audio queue full - dropped oldest to enqueue final marker")
+                    except Exception:
+                        logger.error("Audio queue full - dropping final marker after retry failed")
+                # Do NOT trigger playback here; the client will handle starting playback
     
     async def _handle_error(self, message: Dict):
         """Handle error message from server"""

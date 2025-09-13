@@ -1,5 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { Card, Button, ProgressBar } from "@pommai/ui";
 import {
   Select,
@@ -44,40 +47,53 @@ interface SafetyAnalyticsProps {
   childId: string;
 }
 
-// Mock data for charts
-const weeklyActivityData = [
-  { day: "Mon", minutes: 45, messages: 120 },
-  { day: "Tue", minutes: 60, messages: 150 },
-  { day: "Wed", minutes: 30, messages: 80 },
-  { day: "Thu", minutes: 75, messages: 190 },
-  { day: "Fri", minutes: 90, messages: 220 },
-  { day: "Sat", minutes: 120, messages: 280 },
-  { day: "Sun", minutes: 100, messages: 240 },
-];
-
-const topicsDistribution = [
-  { name: "Education", value: 35, color: "#3B82F6" },
-  { name: "Games", value: 25, color: "#10B981" },
-  { name: "Stories", value: 20, color: "#F59E0B" },
-  { name: "Creative", value: 15, color: "#8B5CF6" },
-  { name: "Other", value: 5, color: "#6B7280" },
-];
-
-const safetyTrends = [
-  { date: "Week 1", safetyScore: 98, incidents: 0 },
-  { date: "Week 2", safetyScore: 97, incidents: 1 },
-  { date: "Week 3", safetyScore: 99, incidents: 0 },
-  { date: "Week 4", safetyScore: 96, incidents: 2 },
-];
-
-const emotionalInsights = [
-  { emotion: "Happy", percentage: 65 },
-  { emotion: "Curious", percentage: 20 },
-  { emotion: "Neutral", percentage: 10 },
-  { emotion: "Frustrated", percentage: 5 },
-];
-
 export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
+  const [range, setRange] = useState<"today" | "week" | "month" | "year">("week");
+  const now = Date.now();
+  const dateFrom = useMemo(() => {
+    if (range === "today") return new Date(new Date().toDateString()).getTime();
+    if (range === "week") return now - 7 * 24 * 60 * 60 * 1000;
+    if (range === "month") return now - 30 * 24 * 60 * 60 * 1000;
+    if (range === "year") return now - 365 * 24 * 60 * 60 * 1000;
+    return undefined;
+  }, [range]);
+
+  const analytics = useQuery(api.conversations.getConversationAnalytics, {
+    toyId: undefined,
+    dateFrom,
+    dateTo: now,
+  });
+
+  const avgMinutes = (analytics?.averageDuration || 0) / 60;
+  const totalConversations = analytics?.totalConversations || 0;
+  const totalMessages = analytics?.totalMessages || 0;
+  const flaggedCount = analytics?.flaggedMessageCount || 0;
+  const sentiment = analytics?.sentimentBreakdown || { positive: 0, neutral: 0, negative: 0 };
+
+  // Derive activity data from conversationsByDay, estimate messages/minutes per conv
+  const estimatedMsgsPerConv = totalConversations > 0 ? totalMessages / totalConversations : 0;
+  const conversationsByDay = analytics?.conversationsByDay || [];
+  const activityData = conversationsByDay.map((d: any) => ({
+    day: d.date.slice(5), // MM-DD
+    minutes: Math.round((avgMinutes || 0) * d.count),
+    messages: Math.round(estimatedMsgsPerConv * d.count),
+    count: d.count,
+  }));
+
+  const topicsDistribution = (analytics?.topTopics || []).slice(0, 5).map((t: any, idx: number) => ({
+    name: t.topic || `Topic ${idx + 1}`,
+    value: t.count || 0,
+    color: ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#6B7280"][idx % 5],
+  }));
+
+  // Mock emotional insights for now (since it's not in the backend yet)
+  const emotionalInsights = [
+    { emotion: "Happy", percentage: 65 },
+    { emotion: "Curious", percentage: 20 },
+    { emotion: "Neutral", percentage: 10 },
+    { emotion: "Frustrated", percentage: 5 },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header with filters */}
@@ -87,7 +103,7 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
           📊 Safety Analytics & Insights
         </h3>
         <div className="flex items-center gap-2">
-          <Select defaultValue="week">
+          <Select value={range} onValueChange={(v) => setRange(v as any)}>
             <SelectTrigger className="w-[140px] border-2 border-black font-bold">
               <Calendar className="w-4 h-4 mr-2" />
               <SelectValue />
@@ -124,10 +140,10 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
             <Shield className="w-5 h-5 text-green-600" />
             <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-green-600 bg-green-100 text-green-600 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
-              +2%
+              Safe
             </span>
           </div>
-          <p className="text-2xl font-black text-black">98%</p>
+          <p className="text-2xl font-black text-black">{Math.max(0, Math.min(100, Math.round(((sentiment.positive + sentiment.neutral * 0.5) / Math.max(1, totalMessages)) * 100)))}%</p>
           <p className="text-sm font-bold uppercase tracking-wide text-gray-700">Safety Score</p>
         </Card>
 
@@ -139,13 +155,10 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
         >
           <div className="flex items-center justify-between mb-2">
             <Clock className="w-5 h-5 text-blue-600" />
-            <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-red-600 bg-red-100 text-red-600 flex items-center gap-1">
-              <TrendingDown className="w-3 h-3" />
-              -15%
-            </span>
+            <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-gray-600 bg-gray-100 text-gray-800">Avg</span>
           </div>
-          <p className="text-2xl font-black text-black">74 min</p>
-          <p className="text-sm font-bold uppercase tracking-wide text-gray-700">Avg Daily Usage</p>
+          <p className="text-2xl font-black text-black">{Math.round(avgMinutes)} min</p>
+          <p className="text-sm font-bold uppercase tracking-wide text-gray-700">Avg Session Duration</p>
         </Card>
 
         <Card 
@@ -156,9 +169,9 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
         >
           <div className="flex items-center justify-between mb-2">
             <MessageSquare className="w-5 h-5 text-purple-600" />
-            <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-gray-600 bg-gray-100 text-gray-800">Stable</span>
+            <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-gray-600 bg-gray-100 text-gray-800">All</span>
           </div>
-          <p className="text-2xl font-black text-black">1,280</p>
+          <p className="text-2xl font-black text-black">{totalMessages}</p>
           <p className="text-sm font-bold uppercase tracking-wide text-gray-700">Total Messages</p>
         </Card>
 
@@ -170,9 +183,9 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
         >
           <div className="flex items-center justify-between mb-2">
             <AlertTriangle className="w-5 h-5 text-orange-600" />
-            <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-green-600 bg-green-100 text-green-600">Low</span>
+            <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-green-600 bg-green-100 text-green-600">Total</span>
           </div>
-          <p className="text-2xl font-black text-black">3</p>
+          <p className="text-2xl font-black text-black">{flaggedCount}</p>
           <p className="text-sm font-bold uppercase tracking-wide text-gray-700">Safety Incidents</p>
         </Card>
       </div>
@@ -185,18 +198,18 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
         className="p-4 sm:p-6 hover-lift"
       >
         <h4 className="text-md font-black uppercase tracking-wider text-black mb-4">
-          📊 Weekly Activity Overview
+          📊 Activity Overview
         </h4>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={weeklyActivityData}>
+          <BarChart data={activityData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="day" />
             <YAxis yAxisId="left" />
             <YAxis yAxisId="right" orientation="right" />
             <Tooltip />
             <Legend />
-            <Bar yAxisId="left" dataKey="minutes" fill="#3B82F6" name="Minutes" />
-            <Bar yAxisId="right" dataKey="messages" fill="#10B981" name="Messages" />
+            <Bar yAxisId="left" dataKey="minutes" fill="#3B82F6" name="Minutes (est)" />
+            <Bar yAxisId="right" dataKey="messages" fill="#10B981" name="Messages (est)" />
           </BarChart>
         </ResponsiveContainer>
       </Card>
@@ -215,7 +228,7 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie
-                data={topicsDistribution}
+                data={topicsDistribution.length > 0 ? topicsDistribution : [{ name: "No data", value: 1, color: "#e5e7eb" }]}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
@@ -224,8 +237,8 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
                 fill="#8884d8"
                 dataKey="value"
               >
-                {topicsDistribution.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                {(topicsDistribution.length > 0 ? topicsDistribution : [{ color: "#e5e7eb" } as any]).map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={(entry as any).color} />
                 ))}
               </Pie>
               <Tooltip />
@@ -241,30 +254,19 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
           className="p-4 sm:p-6 hover-lift"
         >
           <h4 className="text-md font-black uppercase tracking-wider text-black mb-4">
-            📈 Safety Trends
+            📈 Sentiment Breakdown
           </h4>
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={safetyTrends}>
+            <BarChart data={[{ label: "All", Positive: sentiment.positive, Neutral: sentiment.neutral, Negative: sentiment.negative }] }>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
+              <XAxis dataKey="label" />
               <YAxis />
               <Tooltip />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="safetyScore"
-                stroke="#10B981"
-                name="Safety Score"
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="incidents"
-                stroke="#EF4444"
-                name="Incidents"
-                strokeWidth={2}
-              />
-            </LineChart>
+              <Bar dataKey="Positive" fill="#10B981" />
+              <Bar dataKey="Neutral" fill="#9CA3AF" />
+              <Bar dataKey="Negative" fill="#EF4444" />
+            </BarChart>
           </ResponsiveContainer>
         </Card>
       </div>
@@ -286,7 +288,7 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
           </span>
         </div>
         <div className="space-y-4">
-          {emotionalInsights.map((emotion) => (
+          {emotionalInsights.map((emotion: { emotion: string; percentage: number }) => (
             <div key={emotion.emotion}>
               <div className="flex justify-between mb-2">
                 <span className="text-sm font-black uppercase tracking-wider text-black">{emotion.emotion}</span>

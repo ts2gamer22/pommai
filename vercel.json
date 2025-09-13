@@ -4,25 +4,5 @@
   "outputDirectory": "apps/web/.next",
   "installCommand": "pnpm install",
   "framework": "nextjs",
-  "devCommand": "turbo run dev --filter=@pommai/web",
-  "root": "apps/web",
-  "env": {
-    "NEXT_PUBLIC_CONVEX_URL": "@convex_url",
-    "NODE_ENV": "@node_env"
-  },
-  "git": {
-    "deploymentEnabled": {
-      "main": true,
-      "develop": true,
-      "staging": true
-    }
-  },
-  "github": {
-    "autoAlias": true
-  },
-  "functions": {
-    "apps/web/src/app/api/**/*.ts": {
-      "runtime": "nodejs20.x"
-    }
-  }
+  "root": "apps/web"
 }

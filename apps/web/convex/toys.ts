@@ -257,6 +257,7 @@ export const updateToy = mutation({
   args: {
     toyId: v.id("toys"),
     name: v.optional(v.string()),
+    type: v.optional(v.string()),
     personalityPrompt: v.optional(v.string()),
     personalityTraits: v.optional(v.object({
       traits: v.array(v.string()),

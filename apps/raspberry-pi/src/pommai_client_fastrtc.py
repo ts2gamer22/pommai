@@ -141,7 +141,7 @@ class HardwareController:
             frames_per_buffer=chunk_size
         )
         # Use a larger buffer for Bluetooth output to reduce underruns
-        out_buffer = max(chunk_size, 1024)
+        out_buffer = max(chunk_size, 4096)  # Increased buffer for Bluetooth stability
         self.output_stream = self._pa.open(
             format=pyaudio.paInt16,
             channels=channels,
@@ -231,6 +231,20 @@ class PommaiClientFastRTC:
             playback_sample_rate = int(playback_rate_env) if playback_rate_env else None
         except Exception:
             playback_sample_rate = None
+        
+        # If Bluetooth device detected and no rate forced, default to 48kHz for stability
+        if output_device is not None and playback_sample_rate is None:
+            # Check if this is likely a Bluetooth device
+            try:
+                p = pyaudio.PyAudio()
+                info = p.get_device_info_by_index(output_device)
+                device_name = info.get('name', '').lower()
+                p.terminate()
+                if 'bluealsa' in device_name or 'bluetooth' in device_name:
+                    playback_sample_rate = 48000
+                    logger.info("Bluetooth device detected, defaulting playback rate to 48000 Hz for stability")
+            except Exception as e:
+                logger.debug(f"Could not detect device type: {e}")
 
         self.hardware = HardwareController(
             sample_rate=config.SAMPLE_RATE,
@@ -316,7 +330,7 @@ class PommaiClientFastRTC:
                 logger.info(f"CACHE: Using db_path={cache_db}, backup_path={cache_backup}")
                 self.cache = ConversationCache(CacheConfig(db_path=cache_db, backup_path=cache_backup))
             except Exception as e:
-                logger.error(f"ConversationCache init failed: {e} - disabling offline mode")
+                logger.error(f"ConversationCache init failed: {e} - disabling offline mode to continue.")
                 self.cache = None
         self.sync_manager: Optional[SyncManager] = None
 
@@ -480,119 +494,70 @@ class PommaiClientFastRTC:
             self.is_recording = False
 
     async def play_audio_from_queue(self):
-        """Play audio chunks from the connection's queue (handles format/endianness/resampling)."""
+        """Play audio chunks from the connection's queue with simple, format-aware passthrough."""
         if getattr(self, "_audio_playback_running", False):
             logger.warning("Audio playback already running; ignoring duplicate trigger")
             return
         
-        # Clear any stale audio from previous sessions
-        while not self.connection.audio_queue.empty():
-            try:
-                self.connection.audio_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                break
-        logger.debug("Cleared audio queue before starting new playback")
-        
         self._audio_playback_running = True
 
-        logger.info("PLAYBACK: Starting audio playback from queue")
+        logger.info(f"PLAYBACK: Starting audio playback from queue (size: {self.connection.audio_queue.qsize()})")
         self.state = ToyState.SPEAKING
         if self.led_controller:
             await self.led_controller.set_pattern(LEDPattern.SPEAKING)
 
         try:
-            frame_bytes = self.audio_manager.config.chunk_size * 2  # 16-bit samples
-
-            def _resample_pcm16(pcm_bytes: bytes, src_rate: int, dst_rate: int) -> bytes:
-                if not pcm_bytes or src_rate == dst_rate:
-                    return pcm_bytes
-                try:
-                    pcm = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32)
-                    ratio = float(dst_rate) / float(src_rate)
-                    new_len = int(max(1, round(len(pcm) * ratio)))
-                    x = np.linspace(0, len(pcm) - 1, num=len(pcm), dtype=np.float32)
-                    xi = np.linspace(0, len(pcm) - 1, num=new_len, dtype=np.float32)
-                    yi = np.interp(xi, x, pcm)
-                    return np.clip(yi, -32768, 32767).astype(np.int16).tobytes()
-                except Exception as _e:
-                    logger.debug(f"Resampler error (falling back to original rate): {_e}")
-                    return pcm_bytes
-
             async def audio_chunk_generator():
                 pcm_accum = bytearray()
-                consecutive_timeouts = 0
-                max_timeouts = 5
-                output_rate = self.audio_manager.config.sample_rate
+                min_buffer_size = 8192  # Accumulate before yielding for Bluetooth stability
 
                 while True:
-                    chunk = await self.connection.get_audio_chunk(timeout=5.0)
+                    # Block until a chunk arrives; do not rely on timeouts
+                    chunk = await self.connection.get_audio_chunk()
                     if not chunk:
-                        consecutive_timeouts += 1
-                        if consecutive_timeouts >= max_timeouts:
-                            logger.warning("Max timeouts waiting for audio; ending stream")
-                            if len(pcm_accum) > 0:
-                                yield {'data': bytes(pcm_accum), 'is_final': False}
-                                pcm_accum.clear()
-                            yield {'data': b'', 'is_final': True}
-                            break
+                        # Connection may be temporarily idle; patiently wait
+                        await asyncio.sleep(0.01)
                         continue
-                    consecutive_timeouts = 0
 
                     audio_data = chunk.get('data', b'')
                     metadata = chunk.get('metadata', {})
                     audio_format = metadata.get('format', 'opus')
-                    src_rate = int(metadata.get('sampleRate', 16000))
-                    channels = int(metadata.get('channels', 1))
-                    endian = metadata.get('endian', 'le')
                     is_final = metadata.get('isFinal', False)
 
                     pcm_data = b''
                     if audio_data:
                         if audio_format == 'pcm16':
-                            # Downmix / endianness handling
-                            if channels == 2 or endian == 'be' or os.getenv('PCM_SWAP_BYTES', 'false').lower() == 'true':
-                                try:
-                                    dtype = '<i2' if endian == 'le' else '>i2'
-                                    arr = np.frombuffer(audio_data, dtype=dtype)
-                                    if channels == 2:
-                                        if len(arr) % 2 == 1:
-                                            arr = arr[:-1]
-                                        arr = arr.reshape(-1, 2)
-                                        arr = arr.mean(axis=1)
-                                    if os.getenv('PCM_SWAP_BYTES', 'false').lower() == 'true':
-                                        arr = arr.byteswap()
-                                    arr = np.clip(arr, -32768, 32767).astype(np.int16)
-                                    pcm_data = arr.tobytes()
-                                except Exception as _e:
-                                    logger.warning(f"PCM downmix/endianness adjust failed: {_e}; using raw bytes")
-                                    pcm_data = audio_data
-                            else:
-                                pcm_data = audio_data
+                            # Trust the server: PCM is already 16kHz, mono, little-endian
+                            pcm_data = audio_data
                         elif audio_format == 'opus':
+                            # Decode Opus to PCM
                             pcm_data = self.opus_codec.decode_chunk(audio_data) or b''
                         else:
                             logger.warning(f"Unsupported audio format: {audio_format}")
                             pcm_data = b''
 
-                        # Resample if needed
-                        if pcm_data and src_rate and output_rate and src_rate != output_rate:
-                            pcm_data = _resample_pcm16(pcm_data, src_rate, output_rate)
-
                     try:
-                        logger.debug(f"DECODED_CHUNK: fmt={audio_format}, src_rate={src_rate}, channels={channels}, endian={endian}, pcm_len={len(pcm_data)}, is_final={is_final}")
+                        logger.debug(f"DECODED_CHUNK: fmt={audio_format}, pcm_len={len(pcm_data)}, is_final={is_final}")
                     except Exception:
                         pass
 
                     if pcm_data:
                         pcm_accum.extend(pcm_data)
+                        # Ensure even number of bytes (16-bit alignment)
                         if len(pcm_accum) % 2 == 1:
                             pcm_accum.append(0)
-                        while len(pcm_accum) >= frame_bytes:
-                            yield {'data': bytes(pcm_accum[:frame_bytes]), 'is_final': False}
-                            del pcm_accum[:frame_bytes]
+                        # Yield in larger chunks for Bluetooth stability
+                        while len(pcm_accum) >= min_buffer_size:
+                            chunk_to_yield = min(min_buffer_size, len(pcm_accum))
+                            yield {'data': bytes(pcm_accum[:chunk_to_yield]), 'is_final': False}
+                            del pcm_accum[:chunk_to_yield]
 
                     if is_final:
                         if len(pcm_accum) > 0:
+                            # Pad final chunk to min_buffer_size for smoother end-of-stream on Bluetooth
+                            if len(pcm_accum) < min_buffer_size:
+                                padding_needed = min_buffer_size - len(pcm_accum)
+                                pcm_accum.extend(b'\x00' * padding_needed)
                             yield {'data': bytes(pcm_accum), 'is_final': False}
                             pcm_accum.clear()
                         yield {'data': b'', 'is_final': True}
@@ -642,14 +607,9 @@ class PommaiClientFastRTC:
             logger.info(f"Toy state update: {state}")
 
     async def handle_audio_ready(self, message: Dict[str, Any]):
+        # Deprecated: we only start playback from text_response to avoid races
         trigger_source = message.get('trigger', 'unknown')
-        logger.info(f"AUDIO_READY: Handler triggered from {trigger_source}")
-        if not getattr(self, "_audio_playback_running", False):
-            queue_size = self.connection.audio_queue.qsize() if hasattr(self.connection, 'audio_queue') else 0
-            logger.info(f"Starting playback from audio_ready handler (queue size: {queue_size})")
-            asyncio.create_task(self.play_audio_from_queue())
-        else:
-            logger.debug("Playback already running, ignoring audio_ready")
+        logger.debug(f"AUDIO_READY ignored (trigger={trigger_source}) - text_response is the sole trigger")
 
     async def handle_text_response(self, message: Dict[str, Any]):
         logger.info("HANDLER: handle_text_response called")
@@ -667,11 +627,11 @@ class PommaiClientFastRTC:
                 logger.warning("Playback flag was stuck, resetting it")
                 self._audio_playback_running = False
         
-        logger.info("TRIGGER: Starting play_audio_from_queue task from text_response")
+        logger.info("TEXT_RESPONSE: Received; starting playback if not already running")
         if not getattr(self, "_audio_playback_running", False):
             asyncio.create_task(self.play_audio_from_queue())
         else:
-            logger.debug("Audio playback already running")
+            logger.debug("Audio playback already running (text_response)")
 
     async def _monitor_audio_queue(self):
         await asyncio.sleep(0.5)

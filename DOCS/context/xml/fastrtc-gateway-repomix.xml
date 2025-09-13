@@ -1,0 +1,3274 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.gitignore
+apply_pi_fix.py
+ARCHITECTURE_OPTION1.md
+backuptts.py
+DEPLOY_PRODUCTION.md
+docker-compose.production.yml
+Dockerfile.production
+fly.toml
+pi-config.env
+pi-websocket-fix.patch
+prepare_production.sh
+requirements_relay.txt
+server_relay_with_tts.py
+server_relay.py
+tts_providers_working_backup.py
+tts_providers.py
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="apply_pi_fix.py">
+#!/usr/bin/env python3
+"""
+Script to fix the WebSocket URL construction in Raspberry Pi's fastrtc_connection.py
+Run this on your Raspberry Pi to apply the fix.
+"""
+
+import sys
+import os
+
+def apply_fix(file_path):
+    """Apply the WebSocket URL construction fix"""
+    
+    # Read the file
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+    
+    # Find and replace the relevant section
+    modified = False
+    for i in range(len(lines)):
+        # Look for the line where we connect to the gateway
+        if 'logger.info(f"Connecting to FastRTC gateway at {self.config.gateway_url}")' in lines[i]:
+            # Replace the logging line and add URL construction
+            lines[i] = '''            # Build the complete WebSocket URL with device_id and toy_id
+            # The server expects: /ws/{device_id}/{toy_id}
+            ws_url = f"{self.config.gateway_url}/{self.config.device_id}/{self.config.toy_id}"
+            
+            logger.info(f"Connecting to FastRTC gateway at {ws_url}")
+'''
+            modified = True
+        
+        # Replace the websockets.connect line
+        elif 'self.config.gateway_url,' in lines[i] and 'await websockets.connect' in lines[i-1]:
+            lines[i] = '                ws_url,  # Use the constructed URL with device_id and toy_id\n'
+            modified = True
+    
+    if not modified:
+        print("WARNING: Could not find the exact lines to modify. Manual fix may be needed.")
+        return False
+    
+    # Write the fixed file
+    with open(file_path, 'w') as f:
+        f.writelines(lines)
+    
+    print(f"✅ Successfully fixed {file_path}")
+    return True
+
+if __name__ == "__main__":
+    # Default path on Raspberry Pi
+    default_path = "/home/pi/pommai-client/src/fastrtc_connection.py"
+    
+    # Allow custom path as argument
+    file_path = sys.argv[1] if len(sys.argv) > 1 else default_path
+    
+    if not os.path.exists(file_path):
+        print(f"❌ File not found: {file_path}")
+        print("Please provide the correct path to fastrtc_connection.py")
+        sys.exit(1)
+    
+    # Create backup
+    backup_path = file_path + ".backup"
+    with open(file_path, 'r') as f:
+        backup_content = f.read()
+    with open(backup_path, 'w') as f:
+        f.write(backup_content)
+    print(f"📁 Created backup at {backup_path}")
+    
+    # Apply the fix
+    if apply_fix(file_path):
+        print("\n✨ Fix applied successfully!")
+        print("\nMake sure your Pi's .env file has:")
+        print("  FASTRTC_GATEWAY_URL=ws://192.168.1.11:8080/ws")
+        print("  DEVICE_ID=rpi-zero2w-001")
+        print("  TOY_ID=kd729cad81984f52pz1v1f3gh57q3774")
+    else:
+        print("\n❌ Fix failed. Restoring backup...")
+        with open(backup_path, 'r') as f:
+            original = f.read()
+        with open(file_path, 'w') as f:
+            f.write(original)
+        print("Backup restored. Please apply the fix manually.")
+</file>
+
+<file path="ARCHITECTURE_OPTION1.md">
+# FastRTC Gateway Architecture - Option 1: TTS Streaming
+
+## Overview
+This gateway implements **Option 1**: Direct TTS streaming from the gateway for lowest latency audio playback.
+
+## Architecture Flow
+
+```
+1. Pi sends audio → Gateway
+2. Gateway forwards to Convex (with skipTTS=true)
+3. Convex performs:
+   - Speech-to-Text (Whisper)
+   - Safety checks
+   - LLM response generation
+   - Returns TEXT + toy voice config (no audio)
+4. Gateway receives text response
+5. Gateway streams TTS directly to Pi:
+   - Uses ElevenLabs or Minimax API
+   - Sends audio chunks as they're generated
+   - Pi starts playing immediately (low latency!)
+```
+
+## Benefits of Option 1
+
+### ✅ **Ultra-Low Latency**
+- Pi starts playing audio within ~100-200ms
+- No waiting for complete audio generation
+- Real-time streaming as TTS generates
+
+### ✅ **Provider Flexibility**
+- Parents can choose between:
+  - **ElevenLabs**: Western company, voice cloning support
+  - **Minimax**: Chinese company, preset voices only
+- Addresses privacy/geopolitical concerns
+
+### ✅ **Clean Separation**
+- **Convex**: Business logic, data, AI orchestration
+- **Gateway**: Real-time streaming layer
+- **Pi**: Simple audio I/O client
+
+## Voice Cloning Flow
+
+### During Toy Setup (Next.js app):
+1. Parent records voice samples
+2. If ElevenLabs: Creates voice clone, gets `voice_id`
+3. If Minimax: Selects preset voice
+4. Saves `voice_id` and `ttsProvider` to toy config in Convex
+
+### During Playback:
+1. Convex returns toy's `voiceId` and `ttsProvider` in response
+2. Gateway uses this config to stream correct voice
+3. Every response uses the toy's configured voice
+
+## File Structure
+
+```
+fastrtc-gateway/
+├── server_relay_with_tts.py  # Main server (renamed to server_relay.py in prod)
+├── tts_providers.py          # ElevenLabs/Minimax abstraction
+├── requirements_relay.txt    # Minimal dependencies
+├── Dockerfile.production     # Optimized Docker image
+├── fly.toml                 # Fly.io deployment config
+└── .env.example             # Environment template
+```
+
+## Environment Variables
+
+```bash
+# Required
+CONVEX_URL=https://warmhearted-snail-998.convex.cloud
+CONVEX_DEPLOY_KEY=your-deploy-key
+
+# TTS Providers (at least one required)
+ELEVENLABS_API_KEY=your-key     # For ElevenLabs
+MINIMAX_API_KEY=your-key        # For Minimax
+MINIMAX_GROUP_ID=your-group-id  # For Minimax
+
+# Optional
+LOG_LEVEL=INFO
+CONVEX_ACTION_TIMEOUT=60
+```
+
+## Deployment Commands
+
+```bash
+# Prepare for production
+chmod +x prepare_production.sh
+./prepare_production.sh
+
+# Deploy to Fly.io
+fly auth login
+fly apps create pommai-gateway
+fly secrets set CONVEX_URL=...
+fly secrets set CONVEX_DEPLOY_KEY=...
+fly secrets set ELEVENLABS_API_KEY=...
+fly deploy
+
+# Your gateway URL: https://pommai-gateway.fly.dev
+```
+
+## Performance Metrics
+
+- **First Audio Byte**: ~100-200ms (vs 2-3s with Option 2)
+- **Memory Usage**: ~100-200MB
+- **Docker Image**: ~200MB
+- **Cost**: ~$5/month on Fly.io
+
+## API Integration Details
+
+### ElevenLabs Streaming
+- Model: `eleven_turbo_v2_5` (lowest latency)
+- Format: `mp3_22050_32` (optimized for streaming)
+- Optimization: `optimize_streaming_latency=3`
+
+### Minimax Streaming  
+- Model: `speech-01-turbo`
+- Format: `pcm` (16kHz, mono, 16-bit)
+- Streaming: SSE (Server-Sent Events)
+
+## Security Notes
+
+1. API keys stored as secrets (never in code)
+2. Non-root Docker user
+3. HTTPS/WSS only in production
+4. Rate limiting available if needed
+
+## Testing
+
+```bash
+# Health check
+curl https://pommai-gateway.fly.dev/health
+
+# Monitor logs
+fly logs -a pommai-gateway
+
+# Test WebSocket
+wscat -c wss://pommai-gateway.fly.dev/ws/test/test
+```
+</file>
+
+<file path="backuptts.py">
+"""TTS Provider Abstraction Layer for multiple TTS services"""
+
+import os
+import json
+import aiohttp
+import logging
+import threading
+import asyncio
+from abc import ABC, abstractmethod
+from typing import AsyncIterator, Dict, Any, Optional
+from enum import Enum
+
+# ElevenLabs official SDK
+try:
+    from elevenlabs.client import ElevenLabs
+except Exception:
+    ElevenLabs = None  # Will be validated at runtime
+
+logger = logging.getLogger(__name__)
+
+class TTSProvider(Enum):
+    ELEVENLABS = "elevenlabs"
+    MINIMAX = "minimax"
+    
+class BaseTTSProvider(ABC):
+    """Abstract base class for TTS providers"""
+    
+    @abstractmethod
+    async def stream_tts(self, text: str, voice_config: Dict[str, Any]) -> AsyncIterator[bytes]:
+        """Stream TTS audio chunks"""
+        pass
+    
+    @abstractmethod
+    def get_audio_format(self) -> str:
+        """Return the audio format this provider outputs"""
+        pass
+
+class ElevenLabsProvider(BaseTTSProvider):
+    """ElevenLabs TTS Provider with streaming support (official SDK)"""
+    
+    def __init__(self):
+        self.api_key = os.getenv("ELEVENLABS_API_KEY")
+        if not self.api_key:
+            raise ValueError("ELEVENLABS_API_KEY not found in environment")
+        if ElevenLabs is None:
+            raise ImportError("elevenlabs SDK is not installed. Add 'ElevenLabs' to requirements.")
+        
+        # Client
+        self.client = ElevenLabs(api_key=self.api_key)
+        
+        # Defaults
+        # Model: prioritize ultra-low latency
+        self.model_id_default = os.getenv("ELEVENLABS_TTS_MODEL_ID", "eleven_flash_v2_5")
+        self.voice_id_default = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
+        
+        # Sample rate derived from output_format (default 24k per docs for better quality vs 16k)
+        self.sample_rate = 24000
+        
+    def _iter_stream(self, text: str, voice_id: str, model_id: str, output_format: str):
+        """Synchronous iterator that yields raw PCM bytes from ElevenLabs SDK."""
+        try:
+            # First try the standard streaming endpoint with requests for better control
+            import requests
+            
+            url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
+            headers = {
+                "xi-api-key": self.api_key,
+                "Content-Type": "application/json"
+            }
+            
+            data = {
+                "text": text,
+                "model_id": model_id,
+                "voice_settings": {
+                    "stability": 0.5,
+                    "similarity_boost": 0.75
+                },
+                "output_format": output_format,
+                "optimize_streaming_latency": 3
+            }
+            
+            logger.debug(f"Making streaming request to ElevenLabs API: {url}")
+            
+            response = requests.post(url, json=data, headers=headers, stream=True)
+            response.raise_for_status()
+            
+            # Stream chunks as they arrive - use larger chunk size
+            # Buffer small chunks to avoid issues
+            for chunk in response.iter_content(chunk_size=4096):  # 4KB chunks
+                if chunk:  # Don't filter - let the buffering in stream_tts handle it
+                    yield chunk
+                    
+        except Exception as e:
+            logger.error(f"ElevenLabs streaming request failed: {e}", exc_info=True)
+            raise
+    
+    async def stream_tts(self, text: str, voice_config: Dict[str, Any]) -> AsyncIterator[bytes]:
+        """Async stream using a background thread to bridge SDK's sync iterator."""
+        # Resolve model/voice and output format
+        voice_id = voice_config.get('voiceId', self.voice_id_default)
+        model_id = voice_config.get('modelId', self.model_id_default)
+        output_format = os.getenv("ELEVENLABS_OUTPUT_FORMAT", "pcm_24000")
+        try:
+            if output_format.startswith("pcm_"):
+                self.sample_rate = int(output_format.split("_")[1])
+        except Exception:
+            self.sample_rate = 24000
+            output_format = "pcm_24000"
+        
+        logger.info(f"ElevenLabs streaming TTS: voice_id={voice_id}, model_id={model_id}, output_format={output_format}, text_length={len(text)}")
+        
+        # Bridge to async via queue + thread
+        q: asyncio.Queue = asyncio.Queue(maxsize=100)
+        stop_sentinel = object()
+        loop = asyncio.get_running_loop()
+        
+        def producer():
+            chunk_count = 0
+            total_bytes = 0
+            buffer = bytearray()  # Buffer to accumulate small chunks
+            MIN_CHUNK_SIZE = 1024  # Minimum chunk size to send (1KB)
+            
+            try:
+                logger.debug(f"Starting ElevenLabs producer thread for text: '{text[:50]}...'")
+                for b in self._iter_stream(text, voice_id, model_id, output_format):
+                    if not b or len(b) == 0:
+                        continue
+                    
+                    total_bytes += len(b)
+                    buffer.extend(b)
+                    
+                    # Send chunks of at least MIN_CHUNK_SIZE
+                    while len(buffer) >= MIN_CHUNK_SIZE:
+                        chunk_to_send = bytes(buffer[:MIN_CHUNK_SIZE])
+                        buffer = buffer[MIN_CHUNK_SIZE:]
+                        chunk_count += 1
+                        logger.debug(f"ElevenLabs chunk #{chunk_count}: {len(chunk_to_send)} bytes")
+                        try:
+                            fut = asyncio.run_coroutine_threadsafe(q.put(chunk_to_send), loop)
+                            fut.result()  # Block thread until queued (provides backpressure)
+                        except Exception as ex:
+                            logger.error(f"Queue put error: {ex}")
+                            return
+                
+                # Send any remaining data in buffer
+                if len(buffer) > 0:
+                    chunk_count += 1
+                    remaining = bytes(buffer)
+                    logger.debug(f"ElevenLabs final chunk #{chunk_count}: {len(remaining)} bytes")
+                    try:
+                        fut = asyncio.run_coroutine_threadsafe(q.put(remaining), loop)
+                        fut.result()
+                    except Exception as ex:
+                        logger.error(f"Queue put error: {ex}")
+                
+                logger.info(f"ElevenLabs producer completed: {chunk_count} chunks, {total_bytes} bytes total")
+            except Exception as e:
+                logger.error(f"ElevenLabs streaming error: {e}", exc_info=True)
+            finally:
+                try:
+                    asyncio.run_coroutine_threadsafe(q.put(stop_sentinel), loop).result()
+                except Exception:
+                    pass
+        
+        threading.Thread(target=producer, daemon=True).start()
+        
+        chunks_yielded = 0
+        bytes_yielded = 0
+        while True:
+            item = await q.get()
+            if item is stop_sentinel:
+                logger.info(f"ElevenLabs stream complete: yielded {chunks_yielded} chunks, {bytes_yielded} bytes")
+                break
+            chunks_yielded += 1
+            bytes_yielded += len(item)
+            logger.debug(f"Yielding chunk #{chunks_yielded}: {len(item)} bytes")
+            yield item
+    
+    def get_audio_format(self) -> str:
+        return "pcm16"
+
+    def get_sample_rate(self) -> int:
+        return getattr(self, 'sample_rate', 24000)
+
+class MinimaxProvider(BaseTTSProvider):
+    """Minimax TTS Provider with streaming support"""
+    
+    def __init__(self):
+        self.api_key = os.getenv("MINIMAX_API_KEY")
+        self.group_id = os.getenv("MINIMAX_GROUP_ID")
+        if not self.api_key or not self.group_id:
+            raise ValueError("MINIMAX_API_KEY or MINIMAX_GROUP_ID not found in environment")
+        self.sample_rate = 16000
+    
+    async def stream_tts(self, text: str, voice_config: Dict[str, Any]) -> AsyncIterator[bytes]:
+        """Stream TTS from Minimax API"""
+        # Minimax voice IDs - can be customized
+        voice_id = voice_config.get('voiceId', 'female-shaonv')  # Default young female voice
+        
+        url = "https://api.minimax.chat/v1/t2a_v2"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Format request according to Minimax API docs
+        data = {
+            "model": "speech-01-turbo",
+            "text": text,
+            "group_id": self.group_id,
+            "voice_setting": {
+                "voice_id": voice_id,  # female-shaonv, male-qn-qingse, etc.
+                "speed": voice_config.get('speed', 1.0),  # 0.5 to 2.0
+                "vol": voice_config.get('volume', 1.0),   # 0.1 to 10
+                "pitch": voice_config.get('pitch', 0),    # -12 to 12
+                "emotion": voice_config.get('emotion', 'happy')  # happy, sad, angry, etc.
+            },
+            "stream": True,  # Enable streaming
+            "audio_setting": {
+                "format": "pcm",  # pcm, mp3, wav
+                "sample_rate": 16000,  # 8000, 16000, 24000, 32000, 48000
+                "channel": 1,  # 1 for mono, 2 for stereo
+                "bits_per_sample": 16  # 8 or 16
+            }
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=data, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"Minimax API error: {response.status} - {error_text}")
+                    raise Exception(f"Minimax API error: {response.status}")
+                
+                # Minimax uses SSE (Server-Sent Events) for streaming
+                buffer = b''
+                async for chunk in response.content.iter_any():
+                    buffer += chunk
+                    lines = buffer.split(b'\n')
+                    
+                    # Process complete lines, keep incomplete for next iteration
+                    for i in range(len(lines) - 1):
+                        line = lines[i]
+                        if line.startswith(b'data: '):
+                            try:
+                                data_str = line[6:].decode('utf-8')
+                                if data_str.strip() == '[DONE]':
+                                    return
+                                
+                                data = json.loads(data_str)
+                                if 'audio' in data and data['audio']:
+                                    # Decode base64 audio chunk
+                                    import base64
+                                    audio_chunk = base64.b64decode(data['audio'])
+                                    yield audio_chunk
+                            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                                logger.debug(f"Failed to parse SSE line: {e}")
+                                continue
+                    
+                    # Keep the last incomplete line in buffer
+                    buffer = lines[-1]
+    
+    def get_audio_format(self) -> str:
+        return "pcm16"
+
+    def get_sample_rate(self) -> int:
+        return getattr(self, 'sample_rate', 16000)
+
+class TTSProviderFactory:
+    """Factory for creating TTS providers"""
+    
+    _providers: Dict[TTSProvider, BaseTTSProvider] = {}
+    
+    @classmethod
+    def get_provider(cls, provider_type: TTSProvider) -> BaseTTSProvider:
+        """Get or create a TTS provider instance"""
+        if provider_type not in cls._providers:
+            if provider_type == TTSProvider.ELEVENLABS:
+                cls._providers[provider_type] = ElevenLabsProvider()
+            elif provider_type == TTSProvider.MINIMAX:
+                cls._providers[provider_type] = MinimaxProvider()
+            else:
+                raise ValueError(f"Unknown TTS provider: {provider_type}")
+        
+        return cls._providers[provider_type]
+    
+    @classmethod
+    def get_available_providers(cls) -> list[str]:
+        """Get list of available TTS providers based on environment variables"""
+        available = []
+        
+        if os.getenv("ELEVENLABS_API_KEY"):
+            available.append(TTSProvider.ELEVENLABS.value)
+        
+        if os.getenv("MINIMAX_API_KEY") and os.getenv("MINIMAX_GROUP_ID"):
+            available.append(TTSProvider.MINIMAX.value)
+        
+        return available
+
+class TTSStreamer:
+    """High-level TTS streaming handler"""
+    
+    def __init__(self, default_provider: TTSProvider = TTSProvider.ELEVENLABS):
+        self.default_provider = default_provider
+    
+    async def stream_to_client(self, 
+                              ws,  # WebSocket connection
+                              text: str, 
+                              toy_config: Dict[str, Any],
+                              provider_override: Optional[TTSProvider] = None) -> None:
+        """Stream TTS audio to client over WebSocket"""
+        
+        # Determine which provider to use
+        provider_type = provider_override or TTSProvider(toy_config.get('ttsProvider', self.default_provider.value))
+        
+        try:
+            provider = TTSProviderFactory.get_provider(provider_type)
+            audio_format = provider.get_audio_format()
+            
+            logger.info(f"Streaming TTS using {provider_type.value} for text: '{text[:50]}...'")
+            
+            # Stream audio chunks to client
+            chunks_sent = 0
+            bytes_sent = 0
+            async for chunk in provider.stream_tts(text, toy_config):
+                if ws.closed:
+                    logger.warning("WebSocket closed during TTS streaming")
+                    break
+                
+                chunks_sent += 1
+                bytes_sent += len(chunk)
+                
+                # Send audio chunk to client
+                response_message = {
+                    "type": "audio_response",
+                    "payload": {
+                        "data": chunk.hex(),
+                        "metadata": {
+                            "format": audio_format,            # 'pcm16'
+                            "endian": "le",                   # little-endian
+                            "channels": 1,                    # mono
+                            "provider": provider_type.value,
+                            "sampleRate": getattr(provider, 'sample_rate', 16000),
+                            "isFinal": False
+                        }
+                    }
+                }
+                await ws.send_str(json.dumps(response_message))
+                logger.debug(f"Sent audio chunk #{chunks_sent}: {len(chunk)} bytes")
+            
+            logger.info(f"TTS streaming stats: sent {chunks_sent} chunks, {bytes_sent} bytes total")
+            
+            # Send final marker
+            if not ws.closed:
+                await ws.send_str(json.dumps({
+                    "type": "audio_response",
+                    "payload": {
+                        "data": "",
+                        "metadata": {
+                            "format": audio_format,
+                            "endian": "le",
+                            "channels": 1,
+                            "provider": provider_type.value,
+                            "sampleRate": getattr(provider, 'sample_rate', 16000),
+                            "isFinal": True
+                        }
+                    }
+                }))
+                
+        except Exception as e:
+            logger.error(f"TTS streaming error with {provider_type.value}: {e}")
+            
+            # Try fallback provider if available
+            if provider_type != self.default_provider:
+                logger.info(f"Attempting fallback to {self.default_provider.value}")
+                await self.stream_to_client(ws, text, toy_config, self.default_provider)
+            else:
+                # Send error to client
+                if not ws.closed:
+                    await ws.send_str(json.dumps({
+                        "type": "error",
+                        "payload": {
+                            "error": "TTS_FAILED",
+                            "message": "Text-to-speech service unavailable"
+                        }
+                    }))
+</file>
+
+<file path="DEPLOY_PRODUCTION.md">
+# Production Deployment Guide for FastRTC Gateway
+
+## Files Cleanup Checklist
+
+### ✅ Files to KEEP for Production:
+- `server_relay_with_tts.py` - Main relay server with TTS streaming
+- `tts_providers.py` - TTS provider abstraction (ElevenLabs/Minimax)
+- `requirements_relay.txt` - Minimal dependencies
+- `Dockerfile.production` - Optimized Docker image
+- `fly.toml` - Fly.io configuration
+- `.env.example` - Environment variable template
+
+### ❌ Files to DELETE before deployment:
+- `server.py` - OLD server with local AI (not needed)
+- `server_relay.py` - Old relay without TTS streaming
+- `requirements.txt` - Heavy dependencies including PyTorch (not needed)
+- `Dockerfile` - Old heavy Docker image
+- `Dockerfile.relay` - Can delete, using Dockerfile.production instead
+- `test_*.py` - Test files (not needed in production)
+- `docker-compose.*.yml` - Local development files
+
+### 📝 Files to UPDATE:
+- Remove hardcoded credentials from `docker-compose.relay.yml` if keeping for local dev
+
+## Deployment Options
+
+### Option A: Deploy on Fly.io (Recommended)
+
+1. **Install Fly CLI:**
+```bash
+curl -L https://fly.io/install.sh | sh
+```
+
+2. **Login to Fly:**
+```bash
+fly auth login
+```
+
+3. **Create app:**
+```bash
+cd apps/fastrtc-gateway
+fly apps create pommai-gateway
+```
+
+4. **Set secrets:**
+```bash
+fly secrets set CONVEX_URL=https://warmhearted-snail-998.convex.cloud
+fly secrets set CONVEX_DEPLOY_KEY=your-production-key
+```
+
+5. **Deploy:**
+```bash
+fly deploy
+```
+
+6. **Get your gateway URL:**
+```bash
+fly info
+# Your URL will be: https://pommai-gateway.fly.dev
+```
+
+### Option B: Deploy on Cloudflare (using Cloudflare Tunnels)
+
+1. **Build Docker image:**
+```bash
+docker build -f Dockerfile.production -t pommai-gateway:latest .
+```
+
+2. **Run container:**
+```bash
+docker run -d \
+  --name pommai-gateway \
+  -p 8080:8080 \
+  -e CONVEX_URL=$CONVEX_URL \
+  -e CONVEX_DEPLOY_KEY=$CONVEX_DEPLOY_KEY \
+  --restart unless-stopped \
+  pommai-gateway:latest
+```
+
+3. **Setup Cloudflare Tunnel:**
+```bash
+cloudflared tunnel create pommai-gateway
+cloudflared tunnel route dns pommai-gateway gateway.yourcompany.com
+cloudflared tunnel run pommai-gateway
+```
+
+### Option C: Deploy on Railway.app
+
+1. **Connect GitHub repo**
+2. **Set environment variables in Railway dashboard**
+3. **Deploy from GitHub**
+
+## Environment Variables
+
+### Required:
+```bash
+CONVEX_URL=https://warmhearted-snail-998.convex.cloud
+CONVEX_DEPLOY_KEY=prod:warmhearted-snail-998|your-key-here
+
+# For TTS Streaming (at least one required)
+ELEVENLABS_API_KEY=your-elevenlabs-key  # For ElevenLabs TTS
+MINIMAX_API_KEY=your-minimax-key        # For Minimax TTS
+MINIMAX_GROUP_ID=your-group-id         # For Minimax TTS
+```
+
+### Optional:
+```bash
+PORT=8080                    # Server port
+HOST=0.0.0.0                # Bind address
+LOG_LEVEL=INFO              # INFO, DEBUG, WARNING, ERROR
+CONVEX_ACTION_TIMEOUT=60    # Timeout for Convex AI pipeline
+SKIP_TTS=false              # Set true to disable TTS (testing only)
+```
+
+## Update Raspberry Pi Configuration
+
+Once deployed, update your Pi's `.env`:
+```bash
+# For Fly.io
+FASTRTC_GATEWAY_URL=wss://pommai-gateway.fly.dev/ws
+
+# For Cloudflare
+FASTRTC_GATEWAY_URL=wss://gateway.yourcompany.com/ws
+
+# Keep the rest unchanged
+DEVICE_ID=rpi-zero2w-001
+TOY_ID=ks7cw1ar4x1x4h0ep21as78d7s7pt9xg
+```
+
+## Monitoring
+
+### Check health:
+```bash
+curl https://pommai-gateway.fly.dev/health
+```
+
+### View logs (Fly.io):
+```bash
+fly logs
+```
+
+### Scale up (Fly.io):
+```bash
+fly scale count 2  # Run 2 instances
+fly scale vm shared-cpu-1x --memory 512  # Increase resources
+```
+
+## Performance Expectations
+
+- **Memory Usage**: ~50-100MB
+- **CPU Usage**: <5% idle, 10-20% under load
+- **Latency**: <50ms added overhead
+- **Concurrent Connections**: 500-1000 per instance
+- **Docker Image Size**: ~150MB
+
+## Security Checklist
+
+- [ ] Never commit `.env` files with real credentials
+- [ ] Use HTTPS/WSS in production
+- [ ] Rotate CONVEX_DEPLOY_KEY regularly
+- [ ] Enable rate limiting if needed
+- [ ] Monitor for suspicious activity
+- [ ] Keep Python dependencies updated
+
+## Troubleshooting
+
+### Connection issues:
+```bash
+# Test WebSocket connection
+wscat -c wss://pommai-gateway.fly.dev/ws/test/test
+```
+
+### High latency:
+- Check region placement (deploy closer to users)
+- Increase Convex timeout if needed
+- Monitor Convex action performance
+
+### Memory issues:
+- Should not happen with relay-only server
+- If occurs, check for memory leaks in session management
+
+## Cost Estimates
+
+### Fly.io:
+- Free tier: 3 shared VMs, 160GB outbound
+- Paid: ~$2-5/month for basic instance
+
+### Cloudflare:
+- Free Cloudflare Tunnel
+- Pay for VM/VPS hosting (~$5-10/month)
+
+### Railway:
+- $5/month + usage-based pricing
+</file>
+
+<file path="docker-compose.production.yml">
+version: '3.8'
+
+services:
+  fastrtc-production:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    container_name: pommai-fastrtc-production
+    ports:
+      - "8080:8080"
+    environment:
+      # Convex Configuration
+      - CONVEX_URL=https://warmhearted-snail-998.convex.cloud
+      - CONVEX_DEPLOY_KEY=prod:warmhearted-snail-998|eyJ2MiI6ImQzMDYzMjQ5ODk5MDQzODZhZDU1NmY2MThkZGMzZmQwIn0=
+      
+      # Server Configuration
+      - PORT=8080
+      - HOST=0.0.0.0
+      - LOG_LEVEL=INFO  # Change to DEBUG for troubleshooting
+      - CONVEX_ACTION_TIMEOUT=60
+      
+      # TTS Configuration
+      # Comment out SKIP_TTS or set to false for production
+      # - SKIP_TTS=true  # Set to true to disable TTS for testing
+      
+      # ElevenLabs TTS (Primary provider - lowest latency)
+      # Get your API key from https://elevenlabs.io/
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - ELEVENLABS_OUTPUT_FORMAT=${ELEVENLABS_OUTPUT_FORMAT:-pcm_16000}
+      
+      # Minimax TTS (Alternative provider)
+      # Get your credentials from Minimax
+      - MINIMAX_API_KEY=${MINIMAX_API_KEY:-}
+      - MINIMAX_GROUP_ID=${MINIMAX_GROUP_ID:-}
+      
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - pommai-network
+    volumes:
+      # Optional: Mount .env file for easier configuration
+      - ./.env:/app/.env:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  pommai-network:
+    driver: bridge
+</file>
+
+<file path="Dockerfile.production">
+# Production FastRTC Relay Gateway
+# Optimized for deployment on Fly.io or Cloudflare Workers
+# Pure WebSocket relay - no local AI processing
+
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install only essential system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements_relay.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements_relay.txt
+
+# Install aiohttp for TTS streaming (if not in requirements)
+RUN pip install --no-cache-dir aiohttp
+
+# Copy application files
+COPY server_relay_with_tts.py server_relay.py
+COPY tts_providers.py .
+
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Environment variables with production defaults
+ENV PORT=8080
+ENV HOST=0.0.0.0
+ENV PYTHONUNBUFFERED=1
+ENV LOG_LEVEL=INFO
+
+# Expose port (Fly.io uses 8080 by default)
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
+
+# Run the relay server
+CMD ["python", "server_relay.py"]
+</file>
+
+<file path="fly.toml">
+# Fly.io Configuration for Pommai FastRTC Gateway
+app = "pommai-gateway"
+primary_region = "sjc"  # San Jose, change to your preferred region
+kill_signal = "SIGINT"
+kill_timeout = 5
+
+[build]
+  dockerfile = "Dockerfile.production"
+
+[env]
+  PORT = "8080"
+  HOST = "0.0.0.0"
+  LOG_LEVEL = "INFO"
+  PYTHONUNBUFFERED = "1"
+  CONVEX_ACTION_TIMEOUT = "60"
+  SKIP_TTS = "false"  # Set to true only for testing
+
+# Secrets should be set via: fly secrets set KEY=value
+# Required secrets:
+# - CONVEX_URL
+# - CONVEX_DEPLOY_KEY
+# - ELEVENLABS_API_KEY (or MINIMAX_API_KEY + MINIMAX_GROUP_ID)
+
+[experimental]
+  auto_rollback = true
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 1000
+    soft_limit = 900
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [[services.http_checks]]
+    interval = "30s"
+    grace_period = "5s"
+    method = "get"
+    path = "/health"
+    protocol = "http"
+    timeout = "2s"
+    tls_skip_verify = false
+
+# Scale configuration
+[metrics]
+  port = 9091
+  path = "/metrics"
+
+# Resource allocation
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512  # Increased for TTS streaming buffers
+</file>
+
+<file path="pi-config.env">
+# Raspberry Pi Configuration
+# Copy this to your Pi as /home/pi/pommai-client/.env
+
+# Gateway Connection (UPDATE THE IP ADDRESS!)
+FASTRTC_GATEWAY_URL=ws://192.168.1.11:8080/ws
+
+# Device Configuration
+DEVICE_ID=rpi-zero2w-001
+TOY_ID=ks7cw1ar4x1x4h0ep21as78d7s7pt9xg
+
+# Audio Configuration
+AUDIO_FORMAT=pcm16
+SAMPLE_RATE=16000
+CHANNELS=1
+CHUNK_SIZE=1024
+
+# Features
+ENABLE_WAKE_WORD=false
+ENABLE_OFFLINE_MODE=false
+ENABLE_LED_FEEDBACK=true
+
+# Logging
+LOG_LEVEL=INFO
+</file>
+
+<file path="pi-websocket-fix.patch">
+--- a/src/fastrtc_connection.py
++++ b/src/fastrtc_connection.py
+@@ -85,7 +85,11 @@ class FastRTCConnection:
+             if self.config.auth_token:
+                 headers['Authorization'] = f'Bearer {self.config.auth_token}'
+             
+-            logger.info(f"Connecting to FastRTC gateway at {self.config.gateway_url}")
++            # Build the complete WebSocket URL with device_id and toy_id
++            # The server expects: /ws/{device_id}/{toy_id}
++            ws_url = f"{self.config.gateway_url}/{self.config.device_id}/{self.config.toy_id}"
++            
++            logger.info(f"Connecting to FastRTC gateway at {ws_url}")
+             
+             # Establish WebSocket connection
+             self.ws = await websockets.connect(
+-                self.config.gateway_url,
++                ws_url,  # Use the constructed URL with device_id and toy_id
+                 extra_headers=headers,
+                 ping_interval=self.config.ping_interval,
+                 ping_timeout=self.config.ping_timeout
+</file>
+
+<file path="prepare_production.sh">
+#!/bin/bash
+# Prepare FastRTC Gateway for Production Deployment (Option 1: TTS Streaming)
+
+echo "Preparing FastRTC Gateway for production with TTS streaming..."
+
+# Backup original server_relay.py if it exists
+if [ -f "server_relay.py" ]; then
+    echo "Backing up original server_relay.py..."
+    cp server_relay.py server_relay_backup.py
+fi
+
+# Use the TTS streaming version as main server
+echo "Setting up TTS streaming server..."
+cp server_relay_with_tts.py server_relay.py
+
+# Clean up old/unnecessary files
+echo "Cleaning up unnecessary files..."
+rm -f server.py                # Old server with local AI
+rm -f requirements.txt         # Heavy dependencies
+rm -f Dockerfile              # Old Dockerfile
+rm -f Dockerfile.relay        # Replaced by Dockerfile.production
+rm -f test_*.py              # Test files
+rm -f docker-compose.yml     # If exists
+rm -f docker-compose.local.yml
+
+# Keep test files in a separate directory if needed
+mkdir -p tests
+mv test_*.py tests/ 2>/dev/null || true
+
+echo "✅ Production files ready!"
+echo ""
+echo "Files structure:"
+echo "- server_relay.py (main server with TTS streaming)"
+echo "- tts_providers.py (TTS provider abstraction)"
+echo "- requirements_relay.txt (minimal dependencies)"
+echo "- Dockerfile.production (optimized Docker image)"
+echo "- fly.toml (Fly.io configuration)"
+echo ""
+echo "Next steps:"
+echo "1. Set your environment variables:"
+echo "   - CONVEX_URL"
+echo "   - CONVEX_DEPLOY_KEY"
+echo "   - ELEVENLABS_API_KEY (or MINIMAX_API_KEY + MINIMAX_GROUP_ID)"
+echo ""
+echo "2. Deploy to Fly.io:"
+echo "   fly deploy"
+echo ""
+echo "Or build Docker image:"
+echo "   docker build -f Dockerfile.production -t pommai-gateway ."
+</file>
+
+<file path="requirements_relay.txt">
+# FastRTC Relay Gateway Requirements
+# Minimal dependencies for pure WebSocket relay (no AI processing)
+
+# Web framework and async
+aiohttp==3.9.1
+
+# Convex integration
+convex==0.6.0
+python-dotenv==1.0.0
+
+# TTS Providers
+# Official ElevenLabs Python SDK for streaming TTS
+# Pin loosely to avoid breakage; adjust as needed
+ElevenLabs
+requests==2.31.0
+
+# Optional: For development and testing
+pytest==7.4.3
+pytest-asyncio==0.23.2
+</file>
+
+<file path="server_relay_with_tts.py">
+"""
+FastRTC Relay Gateway Server for Pommai AI Toy Platform
+Pure WebSocket relay between Raspberry Pi clients and Convex backend.
+With TTS streaming support for low-latency audio playback.
+"""
+
+import asyncio
+import json
+import os
+import logging
+import base64
+from datetime import datetime
+from typing import Dict, Optional, Any
+from dataclasses import dataclass, field
+import inspect
+
+from aiohttp import web, WSMsgType
+from convex import ConvexClient
+from dotenv import load_dotenv
+
+try:
+    from tts_providers import TTSStreamer, TTSProvider, TTSProviderFactory
+    TTS_AVAILABLE = True
+except ImportError:
+    TTS_AVAILABLE = False
+    logging.warning("TTS providers not available, will use Convex for TTS")
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging based on LOG_LEVEL env (DEBUG, INFO, WARNING, ERROR)
+LOG_LEVEL = (os.getenv("LOG_LEVEL", "INFO") or "INFO").upper()
+_level = getattr(logging, LOG_LEVEL, logging.INFO)
+logging.basicConfig(
+    level=_level,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+# Keep aiohttp access logs at INFO unless explicitly asking for DEBUG
+_access_logger = logging.getLogger('aiohttp.access')
+if LOG_LEVEL == 'DEBUG':
+    _access_logger.setLevel(logging.INFO)
+
+# Configuration from environment
+CONVEX_URL = os.getenv("CONVEX_URL", "https://your-app.convex.cloud")
+CONVEX_DEPLOY_KEY = os.getenv("CONVEX_DEPLOY_KEY")
+PORT = int(os.getenv("PORT", "8080"))
+HOST = os.getenv("HOST", "0.0.0.0")
+
+@dataclass
+class ClientSession:
+    """Represents a connected Raspberry Pi client session"""
+    session_id: str
+    device_id: str
+    toy_id: str
+    ws: web.WebSocketResponse
+    audio_buffer: bytearray = field(default_factory=bytearray)
+    last_activity: datetime = field(default_factory=datetime.now)
+    thread_id: Optional[str] = None
+
+
+class FastRTCRelayGateway:
+    """
+    Pure relay gateway between Raspberry Pi clients and Convex backend.
+    With optional TTS streaming for low-latency audio playback.
+    """
+    
+    def __init__(self):
+        # Initialize Convex client
+        self.convex_client = ConvexClient(CONVEX_URL)
+        if CONVEX_DEPLOY_KEY:
+            self.convex_client.set_auth(CONVEX_DEPLOY_KEY)
+        
+        # Active client sessions
+        self.sessions: Dict[str, ClientSession] = {}
+        
+        # Initialize TTS streamer if available
+        self.tts_streamer = None
+        if TTS_AVAILABLE:
+            available_providers = TTSProviderFactory.get_available_providers()
+            if available_providers:
+                default_provider = TTSProvider.ELEVENLABS if 'elevenlabs' in available_providers else TTSProvider.MINIMAX
+                self.tts_streamer = TTSStreamer(default_provider)
+                logger.info(f"TTS streaming enabled with providers: {available_providers}")
+            else:
+                logger.warning("No TTS providers configured, will use Convex for TTS")
+        
+        logger.info(f"FastRTC Relay Gateway initialized")
+        logger.info(f"Convex URL: {CONVEX_URL}")
+        logger.info(f"Server will listen on {HOST}:{PORT}")
+    
+    async def handle_websocket(self, request: web.Request) -> web.WebSocketResponse:
+        """
+        Handle WebSocket connections from Raspberry Pi clients.
+        This matches the endpoint the Pi expects: /ws/{device_id}/{toy_id}
+        """
+        device_id = request.match_info.get('device_id', 'unknown-device')
+        toy_id = request.match_info.get('toy_id', 'unknown-toy')
+        
+        # Increase heartbeat interval to handle long AI processing
+        ws = web.WebSocketResponse(
+            heartbeat=45,  # Increased from 30 to 45 seconds
+            autoping=True,  # Ensure automatic ping/pong
+            compress=False  # Disable compression for lower latency
+        )
+        await ws.prepare(request)
+        
+        # Create session
+        session_id = f"{device_id}-{datetime.now().timestamp()}"
+        session = ClientSession(
+            session_id=session_id,
+            device_id=device_id,
+            toy_id=toy_id,
+            ws=ws
+        )
+        self.sessions[session_id] = session
+        
+        logger.info(f"Client connected: device={device_id}, toy={toy_id}, session={session_id}")
+        
+        try:
+            async for msg in ws:
+                if msg.type == WSMsgType.TEXT:
+                    await self.handle_client_message(session, msg.data)
+                elif msg.type == WSMsgType.ERROR:
+                    logger.error(f"WebSocket error: {ws.exception()}")
+                    break
+                    
+        except Exception as e:
+            logger.error(f"Session {session_id} error: {e}")
+        finally:
+            # Clean up session
+            if len(session.audio_buffer) > 0:
+                logger.warning(f"Client disconnected with %dB buffered audio and no final marker: session=%s", len(session.audio_buffer), session_id)
+            del self.sessions[session_id]
+            await ws.close()
+            logger.info(f"Client disconnected: session={session_id}")
+        
+        return ws
+    
+    async def handle_client_message(self, session: ClientSession, message: str):
+        """
+        Process messages from Raspberry Pi client and forward to appropriate handler.
+        
+        Expected message types from Pi client (from fastrtc_connection.py):
+        - handshake: Initial connection handshake
+        - ping: Heartbeat keepalive
+        - control: Control commands (start_streaming, stop_streaming)
+        - audio_chunk: Audio data with metadata
+
+        Robust error handling & logging
+        - We log each incoming message type at DEBUG and errors with stacktraces at ERROR.
+        - If JSON is invalid we return a typed error back to the client and continue.
+        """
+        try:
+            data = json.loads(message)
+            msg_type = data.get('type')
+            
+            logger.debug(f"Received message type: {msg_type} from {session.device_id}")
+            
+            if msg_type == 'handshake':
+                # Acknowledge handshake from Pi
+                await session.ws.send_str(json.dumps({
+                    'type': 'handshake_ack',
+                    'status': 'connected',
+                    'session_id': session.session_id,
+                    'timestamp': datetime.now().isoformat()
+                }))
+                logger.info(f"Handshake completed for {session.device_id}")
+                
+            elif msg_type == 'ping':
+                # Respond to ping with pong
+                await session.ws.send_str(json.dumps({
+                    'type': 'pong',
+                    'timestamp': datetime.now().isoformat()
+                }))
+                
+            elif msg_type == 'control':
+                # Acknowledge control commands
+                command = data.get('command')
+                await session.ws.send_str(json.dumps({
+                    'type': 'control_ack',
+                    'command': command,
+                    'ok': True
+                }))
+                logger.debug(f"Control command acknowledged: {command}")
+                
+            elif msg_type == 'audio_chunk':
+                # Process audio chunk from Pi client
+                await self.handle_audio_chunk(session, data.get('payload', {}))
+                
+            else:
+                logger.warning(f"Unknown message type: {msg_type}")
+                await session.ws.send_str(json.dumps({
+                    'type': 'error',
+                    'error': f'unknown_message_type: {msg_type}'
+                }))
+                
+            # Update last activity
+            session.last_activity = datetime.now()
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON from client: {e}", exc_info=True)
+            await session.ws.send_str(json.dumps({
+                'type': 'error',
+                'error': 'invalid_json'
+            }))
+        except Exception as e:
+            logger.error(f"Error handling client message: {e}", exc_info=True)
+            await session.ws.send_str(json.dumps({
+                'type': 'error',
+                'error': str(e)
+            }))
+    
+    async def handle_audio_chunk(self, session: ClientSession, payload: Dict[str, Any]):
+        """
+        Handle audio chunks from Pi client.
+        
+        The Pi sends audio as hex-encoded bytes in this format:
+        {
+            'data': hex_string,  # Audio data as hex string
+            'metadata': {
+                'isFinal': bool,  # True when recording ends
+                'format': 'opus' | 'pcm16' | 'wav',
+                'sampleRate': 16000,
+                'timestamp': float
+            }
+        }
+        
+        Strategy:
+        - Buffer bytes on each chunk
+        - On final chunk:
+            - If format == 'pcm16': wrap buffered bytes as a WAV container in-memory
+            - If format == 'wav': forward as-is
+            - If format == 'opus': forward raw bytes but warn (Whisper usually requires WAV/MP3/OGG/WebM)
+        - Base64-encode and call Convex action
+        """
+        try:
+            audio_hex = payload.get('data', '')
+            metadata = payload.get('metadata', {})
+            is_final = bool(metadata.get('isFinal', False))
+            fmt = str(metadata.get('format', 'opus')).lower()
+            sample_rate = int(metadata.get('sampleRate', 16000))
+            
+            # Handle empty audio data (could be final marker)
+            if not audio_hex:
+                if is_final:
+                    # This is a final marker - process any buffered audio
+                    if len(session.audio_buffer) > 0:
+                        logger.info("Final marker received with empty data; processing %d bytes of buffered audio", len(session.audio_buffer))
+                        # Don't return - continue to processing below
+                    else:
+                        logger.warning("Final marker received but no buffered audio to process")
+                        return
+                else:
+                    # Non-final empty chunk - ignore
+                    logger.debug("Empty non-final audio chunk received (ignored)")
+                    return
+            else:
+                # We have audio data - convert and buffer it
+                try:
+                    audio_bytes = bytes.fromhex(audio_hex)
+                    session.audio_buffer.extend(audio_bytes)
+                    logger.debug(f"WS audio_chunk: +{len(audio_bytes)}B, total={len(session.audio_buffer)}B, final={is_final}, format={fmt}")
+                except ValueError as e:
+                    logger.error(f"Invalid hex audio data: {e}")
+                    return
+            
+            # Process when we get the final chunk
+            if is_final and len(session.audio_buffer) > 0:
+                logger.info(f"Processing complete audio: total={len(session.audio_buffer)}B, format={fmt}")
+                
+                # Decide how to forward to Convex (aim: WAV/Base64 if possible)
+                forward_bytes: bytes
+                forward_format: str
+                if fmt == 'pcm16':
+                    # Wrap PCM16 LE mono into a WAV container
+                    try:
+                        import io, wave, struct
+                        pcm = bytes(session.audio_buffer)
+                        buffer = io.BytesIO()
+                        with wave.open(buffer, 'wb') as wf:
+                            wf.setnchannels(1)
+                            wf.setsampwidth(2)  # 16-bit PCM
+                            wf.setframerate(sample_rate)
+                            wf.writeframes(pcm)
+                        forward_bytes = buffer.getvalue()
+                        forward_format = 'wav'
+                        logger.info(f"Packaged PCM16 -> WAV {len(forward_bytes)}B @ {sample_rate}Hz")
+                    except Exception as e:
+                        logger.error(f"Failed to package PCM16 to WAV: {e}")
+                        # Fallback: send raw PCM (may fail in Convex)
+                        forward_bytes = bytes(session.audio_buffer)
+                        forward_format = 'pcm16'
+                elif fmt in ('wav', 'wave'):
+                    forward_bytes = bytes(session.audio_buffer)
+                    forward_format = 'wav'
+                elif fmt == 'opus':
+                    # We don't re-containerize Opus here; forward as-is (likely unsupported by Whisper if raw)
+                    logger.warning("Forwarding raw Opus bytes; Convex STT may require WAV/MP3/OGG/WebM")
+                    forward_bytes = bytes(session.audio_buffer)
+                    forward_format = 'opus'
+                else:
+                    logger.warning(f"Unsupported audio format '{fmt}', forwarding raw bytes")
+                    forward_bytes = bytes(session.audio_buffer)
+                    forward_format = fmt
+                
+                # Convert to Base64 for Convex
+                audio_base64 = base64.b64encode(forward_bytes).decode('utf-8')
+                
+                # Clear buffer for next recording
+                session.audio_buffer = bytearray()
+                
+                # Prepare arguments for Convex call
+                action_args = {
+                    "toyId": session.toy_id,
+                    "audioData": audio_base64,
+                    "sessionId": session.session_id,
+                    "deviceId": session.device_id,
+                    "metadata": {
+                        "timestamp": int(datetime.now().timestamp() * 1000),
+                        "format": forward_format,
+                        "duration": metadata.get('duration', 0)
+                    }
+                }
+                
+                # Determine TTS behavior:
+                # - If SKIP_TTS=true: Skip TTS entirely (for testing)
+                # - If we have TTS streamer: Tell Convex to skip TTS (we'll stream it)
+                # - Otherwise: Let Convex handle TTS
+                skip_tts_env = os.getenv('SKIP_TTS', 'false').lower() == 'true'
+                
+                if skip_tts_env:
+                    # Testing mode - skip TTS entirely
+                    action_args["skipTTS"] = True
+                    logger.info("SKIP_TTS=true, skipping TTS generation")
+                elif self.tts_streamer:
+                    # We have TTS streaming capability - tell Convex to skip
+                    action_args["skipTTS"] = True
+                    logger.info("TTS streaming enabled, Convex will skip TTS")
+                else:
+                    # No TTS streamer - let Convex handle TTS
+                    action_args["skipTTS"] = False
+                    logger.info("No TTS streamer, Convex will generate TTS")
+                
+                logger.debug("Scheduling background AI processing task: %s", json.dumps({**action_args, "audioData": f"<base64 {len(audio_base64)} chars>"}, indent=2))
+                
+                # Send processing status immediately to keep connection alive
+                await session.ws.send_str(json.dumps({
+                    'type': 'status',
+                    'status': 'processing',
+                    'message': 'Audio received, processing with AI...'
+                }))
+                
+                # Schedule background task so the WS loop remains responsive to pings
+                asyncio.create_task(self.process_and_respond_to_client(session, action_args))
+        except Exception as e:
+            logger.error(f"Error handling audio chunk: {e}")
+    
+    async def process_and_respond_to_client(self, session: ClientSession, action_args: Dict[str, Any]):
+        """
+        Run the Convex AI pipeline off the main WS loop and send the response when ready.
+        - Uses timeout via CONVEX_ACTION_TIMEOUT (default 30s)
+        - Runs synchronous client calls in a thread to avoid blocking the event loop
+        - Checks if the client is still connected before sending
+        - Streams TTS audio directly from provider for low latency
+        """
+        try:
+            timeout_s = float(os.getenv("CONVEX_ACTION_TIMEOUT", "30"))
+            started = datetime.now()
+            logger.info("Calling Convex action 'aiPipeline:processVoiceInteraction' for toyId=%s", action_args.get("toyId"))
+
+            # Send periodic status updates during processing
+            async def send_status_updates():
+                while not session.ws.closed:
+                    await asyncio.sleep(10)  # Send update every 10 seconds
+                    if not session.ws.closed:
+                        await session.ws.send_str(json.dumps({
+                            'type': 'status',
+                            'status': 'processing',
+                            'message': 'Still processing your request...'
+                        }))
+            
+            status_task = asyncio.create_task(send_status_updates())
+            
+            try:
+                # Log before calling Convex
+                logger.debug("About to call Convex action with timeout=%ss", timeout_s)
+                
+                # Use HTTP API directly instead of Python SDK which seems to hang
+                import aiohttp
+                
+                url = f"{CONVEX_URL}/api/action"
+                headers = {
+                    "Content-Type": "application/json",
+                }
+                
+                payload = {
+                    "path": "aiPipeline:processVoiceInteraction",
+                    "args": action_args,
+                    "format": "json"
+                }
+                
+                if CONVEX_DEPLOY_KEY:
+                    headers["Authorization"] = f"Convex {CONVEX_DEPLOY_KEY}"
+                
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout_s)) as response:
+                        if response.status == 200:
+                            result = await response.json()
+                            if "value" in result:
+                                result = result["value"]
+                        else:
+                            error_text = await response.text()
+                            logger.error(f"Convex HTTP error {response.status}: {error_text}")
+                            result = {"success": False, "error": f"HTTP {response.status}: {error_text}"}
+                
+                logger.debug("Convex action completed successfully")
+            finally:
+                status_task.cancel()  # Stop sending status updates
+
+            duration_ms = (datetime.now() - started).total_seconds() * 1000
+            logger.info("Convex action result: success=%s processingTime=%s (gateway call %.0fms)", result.get('success'), result.get('processingTime'), duration_ms)
+
+            if session.ws.closed:
+                logger.warning("Client %s disconnected before AI response was ready.", session.device_id)
+                return
+
+            if result.get('success'):
+                response_text = result.get('text', '')
+                toy_config = result.get('toyConfig', {})  # Get toy voice configuration from Convex
+                
+                # Send text response first for immediate feedback
+                await session.ws.send_str(json.dumps({
+                    'type': 'text_response',
+                    'payload': {
+                        'text': response_text,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                }))
+                
+                # Handle TTS based on available options
+                if self.tts_streamer and response_text and not os.getenv('SKIP_TTS', 'false').lower() == 'true':
+                    # Stream TTS directly for low latency
+                    logger.info(f"Streaming TTS for: '{response_text[:50]}...'")
+                    
+                    try:
+                        await self.tts_streamer.stream_to_client(
+                            ws=session.ws,
+                            text=response_text,
+                            toy_config=toy_config
+                        )
+                        logger.info("TTS streaming completed for %s", session.device_id)
+                    except Exception as e:
+                        logger.error(f"TTS streaming failed: {e}")
+                        # Fallback: send error to client
+                        await session.ws.send_str(json.dumps({
+                            'type': 'error',
+                            'payload': {
+                                'error': 'TTS_FAILED',
+                                'message': 'Text-to-speech service unavailable'
+                            }
+                        }))
+                else:
+                    # Use Convex TTS (higher latency but reliable fallback)
+                    response_audio_base64 = result.get('audioData', '')
+                    audio_format = result.get('format', 'mp3')
+                    
+                    if response_audio_base64:
+                        try:
+                            response_audio_bytes = base64.b64decode(response_audio_base64)
+                            response_audio_hex = response_audio_bytes.hex()
+                            
+                            response_message = {
+                                'type': 'audio_response',
+                                'payload': {
+                                    'data': response_audio_hex,
+                                    'metadata': {
+                                        'format': audio_format,
+                                        'text': response_text,
+                                        'sampleRate': 22050,
+                                        'duration': result.get('duration'),
+                                        'timestamp': datetime.now().isoformat(),
+                                        'isFinal': True
+                                    }
+                                }
+                            }
+                            await session.ws.send_str(json.dumps(response_message))
+                            logger.info("Relayed Convex TTS response to %s (audio=%dB, text='%s…')", 
+                                      session.device_id, len(response_audio_hex)//2, response_text[:50])
+                        except Exception as e:
+                            logger.error(f"Failed to decode response audio: {e}", exc_info=True)
+                    else:
+                        logger.info("No TTS audio (SKIP_TTS=true or empty text)")
+            else:
+                error_msg = result.get('error', 'Unknown error from AI pipeline')
+                logger.error("Convex AI pipeline error: %s", error_msg)
+                await session.ws.send_str(json.dumps({'type': 'error', 'error': error_msg}))
+
+        except asyncio.TimeoutError:
+            logger.error("Convex action timed out after %.1fs (background)", timeout_s)
+            if not session.ws.closed:
+                await session.ws.send_str(json.dumps({'type': 'error', 'error': f'convex_timeout_after_{timeout_s}s'}))
+        except Exception as e:
+            logger.error("FAILED to call Convex action in background task: %s", e, exc_info=True)
+            if not session.ws.closed:
+                await session.ws.send_str(json.dumps({'type': 'error', 'error': f'Failed to process AI request: {str(e)}'}))
+
+    async def cleanup_inactive_sessions(self):
+        """Periodically clean up inactive sessions"""
+        while True:
+            await asyncio.sleep(60)  # Check every minute
+            
+            now = datetime.now()
+            inactive_sessions = []
+            
+            for session_id, session in self.sessions.items():
+                # Remove sessions inactive for more than 5 minutes
+                if (now - session.last_activity).seconds > 300:
+                    inactive_sessions.append(session_id)
+            
+            for session_id in inactive_sessions:
+                logger.info(f"Cleaning up inactive session: {session_id}")
+                session = self.sessions.get(session_id)
+                if session and session.ws:
+                    await session.ws.close()
+                del self.sessions[session_id]
+
+
+# Web application setup
+app = web.Application()
+gateway = FastRTCRelayGateway()
+
+# Health check endpoint
+async def health_check(request):
+    """Simple health check endpoint for Docker and monitoring"""
+    tts_status = "enabled" if gateway.tts_streamer else "disabled"
+    tts_providers = TTSProviderFactory.get_available_providers() if TTS_AVAILABLE else []
+    
+    return web.json_response({
+        'status': 'healthy',
+        'type': 'relay',
+        'sessions': len(gateway.sessions),
+        'convex_url': CONVEX_URL,
+        'tts_streaming': tts_status,
+        'tts_providers': tts_providers,
+        'timestamp': datetime.now().isoformat()
+    })
+
+# Route configuration
+app.router.add_get('/health', health_check)
+app.router.add_get('/ws/{device_id}/{toy_id}', gateway.handle_websocket)
+
+# Startup and cleanup
+async def on_startup(app):
+    """Initialize background tasks on startup"""
+    app['cleanup_task'] = asyncio.create_task(gateway.cleanup_inactive_sessions())
+    logger.info("Background tasks started")
+
+async def on_cleanup(app):
+    """Clean up on shutdown"""
+    if 'cleanup_task' in app:
+        app['cleanup_task'].cancel()
+        try:
+            await app['cleanup_task']
+        except asyncio.CancelledError:
+            pass
+    
+    # Close all active sessions
+    for session in gateway.sessions.values():
+        if session.ws:
+            await session.ws.close()
+    
+    logger.info("Cleanup completed")
+
+app.on_startup.append(on_startup)
+app.on_cleanup.append(on_cleanup)
+
+# Run the server
+if __name__ == '__main__':
+    logger.info(f"Starting FastRTC Relay Gateway on {HOST}:{PORT}")
+    web.run_app(app, host=HOST, port=PORT)
+</file>
+
+<file path="server_relay.py">
+"""
+FastRTC Relay Gateway Server for Pommai AI Toy Platform
+Pure WebSocket relay between Raspberry Pi clients and Convex backend.
+With TTS streaming support for low-latency audio playback.
+"""
+
+import asyncio
+import json
+import os
+import logging
+import base64
+from datetime import datetime
+from typing import Dict, Optional, Any
+from dataclasses import dataclass, field
+import inspect
+
+from aiohttp import web, WSMsgType
+from convex import ConvexClient
+from dotenv import load_dotenv
+
+try:
+    from tts_providers import TTSStreamer, TTSProvider, TTSProviderFactory
+    TTS_AVAILABLE = True
+except ImportError:
+    TTS_AVAILABLE = False
+    logging.warning("TTS providers not available, will use Convex for TTS")
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging based on LOG_LEVEL env (DEBUG, INFO, WARNING, ERROR)
+LOG_LEVEL = (os.getenv("LOG_LEVEL", "INFO") or "INFO").upper()
+_level = getattr(logging, LOG_LEVEL, logging.INFO)
+logging.basicConfig(
+    level=_level,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+# Keep aiohttp access logs at INFO unless explicitly asking for DEBUG
+_access_logger = logging.getLogger('aiohttp.access')
+if LOG_LEVEL == 'DEBUG':
+    _access_logger.setLevel(logging.INFO)
+
+# Configuration from environment
+CONVEX_URL = os.getenv("CONVEX_URL", "https://your-app.convex.cloud")
+CONVEX_DEPLOY_KEY = os.getenv("CONVEX_DEPLOY_KEY")
+PORT = int(os.getenv("PORT", "8080"))
+HOST = os.getenv("HOST", "0.0.0.0")
+
+@dataclass
+class ClientSession:
+    """Represents a connected Raspberry Pi client session"""
+    session_id: str
+    device_id: str
+    toy_id: str
+    ws: web.WebSocketResponse
+    audio_buffer: bytearray = field(default_factory=bytearray)
+    last_activity: datetime = field(default_factory=datetime.now)
+    thread_id: Optional[str] = None
+
+
+class FastRTCRelayGateway:
+    """
+    Pure relay gateway between Raspberry Pi clients and Convex backend.
+    With optional TTS streaming for low-latency audio playback.
+    """
+    
+    def __init__(self):
+        # Initialize Convex client
+        self.convex_client = ConvexClient(CONVEX_URL)
+        if CONVEX_DEPLOY_KEY:
+            self.convex_client.set_auth(CONVEX_DEPLOY_KEY)
+        
+        # Active client sessions
+        self.sessions: Dict[str, ClientSession] = {}
+        
+        # Initialize TTS streamer if available
+        self.tts_streamer = None
+        if TTS_AVAILABLE:
+            available_providers = TTSProviderFactory.get_available_providers()
+            if available_providers:
+                default_provider = TTSProvider.ELEVENLABS if 'elevenlabs' in available_providers else TTSProvider.MINIMAX
+                self.tts_streamer = TTSStreamer(default_provider)
+                logger.info(f"TTS streaming enabled with providers: {available_providers}")
+            else:
+                logger.warning("No TTS providers configured, will use Convex for TTS")
+        
+        logger.info(f"FastRTC Relay Gateway initialized")
+        logger.info(f"Convex URL: {CONVEX_URL}")
+        logger.info(f"Server will listen on {HOST}:{PORT}")
+    
+    async def handle_websocket(self, request: web.Request) -> web.WebSocketResponse:
+        """
+        Handle WebSocket connections from Raspberry Pi clients.
+        This matches the endpoint the Pi expects: /ws/{device_id}/{toy_id}
+        """
+        device_id = request.match_info.get('device_id', 'unknown-device')
+        toy_id = request.match_info.get('toy_id', 'unknown-toy')
+        
+        # Increase heartbeat interval to handle long AI processing
+        ws = web.WebSocketResponse(
+            heartbeat=45,  # Increased from 30 to 45 seconds
+            autoping=True,  # Ensure automatic ping/pong
+            compress=False  # Disable compression for lower latency
+        )
+        await ws.prepare(request)
+        
+        # Create session
+        session_id = f"{device_id}-{datetime.now().timestamp()}"
+        session = ClientSession(
+            session_id=session_id,
+            device_id=device_id,
+            toy_id=toy_id,
+            ws=ws
+        )
+        self.sessions[session_id] = session
+        
+        logger.info(f"Client connected: device={device_id}, toy={toy_id}, session={session_id}")
+        
+        try:
+            async for msg in ws:
+                if msg.type == WSMsgType.TEXT:
+                    await self.handle_client_message(session, msg.data)
+                elif msg.type == WSMsgType.ERROR:
+                    logger.error(f"WebSocket error: {ws.exception()}")
+                    break
+                    
+        except Exception as e:
+            logger.error(f"Session {session_id} error: {e}")
+        finally:
+            # Clean up session
+            if len(session.audio_buffer) > 0:
+                logger.warning(f"Client disconnected with %dB buffered audio and no final marker: session=%s", len(session.audio_buffer), session_id)
+            del self.sessions[session_id]
+            await ws.close()
+            logger.info(f"Client disconnected: session={session_id}")
+        
+        return ws
+    
+    async def handle_client_message(self, session: ClientSession, message: str):
+        """
+        Process messages from Raspberry Pi client and forward to appropriate handler.
+        
+        Expected message types from Pi client (from fastrtc_connection.py):
+        - handshake: Initial connection handshake
+        - ping: Heartbeat keepalive
+        - control: Control commands (start_streaming, stop_streaming)
+        - audio_chunk: Audio data with metadata
+
+        Robust error handling & logging
+        - We log each incoming message type at DEBUG and errors with stacktraces at ERROR.
+        - If JSON is invalid we return a typed error back to the client and continue.
+        """
+        try:
+            data = json.loads(message)
+            msg_type = data.get('type')
+            
+            logger.debug(f"Received message type: {msg_type} from {session.device_id}")
+            
+            if msg_type == 'handshake':
+                # Acknowledge handshake from Pi
+                await session.ws.send_str(json.dumps({
+                    'type': 'handshake_ack',
+                    'status': 'connected',
+                    'session_id': session.session_id,
+                    'timestamp': datetime.now().isoformat()
+                }))
+                logger.info(f"Handshake completed for {session.device_id}")
+                
+            elif msg_type == 'ping':
+                # Respond to ping with pong
+                await session.ws.send_str(json.dumps({
+                    'type': 'pong',
+                    'timestamp': datetime.now().isoformat()
+                }))
+                
+            elif msg_type == 'control':
+                # Acknowledge control commands
+                command = data.get('command')
+                await session.ws.send_str(json.dumps({
+                    'type': 'control_ack',
+                    'command': command,
+                    'ok': True
+                }))
+                logger.debug(f"Control command acknowledged: {command}")
+                
+            elif msg_type == 'audio_chunk':
+                # Process audio chunk from Pi client
+                await self.handle_audio_chunk(session, data.get('payload', {}))
+                
+            else:
+                logger.warning(f"Unknown message type: {msg_type}")
+                await session.ws.send_str(json.dumps({
+                    'type': 'error',
+                    'error': f'unknown_message_type: {msg_type}'
+                }))
+                
+            # Update last activity
+            session.last_activity = datetime.now()
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON from client: {e}", exc_info=True)
+            await session.ws.send_str(json.dumps({
+                'type': 'error',
+                'error': 'invalid_json'
+            }))
+        except Exception as e:
+            logger.error(f"Error handling client message: {e}", exc_info=True)
+            await session.ws.send_str(json.dumps({
+                'type': 'error',
+                'error': str(e)
+            }))
+    
+    async def handle_audio_chunk(self, session: ClientSession, payload: Dict[str, Any]):
+        """
+        Handle audio chunks from Pi client.
+        
+        The Pi sends audio as hex-encoded bytes in this format:
+        {
+            'data': hex_string,  # Audio data as hex string
+            'metadata': {
+                'isFinal': bool,  # True when recording ends
+                'format': 'opus' | 'pcm16' | 'wav',
+                'sampleRate': 16000,
+                'timestamp': float
+            }
+        }
+        
+        Strategy:
+        - Buffer bytes on each chunk
+        - On final chunk:
+            - If format == 'pcm16': wrap buffered bytes as a WAV container in-memory
+            - If format == 'wav': forward as-is
+            - If format == 'opus': forward raw bytes but warn (Whisper usually requires WAV/MP3/OGG/WebM)
+        - Base64-encode and call Convex action
+        """
+        try:
+            audio_hex = payload.get('data', '')
+            metadata = payload.get('metadata', {})
+            is_final = bool(metadata.get('isFinal', False))
+            fmt = str(metadata.get('format', 'opus')).lower()
+            sample_rate = int(metadata.get('sampleRate', 16000))
+            
+            # Handle empty audio data (could be final marker)
+            if not audio_hex:
+                if is_final:
+                    # This is a final marker - process any buffered audio
+                    if len(session.audio_buffer) > 0:
+                        logger.info("Final marker received with empty data; processing %d bytes of buffered audio", len(session.audio_buffer))
+                        # Don't return - continue to processing below
+                    else:
+                        logger.warning("Final marker received but no buffered audio to process")
+                        return
+                else:
+                    # Non-final empty chunk - ignore
+                    logger.debug("Empty non-final audio chunk received (ignored)")
+                    return
+            else:
+                # We have audio data - convert and buffer it
+                try:
+                    audio_bytes = bytes.fromhex(audio_hex)
+                    session.audio_buffer.extend(audio_bytes)
+                    logger.debug(f"WS audio_chunk: +{len(audio_bytes)}B, total={len(session.audio_buffer)}B, final={is_final}, format={fmt}")
+                except ValueError as e:
+                    logger.error(f"Invalid hex audio data: {e}")
+                    return
+            
+            # Process when we get the final chunk
+            if is_final and len(session.audio_buffer) > 0:
+                logger.info(f"Processing complete audio: total={len(session.audio_buffer)}B, format={fmt}")
+                
+                # Decide how to forward to Convex (aim: WAV/Base64 if possible)
+                forward_bytes: bytes
+                forward_format: str
+                if fmt == 'pcm16':
+                    # Wrap PCM16 LE mono into a WAV container
+                    try:
+                        import io, wave, struct
+                        pcm = bytes(session.audio_buffer)
+                        buffer = io.BytesIO()
+                        with wave.open(buffer, 'wb') as wf:
+                            wf.setnchannels(1)
+                            wf.setsampwidth(2)  # 16-bit PCM
+                            wf.setframerate(sample_rate)
+                            wf.writeframes(pcm)
+                        forward_bytes = buffer.getvalue()
+                        forward_format = 'wav'
+                        logger.info(f"Packaged PCM16 -> WAV {len(forward_bytes)}B @ {sample_rate}Hz")
+                    except Exception as e:
+                        logger.error(f"Failed to package PCM16 to WAV: {e}")
+                        # Fallback: send raw PCM (may fail in Convex)
+                        forward_bytes = bytes(session.audio_buffer)
+                        forward_format = 'pcm16'
+                elif fmt in ('wav', 'wave'):
+                    forward_bytes = bytes(session.audio_buffer)
+                    forward_format = 'wav'
+                elif fmt == 'opus':
+                    # We don't re-containerize Opus here; forward as-is (likely unsupported by Whisper if raw)
+                    logger.warning("Forwarding raw Opus bytes; Convex STT may require WAV/MP3/OGG/WebM")
+                    forward_bytes = bytes(session.audio_buffer)
+                    forward_format = 'opus'
+                else:
+                    logger.warning(f"Unsupported audio format '{fmt}', forwarding raw bytes")
+                    forward_bytes = bytes(session.audio_buffer)
+                    forward_format = fmt
+                
+                # Convert to Base64 for Convex
+                audio_base64 = base64.b64encode(forward_bytes).decode('utf-8')
+                
+                # Clear buffer for next recording
+                session.audio_buffer = bytearray()
+                
+                # Prepare arguments for Convex call
+                action_args = {
+                    "toyId": session.toy_id,
+                    "audioData": audio_base64,
+                    "sessionId": session.session_id,
+                    "deviceId": session.device_id,
+                    "metadata": {
+                        "timestamp": int(datetime.now().timestamp() * 1000),
+                        "format": forward_format,
+                        "duration": metadata.get('duration', 0)
+                    }
+                }
+                
+                # Determine TTS behavior:
+                # - If SKIP_TTS=true: Skip TTS entirely (for testing)
+                # - If we have TTS streamer: Tell Convex to skip TTS (we'll stream it)
+                # - Otherwise: Let Convex handle TTS
+                skip_tts_env = os.getenv('SKIP_TTS', 'false').lower() == 'true'
+                
+                if skip_tts_env:
+                    # Testing mode - skip TTS entirely
+                    action_args["skipTTS"] = True
+                    logger.info("SKIP_TTS=true, skipping TTS generation")
+                elif self.tts_streamer:
+                    # We have TTS streaming capability - tell Convex to skip
+                    action_args["skipTTS"] = True
+                    logger.info("TTS streaming enabled, Convex will skip TTS")
+                else:
+                    # No TTS streamer - let Convex handle TTS
+                    action_args["skipTTS"] = False
+                    logger.info("No TTS streamer, Convex will generate TTS")
+                
+                logger.debug("Scheduling background AI processing task: %s", json.dumps({**action_args, "audioData": f"<base64 {len(audio_base64)} chars>"}, indent=2))
+                
+                # Send processing status immediately to keep connection alive
+                await session.ws.send_str(json.dumps({
+                    'type': 'status',
+                    'status': 'processing',
+                    'message': 'Audio received, processing with AI...'
+                }))
+                
+                # Schedule background task so the WS loop remains responsive to pings
+                asyncio.create_task(self.process_and_respond_to_client(session, action_args))
+        except Exception as e:
+            logger.error(f"Error handling audio chunk: {e}")
+    
+    async def process_and_respond_to_client(self, session: ClientSession, action_args: Dict[str, Any]):
+        """
+        Run the Convex AI pipeline off the main WS loop and send the response when ready.
+        - Uses timeout via CONVEX_ACTION_TIMEOUT (default 30s)
+        - Runs synchronous client calls in a thread to avoid blocking the event loop
+        - Checks if the client is still connected before sending
+        - Streams TTS audio directly from provider for low latency
+        """
+        try:
+            timeout_s = float(os.getenv("CONVEX_ACTION_TIMEOUT", "30"))
+            started = datetime.now()
+            logger.info("Calling Convex action 'aiPipeline:processVoiceInteraction' for toyId=%s", action_args.get("toyId"))
+
+            # Send periodic status updates during processing
+            async def send_status_updates():
+                while not session.ws.closed:
+                    await asyncio.sleep(10)  # Send update every 10 seconds
+                    if not session.ws.closed:
+                        await session.ws.send_str(json.dumps({
+                            'type': 'status',
+                            'status': 'processing',
+                            'message': 'Still processing your request...'
+                        }))
+            
+            status_task = asyncio.create_task(send_status_updates())
+            
+            try:
+                # Log before calling Convex
+                logger.debug("About to call Convex action with timeout=%ss", timeout_s)
+                
+                # Use HTTP API directly instead of Python SDK which seems to hang
+                import aiohttp
+                
+                url = f"{CONVEX_URL}/api/action"
+                headers = {
+                    "Content-Type": "application/json",
+                }
+                
+                payload = {
+                    "path": "aiPipeline:processVoiceInteraction",
+                    "args": action_args,
+                    "format": "json"
+                }
+                
+                if CONVEX_DEPLOY_KEY:
+                    headers["Authorization"] = f"Convex {CONVEX_DEPLOY_KEY}"
+                
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout_s)) as response:
+                        if response.status == 200:
+                            result = await response.json()
+                            if "value" in result:
+                                result = result["value"]
+                        else:
+                            error_text = await response.text()
+                            logger.error(f"Convex HTTP error {response.status}: {error_text}")
+                            result = {"success": False, "error": f"HTTP {response.status}: {error_text}"}
+                
+                logger.debug("Convex action completed successfully")
+            finally:
+                status_task.cancel()  # Stop sending status updates
+
+            duration_ms = (datetime.now() - started).total_seconds() * 1000
+            logger.info("Convex action result: success=%s processingTime=%s (gateway call %.0fms)", result.get('success'), result.get('processingTime'), duration_ms)
+
+            if session.ws.closed:
+                logger.warning("Client %s disconnected before AI response was ready.", session.device_id)
+                return
+
+            if result.get('success'):
+                response_text = result.get('text', '')
+                toy_config = result.get('toyConfig', {})  # Get toy voice configuration from Convex
+                
+                # Send text response first for immediate feedback
+                await session.ws.send_str(json.dumps({
+                    'type': 'text_response',
+                    'payload': {
+                        'text': response_text,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                }))
+                
+                # Handle TTS based on available options
+                if self.tts_streamer and response_text and not os.getenv('SKIP_TTS', 'false').lower() == 'true':
+                    # Stream TTS directly for low latency
+                    logger.info(f"Streaming TTS for: '{response_text[:50]}...'")
+                    
+                    try:
+                        await self.tts_streamer.stream_to_client(
+                            ws=session.ws,
+                            text=response_text,
+                            toy_config=toy_config
+                        )
+                        logger.info("TTS streaming completed for %s", session.device_id)
+                    except Exception as e:
+                        logger.error(f"TTS streaming failed: {e}")
+                        # Fallback: send error to client
+                        await session.ws.send_str(json.dumps({
+                            'type': 'error',
+                            'payload': {
+                                'error': 'TTS_FAILED',
+                                'message': 'Text-to-speech service unavailable'
+                            }
+                        }))
+                else:
+                    # Use Convex TTS (higher latency but reliable fallback)
+                    response_audio_base64 = result.get('audioData', '')
+                    audio_format = result.get('format', 'mp3')
+                    
+                    if response_audio_base64:
+                        try:
+                            response_audio_bytes = base64.b64decode(response_audio_base64)
+                            response_audio_hex = response_audio_bytes.hex()
+                            
+                            response_message = {
+                                'type': 'audio_response',
+                                'payload': {
+                                    'data': response_audio_hex,
+                                    'metadata': {
+                                        'format': audio_format,
+                                        'text': response_text,
+                                        'sampleRate': 22050,
+                                        'duration': result.get('duration'),
+                                        'timestamp': datetime.now().isoformat(),
+                                        'isFinal': True
+                                    }
+                                }
+                            }
+                            await session.ws.send_str(json.dumps(response_message))
+                            logger.info("Relayed Convex TTS response to %s (audio=%dB, text='%s…')", 
+                                      session.device_id, len(response_audio_hex)//2, response_text[:50])
+                        except Exception as e:
+                            logger.error(f"Failed to decode response audio: {e}", exc_info=True)
+                    else:
+                        logger.info("No TTS audio (SKIP_TTS=true or empty text)")
+            else:
+                error_msg = result.get('error', 'Unknown error from AI pipeline')
+                logger.error("Convex AI pipeline error: %s", error_msg)
+                await session.ws.send_str(json.dumps({'type': 'error', 'error': error_msg}))
+
+        except asyncio.TimeoutError:
+            logger.error("Convex action timed out after %.1fs (background)", timeout_s)
+            if not session.ws.closed:
+                await session.ws.send_str(json.dumps({'type': 'error', 'error': f'convex_timeout_after_{timeout_s}s'}))
+        except Exception as e:
+            logger.error("FAILED to call Convex action in background task: %s", e, exc_info=True)
+            if not session.ws.closed:
+                await session.ws.send_str(json.dumps({'type': 'error', 'error': f'Failed to process AI request: {str(e)}'}))
+
+    async def cleanup_inactive_sessions(self):
+        """Periodically clean up inactive sessions"""
+        while True:
+            await asyncio.sleep(60)  # Check every minute
+            
+            now = datetime.now()
+            inactive_sessions = []
+            
+            for session_id, session in self.sessions.items():
+                # Remove sessions inactive for more than 5 minutes
+                if (now - session.last_activity).seconds > 300:
+                    inactive_sessions.append(session_id)
+            
+            for session_id in inactive_sessions:
+                logger.info(f"Cleaning up inactive session: {session_id}")
+                session = self.sessions.get(session_id)
+                if session and session.ws:
+                    await session.ws.close()
+                del self.sessions[session_id]
+
+
+# Web application setup
+app = web.Application()
+gateway = FastRTCRelayGateway()
+
+# Health check endpoint
+async def health_check(request):
+    """Simple health check endpoint for Docker and monitoring"""
+    tts_status = "enabled" if gateway.tts_streamer else "disabled"
+    tts_providers = TTSProviderFactory.get_available_providers() if TTS_AVAILABLE else []
+    
+    return web.json_response({
+        'status': 'healthy',
+        'type': 'relay',
+        'sessions': len(gateway.sessions),
+        'convex_url': CONVEX_URL,
+        'tts_streaming': tts_status,
+        'tts_providers': tts_providers,
+        'timestamp': datetime.now().isoformat()
+    })
+
+# Route configuration
+app.router.add_get('/health', health_check)
+app.router.add_get('/ws/{device_id}/{toy_id}', gateway.handle_websocket)
+
+# Startup and cleanup
+async def on_startup(app):
+    """Initialize background tasks on startup"""
+    app['cleanup_task'] = asyncio.create_task(gateway.cleanup_inactive_sessions())
+    logger.info("Background tasks started")
+
+async def on_cleanup(app):
+    """Clean up on shutdown"""
+    if 'cleanup_task' in app:
+        app['cleanup_task'].cancel()
+        try:
+            await app['cleanup_task']
+        except asyncio.CancelledError:
+            pass
+    
+    # Close all active sessions
+    for session in gateway.sessions.values():
+        if session.ws:
+            await session.ws.close()
+    
+    logger.info("Cleanup completed")
+
+app.on_startup.append(on_startup)
+app.on_cleanup.append(on_cleanup)
+
+# Run the server
+if __name__ == '__main__':
+    logger.info(f"Starting FastRTC Relay Gateway on {HOST}:{PORT}")
+    web.run_app(app, host=HOST, port=PORT)
+</file>
+
+<file path="tts_providers_working_backup.py">
+"""TTS Provider Abstraction Layer for multiple TTS services"""
+
+import os
+import json
+import aiohttp
+import logging
+import threading
+import asyncio
+from abc import ABC, abstractmethod
+from typing import AsyncIterator, Dict, Any, Optional
+from enum import Enum
+
+# ElevenLabs official SDK
+try:
+    from elevenlabs.client import ElevenLabs
+except Exception:
+    ElevenLabs = None  # Will be validated at runtime
+
+logger = logging.getLogger(__name__)
+
+class TTSProvider(Enum):
+    ELEVENLABS = "elevenlabs"
+    MINIMAX = "minimax"
+    
+class BaseTTSProvider(ABC):
+    """Abstract base class for TTS providers"""
+    
+    @abstractmethod
+    async def stream_tts(self, text: str, voice_config: Dict[str, Any]) -> AsyncIterator[bytes]:
+        """Stream TTS audio chunks"""
+        pass
+    
+    @abstractmethod
+    def get_audio_format(self) -> str:
+        """Return the audio format this provider outputs"""
+        pass
+
+class ElevenLabsProvider(BaseTTSProvider):
+    """ElevenLabs TTS Provider with streaming support (official SDK)"""
+    
+    def __init__(self):
+        self.api_key = os.getenv("ELEVENLABS_API_KEY")
+        if not self.api_key:
+            raise ValueError("ELEVENLABS_API_KEY not found in environment")
+        if ElevenLabs is None:
+            raise ImportError("elevenlabs SDK is not installed. Add 'ElevenLabs' to requirements.")
+        
+        # Client
+        self.client = ElevenLabs(api_key=self.api_key)
+        
+        # Defaults
+        # Model: prioritize ultra-low latency
+        self.model_id_default = os.getenv("ELEVENLABS_TTS_MODEL_ID", "eleven_flash_v2_5")
+        self.voice_id_default = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
+        
+        # Default to 16kHz for better Pi compatibility (can be overridden via env var)
+        self.sample_rate = 16000
+        
+    def _iter_stream(self, text: str, voice_id: str, model_id: str, output_format: str):
+        """Synchronous iterator that yields raw PCM bytes from ElevenLabs SDK."""
+        try:
+            # First try the standard streaming endpoint with requests for better control
+            import requests
+            import time
+            
+            # Note: /stream endpoint always returns MP3, use non-streaming for PCM
+            url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+            headers = {
+                "xi-api-key": self.api_key,
+                "Content-Type": "application/json"
+            }
+            
+            # CRITICAL: Add Accept header for PCM output
+            # ElevenLabs requires specific Accept header format for raw PCM
+            if output_format.startswith("pcm_"):
+                # Use audio/basic for raw PCM (this is what ElevenLabs expects)
+                headers["Accept"] = "audio/basic"
+            
+            # Add output_format as query parameter for PCM
+            if output_format.startswith("pcm_"):
+                url += f"?output_format={output_format}"
+            
+            request_id = f"req_{int(time.time()*1000)}"
+            
+            data = {
+                "text": text,
+                "model_id": model_id,
+                "voice_settings": {
+                    "stability": 0.5,
+                    "similarity_boost": 0.75
+                },
+                "optimize_streaming_latency": 3
+            }
+            
+            logger.info(f"[{request_id}] Making ElevenLabs API request: {url}")
+            logger.info(f"[{request_id}] Request headers: {headers}")
+            logger.info(f"[{request_id}] Output format: {output_format}")
+            logger.info(f"[{request_id}] Text length: {len(text)} chars")
+            
+            response = requests.post(url, json=data, headers=headers, stream=True)
+            response.raise_for_status()
+            
+            # Validate Content-Type to ensure we got PCM, not MP3
+            content_type = response.headers.get('Content-Type', '')
+            content_length = response.headers.get('Content-Length', 'streaming')
+            logger.info(f"[{request_id}] ElevenLabs response - Content-Type: {content_type}, Content-Length: {content_length}")
+            
+            if output_format.startswith("pcm_"):
+                # ElevenLabs returns audio/basic for PCM format
+                valid_pcm_types = ["audio/pcm", "audio/basic", "application/octet-stream"]
+                if not any(ct in content_type.lower() for ct in valid_pcm_types):
+                    logger.error(f"Expected PCM but got Content-Type: {content_type}. Check Accept header.")
+                    raise ValueError(f"Expected PCM audio but received {content_type}")
+            
+            # Stream chunks as they arrive - use larger chunk size
+            # Buffer small chunks to avoid issues
+            chunk_num = 0
+            total_bytes = 0
+            for chunk in response.iter_content(chunk_size=4096):  # 4KB chunks
+                if chunk:  # Don't filter - let the buffering in stream_tts handle it
+                    chunk_num += 1
+                    total_bytes += len(chunk)
+                    if chunk_num <= 3 or chunk_num % 10 == 0:  # Log first few and every 10th
+                        logger.debug(f"[{request_id}] Raw chunk #{chunk_num}: {len(chunk)} bytes (total: {total_bytes})")
+                    yield chunk
+            
+            logger.info(f"[{request_id}] Stream complete: {chunk_num} chunks, {total_bytes} bytes")
+                    
+        except Exception as e:
+            logger.error(f"ElevenLabs streaming request failed: {e}", exc_info=True)
+            raise
+    
+    async def stream_tts(self, text: str, voice_config: Dict[str, Any]) -> AsyncIterator[bytes]:
+        """Async stream using a background thread to bridge SDK's sync iterator."""
+        # Resolve model/voice and output format
+        voice_id = voice_config.get('voiceId', self.voice_id_default)
+        model_id = voice_config.get('modelId', self.model_id_default)
+        # Default to 16kHz for Pi compatibility
+        output_format = os.getenv("ELEVENLABS_OUTPUT_FORMAT", "pcm_16000")
+        try:
+            if output_format.startswith("pcm_"):
+                self.sample_rate = int(output_format.split("_")[1])
+        except Exception:
+            self.sample_rate = 16000
+            output_format = "pcm_16000"
+        
+        stream_id = f"stream_{int(asyncio.get_event_loop().time()*1000)}"
+        logger.info(f"[{stream_id}] ElevenLabs streaming TTS: voice_id={voice_id}, model_id={model_id}, output_format={output_format}, text_length={len(text)}")
+        
+        # Bridge to async via queue + thread
+        q: asyncio.Queue = asyncio.Queue(maxsize=100)
+        stop_sentinel = object()
+        loop = asyncio.get_running_loop()
+        
+        def producer():
+            chunk_count = 0
+            total_bytes = 0
+            buffer = bytearray()  # Buffer to accumulate small chunks
+            MIN_CHUNK_SIZE = 1024  # Minimum chunk size to send (1KB)
+            
+            try:
+                logger.info(f"[{stream_id}] Starting ElevenLabs producer thread for text: '{text[:50]}...'")
+                for b in self._iter_stream(text, voice_id, model_id, output_format):
+                    if not b or len(b) == 0:
+                        continue
+                    
+                    total_bytes += len(b)
+                    buffer.extend(b)
+                    
+                    # Send chunks of at least MIN_CHUNK_SIZE
+                    while len(buffer) >= MIN_CHUNK_SIZE:
+                        chunk_to_send = bytes(buffer[:MIN_CHUNK_SIZE])
+                        buffer = buffer[MIN_CHUNK_SIZE:]
+                        chunk_count += 1
+                        if chunk_count <= 3 or chunk_count % 10 == 0:
+                            logger.debug(f"[{stream_id}] ElevenLabs chunk #{chunk_count}: {len(chunk_to_send)} bytes")
+                        try:
+                            fut = asyncio.run_coroutine_threadsafe(q.put(chunk_to_send), loop)
+                            fut.result()  # Block thread until queued (provides backpressure)
+                        except Exception as ex:
+                            logger.error(f"Queue put error: {ex}")
+                            return
+                
+                # Send any remaining data in buffer
+                if len(buffer) > 0:
+                    chunk_count += 1
+                    remaining = bytes(buffer)
+                    logger.debug(f"ElevenLabs final chunk #{chunk_count}: {len(remaining)} bytes")
+                    try:
+                        fut = asyncio.run_coroutine_threadsafe(q.put(remaining), loop)
+                        fut.result()
+                    except Exception as ex:
+                        logger.error(f"Queue put error: {ex}")
+                
+                logger.info(f"[{stream_id}] ElevenLabs producer completed: {chunk_count} chunks, {total_bytes} bytes total")
+            except Exception as e:
+                logger.error(f"ElevenLabs streaming error: {e}", exc_info=True)
+            finally:
+                try:
+                    asyncio.run_coroutine_threadsafe(q.put(stop_sentinel), loop).result()
+                except Exception:
+                    pass
+        
+        threading.Thread(target=producer, daemon=True).start()
+        
+        chunks_yielded = 0
+        bytes_yielded = 0
+        while True:
+            item = await q.get()
+            if item is stop_sentinel:
+                logger.info(f"[{stream_id}] ElevenLabs stream complete: yielded {chunks_yielded} chunks, {bytes_yielded} bytes")
+                break
+            chunks_yielded += 1
+            bytes_yielded += len(item)
+            logger.debug(f"Yielding chunk #{chunks_yielded}: {len(item)} bytes")
+            yield item
+    
+    def get_audio_format(self) -> str:
+        # Always return pcm16 as the format identifier
+        # The actual sample rate is communicated separately via sampleRate field
+        return "pcm16"
+
+    def get_sample_rate(self) -> int:
+        return getattr(self, 'sample_rate', 16000)
+
+class MinimaxProvider(BaseTTSProvider):
+    """Minimax TTS Provider with streaming support"""
+    
+    def __init__(self):
+        self.api_key = os.getenv("MINIMAX_API_KEY")
+        self.group_id = os.getenv("MINIMAX_GROUP_ID")
+        if not self.api_key or not self.group_id:
+            raise ValueError("MINIMAX_API_KEY or MINIMAX_GROUP_ID not found in environment")
+        self.sample_rate = 16000
+    
+    async def stream_tts(self, text: str, voice_config: Dict[str, Any]) -> AsyncIterator[bytes]:
+        """Stream TTS from Minimax API"""
+        # Minimax voice IDs - can be customized
+        voice_id = voice_config.get('voiceId', 'female-shaonv')  # Default young female voice
+        
+        url = "https://api.minimax.chat/v1/t2a_v2"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Format request according to Minimax API docs
+        data = {
+            "model": "speech-01-turbo",
+            "text": text,
+            "group_id": self.group_id,
+            "voice_setting": {
+                "voice_id": voice_id,  # female-shaonv, male-qn-qingse, etc.
+                "speed": voice_config.get('speed', 1.0),  # 0.5 to 2.0
+                "vol": voice_config.get('volume', 1.0),   # 0.1 to 10
+                "pitch": voice_config.get('pitch', 0),    # -12 to 12
+                "emotion": voice_config.get('emotion', 'happy')  # happy, sad, angry, etc.
+            },
+            "stream": True,  # Enable streaming
+            "audio_setting": {
+                "format": "pcm",  # pcm, mp3, wav
+                "sample_rate": 16000,  # 8000, 16000, 24000, 32000, 48000
+                "channel": 1,  # 1 for mono, 2 for stereo
+                "bits_per_sample": 16  # 8 or 16
+            }
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=data, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"Minimax API error: {response.status} - {error_text}")
+                    raise Exception(f"Minimax API error: {response.status}")
+                
+                # Minimax uses SSE (Server-Sent Events) for streaming
+                buffer = b''
+                async for chunk in response.content.iter_any():
+                    buffer += chunk
+                    lines = buffer.split(b'\n')
+                    
+                    # Process complete lines, keep incomplete for next iteration
+                    for i in range(len(lines) - 1):
+                        line = lines[i]
+                        if line.startswith(b'data: '):
+                            try:
+                                data_str = line[6:].decode('utf-8')
+                                if data_str.strip() == '[DONE]':
+                                    return
+                                
+                                data = json.loads(data_str)
+                                if 'audio' in data and data['audio']:
+                                    # Decode base64 audio chunk
+                                    import base64
+                                    audio_chunk = base64.b64decode(data['audio'])
+                                    yield audio_chunk
+                            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                                logger.debug(f"Failed to parse SSE line: {e}")
+                                continue
+                    
+                    # Keep the last incomplete line in buffer
+                    buffer = lines[-1]
+    
+    def get_audio_format(self) -> str:
+        return "pcm16"
+
+    def get_sample_rate(self) -> int:
+        return getattr(self, 'sample_rate', 16000)
+
+class TTSProviderFactory:
+    """Factory for creating TTS providers"""
+    
+    _providers: Dict[TTSProvider, BaseTTSProvider] = {}
+    
+    @classmethod
+    def get_provider(cls, provider_type: TTSProvider) -> BaseTTSProvider:
+        """Get or create a TTS provider instance"""
+        if provider_type not in cls._providers:
+            if provider_type == TTSProvider.ELEVENLABS:
+                cls._providers[provider_type] = ElevenLabsProvider()
+            elif provider_type == TTSProvider.MINIMAX:
+                cls._providers[provider_type] = MinimaxProvider()
+            else:
+                raise ValueError(f"Unknown TTS provider: {provider_type}")
+        
+        return cls._providers[provider_type]
+    
+    @classmethod
+    def get_available_providers(cls) -> list[str]:
+        """Get list of available TTS providers based on environment variables"""
+        available = []
+        
+        if os.getenv("ELEVENLABS_API_KEY"):
+            available.append(TTSProvider.ELEVENLABS.value)
+        
+        if os.getenv("MINIMAX_API_KEY") and os.getenv("MINIMAX_GROUP_ID"):
+            available.append(TTSProvider.MINIMAX.value)
+        
+        return available
+
+class TTSStreamer:
+    """High-level TTS streaming handler"""
+    
+    def __init__(self, default_provider: TTSProvider = TTSProvider.ELEVENLABS):
+        self.default_provider = default_provider
+    
+    async def stream_to_client(self, 
+                              ws,  # WebSocket connection
+                              text: str, 
+                              toy_config: Dict[str, Any],
+                              provider_override: Optional[TTSProvider] = None) -> None:
+        """Stream TTS audio to client over WebSocket"""
+        
+        # Determine which provider to use
+        provider_type = provider_override or TTSProvider(toy_config.get('ttsProvider', self.default_provider.value))
+        
+        try:
+            provider = TTSProviderFactory.get_provider(provider_type)
+            audio_format = provider.get_audio_format()
+            
+            logger.info(f"Streaming TTS using {provider_type.value} for text: '{text[:50]}...'")
+            
+            # Stream audio chunks to client
+            chunks_sent = 0
+            bytes_sent = 0
+            async for chunk in provider.stream_tts(text, toy_config):
+                if ws.closed:
+                    logger.warning("WebSocket closed during TTS streaming")
+                    break
+                
+                chunks_sent += 1
+                bytes_sent += len(chunk)
+                
+                # Send audio chunk to client
+                response_message = {
+                    "type": "audio_response",
+                    "payload": {
+                        "data": chunk.hex(),
+                        "metadata": {
+                            "format": audio_format,            # 'pcm16'
+                            "endian": "le",                   # little-endian
+                            "channels": 1,                    # mono
+                            "provider": provider_type.value,
+                            "sampleRate": getattr(provider, 'sample_rate', 16000),
+                            "isFinal": False
+                        }
+                    }
+                }
+                await ws.send_str(json.dumps(response_message))
+                logger.debug(f"Sent audio chunk #{chunks_sent}: {len(chunk)} bytes")
+            
+            logger.info(f"TTS streaming stats: sent {chunks_sent} chunks, {bytes_sent} bytes total")
+            
+            # Send final marker
+            if not ws.closed:
+                await ws.send_str(json.dumps({
+                    "type": "audio_response",
+                    "payload": {
+                        "data": "",
+                        "metadata": {
+                            "format": audio_format,
+                            "endian": "le",
+                            "channels": 1,
+                            "provider": provider_type.value,
+                            "sampleRate": getattr(provider, 'sample_rate', 16000),
+                            "isFinal": True
+                        }
+                    }
+                }))
+                
+        except Exception as e:
+            logger.error(f"TTS streaming error with {provider_type.value}: {e}")
+            
+            # Try fallback provider if available
+            if provider_type != self.default_provider:
+                logger.info(f"Attempting fallback to {self.default_provider.value}")
+                await self.stream_to_client(ws, text, toy_config, self.default_provider)
+            else:
+                # Send error to client
+                if not ws.closed:
+                    await ws.send_str(json.dumps({
+                        "type": "error",
+                        "payload": {
+                            "error": "TTS_FAILED",
+                            "message": "Text-to-speech service unavailable"
+                        }
+                    }))
+</file>
+
+<file path="tts_providers.py">
+"""TTS Provider Abstraction Layer for multiple TTS services"""
+
+import os
+import json
+import aiohttp
+import logging
+import threading
+import asyncio
+from abc import ABC, abstractmethod
+from typing import AsyncIterator, Dict, Any, Optional
+from enum import Enum
+
+# ElevenLabs official SDK
+try:
+    from elevenlabs.client import ElevenLabs
+except Exception:
+    ElevenLabs = None  # Will be validated at runtime
+
+logger = logging.getLogger(__name__)
+
+class TTSProvider(Enum):
+    ELEVENLABS = "elevenlabs"
+    MINIMAX = "minimax"
+    
+class BaseTTSProvider(ABC):
+    """Abstract base class for TTS providers"""
+    
+    @abstractmethod
+    async def stream_tts(self, text: str, voice_config: Dict[str, Any]) -> AsyncIterator[bytes]:
+        """Stream TTS audio chunks"""
+        pass
+    
+    @abstractmethod
+    def get_audio_format(self) -> str:
+        """Return the audio format this provider outputs"""
+        pass
+
+class ElevenLabsProvider(BaseTTSProvider):
+    """ElevenLabs TTS Provider with streaming support (official SDK)"""
+    
+    def __init__(self):
+        self.api_key = os.getenv("ELEVENLABS_API_KEY")
+        if not self.api_key:
+            raise ValueError("ELEVENLABS_API_KEY not found in environment")
+        if ElevenLabs is None:
+            raise ImportError("elevenlabs SDK is not installed. Add 'ElevenLabs' to requirements.")
+        
+        # Client
+        self.client = ElevenLabs(api_key=self.api_key)
+        
+        # Defaults
+        # Model: prioritize ultra-low latency
+        self.model_id_default = os.getenv("ELEVENLABS_TTS_MODEL_ID", "eleven_flash_v2_5")
+        self.voice_id_default = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
+        
+        # Default to 16kHz for better Pi compatibility (can be overridden via env var)
+        self.sample_rate = 16000
+        
+    def _iter_stream(self, text: str, voice_id: str, model_id: str, output_format: str):
+        """Synchronous iterator that yields raw PCM bytes from ElevenLabs SDK."""
+        try:
+            # First try the standard streaming endpoint with requests for better control
+            import requests
+            import time
+            
+            # Note: /stream endpoint always returns MP3, use non-streaming for PCM
+            url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+            headers = {
+                "xi-api-key": self.api_key,
+                "Content-Type": "application/json"
+            }
+            
+            # CRITICAL: Add Accept header for PCM output
+            # ElevenLabs requires specific Accept header format for raw PCM
+            if output_format.startswith("pcm_"):
+                # Use audio/basic for raw PCM (this is what ElevenLabs expects)
+                headers["Accept"] = "audio/basic"
+            
+            # Add output_format as query parameter for PCM
+            if output_format.startswith("pcm_"):
+                url += f"?output_format={output_format}"
+            
+            request_id = f"req_{int(time.time()*1000)}"
+            
+            data = {
+                "text": text,
+                "model_id": model_id,
+                "voice_settings": {
+                    "stability": 0.5,
+                    "similarity_boost": 0.75
+                },
+                "optimize_streaming_latency": 3
+            }
+            
+            logger.info(f"[{request_id}] Making ElevenLabs API request: {url}")
+            logger.info(f"[{request_id}] Request headers: {headers}")
+            logger.info(f"[{request_id}] Output format: {output_format}")
+            logger.info(f"[{request_id}] Text length: {len(text)} chars")
+            
+            response = requests.post(url, json=data, headers=headers, stream=True)
+            response.raise_for_status()
+            
+            # Validate Content-Type to ensure we got PCM, not MP3
+            content_type = response.headers.get('Content-Type', '')
+            content_length = response.headers.get('Content-Length', 'streaming')
+            logger.info(f"[{request_id}] ElevenLabs response - Content-Type: {content_type}, Content-Length: {content_length}")
+            
+            if output_format.startswith("pcm_"):
+                # ElevenLabs returns audio/basic for PCM format
+                valid_pcm_types = ["audio/pcm", "audio/basic", "application/octet-stream"]
+                if not any(ct in content_type.lower() for ct in valid_pcm_types):
+                    logger.error(f"Expected PCM but got Content-Type: {content_type}. Check Accept header.")
+                    raise ValueError(f"Expected PCM audio but received {content_type}")
+            
+            # Stream chunks as they arrive - use larger chunk size
+            # Buffer small chunks to avoid issues
+            chunk_num = 0
+            total_bytes = 0
+            for chunk in response.iter_content(chunk_size=4096):  # 4KB chunks
+                if chunk:  # Don't filter - let the buffering in stream_tts handle it
+                    chunk_num += 1
+                    total_bytes += len(chunk)
+                    if chunk_num <= 3 or chunk_num % 10 == 0:  # Log first few and every 10th
+                        logger.debug(f"[{request_id}] Raw chunk #{chunk_num}: {len(chunk)} bytes (total: {total_bytes})")
+                    yield chunk
+            
+            logger.info(f"[{request_id}] Stream complete: {chunk_num} chunks, {total_bytes} bytes")
+                    
+        except Exception as e:
+            logger.error(f"ElevenLabs streaming request failed: {e}", exc_info=True)
+            raise
+    
+    async def stream_tts(self, text: str, voice_config: Dict[str, Any]) -> AsyncIterator[bytes]:
+        """Async stream using a background thread to bridge SDK's sync iterator."""
+        # Resolve model/voice and output format
+        voice_id = voice_config.get('voiceId', self.voice_id_default)
+        model_id = voice_config.get('modelId', self.model_id_default)
+        # Default to 16kHz for Pi compatibility
+        output_format = os.getenv("ELEVENLABS_OUTPUT_FORMAT", "pcm_16000")
+        try:
+            if output_format.startswith("pcm_"):
+                self.sample_rate = int(output_format.split("_")[1])
+        except Exception:
+            self.sample_rate = 16000
+            output_format = "pcm_16000"
+        
+        stream_id = f"stream_{int(asyncio.get_event_loop().time()*1000)}"
+        logger.info(f"[{stream_id}] ElevenLabs streaming TTS: voice_id={voice_id}, model_id={model_id}, output_format={output_format}, text_length={len(text)}")
+        
+        # Bridge to async via queue + thread
+        q: asyncio.Queue = asyncio.Queue(maxsize=100)
+        stop_sentinel = object()
+        loop = asyncio.get_running_loop()
+        
+        def producer():
+            chunk_count = 0
+            total_bytes = 0
+            buffer = bytearray()  # Buffer to accumulate small chunks
+            MIN_CHUNK_SIZE = 1024  # Minimum chunk size to send (1KB)
+            
+            try:
+                logger.info(f"[{stream_id}] Starting ElevenLabs producer thread for text: '{text[:50]}...'")
+                for b in self._iter_stream(text, voice_id, model_id, output_format):
+                    if not b or len(b) == 0:
+                        continue
+                    
+                    total_bytes += len(b)
+                    buffer.extend(b)
+                    
+                    # Send chunks of at least MIN_CHUNK_SIZE
+                    while len(buffer) >= MIN_CHUNK_SIZE:
+                        chunk_to_send = bytes(buffer[:MIN_CHUNK_SIZE])
+                        buffer = buffer[MIN_CHUNK_SIZE:]
+                        chunk_count += 1
+                        if chunk_count <= 3 or chunk_count % 10 == 0:
+                            logger.debug(f"[{stream_id}] ElevenLabs chunk #{chunk_count}: {len(chunk_to_send)} bytes")
+                        try:
+                            fut = asyncio.run_coroutine_threadsafe(q.put(chunk_to_send), loop)
+                            fut.result()  # Block thread until queued (provides backpressure)
+                        except Exception as ex:
+                            logger.error(f"Queue put error: {ex}")
+                            return
+                
+                # Send any remaining data in buffer
+                if len(buffer) > 0:
+                    chunk_count += 1
+                    remaining = bytes(buffer)
+                    logger.debug(f"ElevenLabs final chunk #{chunk_count}: {len(remaining)} bytes")
+                    try:
+                        fut = asyncio.run_coroutine_threadsafe(q.put(remaining), loop)
+                        fut.result()
+                    except Exception as ex:
+                        logger.error(f"Queue put error: {ex}")
+                
+                logger.info(f"[{stream_id}] ElevenLabs producer completed: {chunk_count} chunks, {total_bytes} bytes total")
+            except Exception as e:
+                logger.error(f"ElevenLabs streaming error: {e}", exc_info=True)
+            finally:
+                try:
+                    asyncio.run_coroutine_threadsafe(q.put(stop_sentinel), loop).result()
+                except Exception:
+                    pass
+        
+        threading.Thread(target=producer, daemon=True).start()
+        
+        chunks_yielded = 0
+        bytes_yielded = 0
+        while True:
+            item = await q.get()
+            if item is stop_sentinel:
+                logger.info(f"[{stream_id}] ElevenLabs stream complete: yielded {chunks_yielded} chunks, {bytes_yielded} bytes")
+                break
+            chunks_yielded += 1
+            bytes_yielded += len(item)
+            logger.debug(f"Yielding chunk #{chunks_yielded}: {len(item)} bytes")
+            yield item
+    
+    def get_audio_format(self) -> str:
+        # Always return pcm16 as the format identifier
+        # The actual sample rate is communicated separately via sampleRate field
+        return "pcm16"
+
+    def get_sample_rate(self) -> int:
+        return getattr(self, 'sample_rate', 16000)
+
+class MinimaxProvider(BaseTTSProvider):
+    """Minimax TTS Provider with streaming support"""
+    
+    def __init__(self):
+        self.api_key = os.getenv("MINIMAX_API_KEY")
+        self.group_id = os.getenv("MINIMAX_GROUP_ID")
+        if not self.api_key or not self.group_id:
+            raise ValueError("MINIMAX_API_KEY or MINIMAX_GROUP_ID not found in environment")
+        self.sample_rate = 16000
+    
+    async def stream_tts(self, text: str, voice_config: Dict[str, Any]) -> AsyncIterator[bytes]:
+        """Stream TTS from Minimax API"""
+        # Minimax voice IDs - can be customized
+        voice_id = voice_config.get('voiceId', 'female-shaonv')  # Default young female voice
+        
+        url = "https://api.minimax.chat/v1/t2a_v2"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Format request according to Minimax API docs
+        data = {
+            "model": "speech-01-turbo",
+            "text": text,
+            "group_id": self.group_id,
+            "voice_setting": {
+                "voice_id": voice_id,  # female-shaonv, male-qn-qingse, etc.
+                "speed": voice_config.get('speed', 1.0),  # 0.5 to 2.0
+                "vol": voice_config.get('volume', 1.0),   # 0.1 to 10
+                "pitch": voice_config.get('pitch', 0),    # -12 to 12
+                "emotion": voice_config.get('emotion', 'happy')  # happy, sad, angry, etc.
+            },
+            "stream": True,  # Enable streaming
+            "audio_setting": {
+                "format": "pcm",  # pcm, mp3, wav
+                "sample_rate": 16000,  # 8000, 16000, 24000, 32000, 48000
+                "channel": 1,  # 1 for mono, 2 for stereo
+                "bits_per_sample": 16  # 8 or 16
+            }
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=data, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"Minimax API error: {response.status} - {error_text}")
+                    raise Exception(f"Minimax API error: {response.status}")
+                
+                # Minimax uses SSE (Server-Sent Events) for streaming
+                buffer = b''
+                async for chunk in response.content.iter_any():
+                    buffer += chunk
+                    lines = buffer.split(b'\n')
+                    
+                    # Process complete lines, keep incomplete for next iteration
+                    for i in range(len(lines) - 1):
+                        line = lines[i]
+                        if line.startswith(b'data: '):
+                            try:
+                                data_str = line[6:].decode('utf-8')
+                                if data_str.strip() == '[DONE]':
+                                    return
+                                
+                                data = json.loads(data_str)
+                                if 'audio' in data and data['audio']:
+                                    # Decode base64 audio chunk
+                                    import base64
+                                    audio_chunk = base64.b64decode(data['audio'])
+                                    yield audio_chunk
+                            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                                logger.debug(f"Failed to parse SSE line: {e}")
+                                continue
+                    
+                    # Keep the last incomplete line in buffer
+                    buffer = lines[-1]
+    
+    def get_audio_format(self) -> str:
+        return "pcm16"
+
+    def get_sample_rate(self) -> int:
+        return getattr(self, 'sample_rate', 16000)
+
+class TTSProviderFactory:
+    """Factory for creating TTS providers"""
+    
+    _providers: Dict[TTSProvider, BaseTTSProvider] = {}
+    
+    @classmethod
+    def get_provider(cls, provider_type: TTSProvider) -> BaseTTSProvider:
+        """Get or create a TTS provider instance"""
+        if provider_type not in cls._providers:
+            if provider_type == TTSProvider.ELEVENLABS:
+                cls._providers[provider_type] = ElevenLabsProvider()
+            elif provider_type == TTSProvider.MINIMAX:
+                cls._providers[provider_type] = MinimaxProvider()
+            else:
+                raise ValueError(f"Unknown TTS provider: {provider_type}")
+        
+        return cls._providers[provider_type]
+    
+    @classmethod
+    def get_available_providers(cls) -> list[str]:
+        """Get list of available TTS providers based on environment variables"""
+        available = []
+        
+        if os.getenv("ELEVENLABS_API_KEY"):
+            available.append(TTSProvider.ELEVENLABS.value)
+        
+        if os.getenv("MINIMAX_API_KEY") and os.getenv("MINIMAX_GROUP_ID"):
+            available.append(TTSProvider.MINIMAX.value)
+        
+        return available
+
+class TTSStreamer:
+    """High-level TTS streaming handler"""
+    
+    def __init__(self, default_provider: TTSProvider = TTSProvider.ELEVENLABS):
+        self.default_provider = default_provider
+    
+    async def stream_to_client(self, 
+                              ws,  # WebSocket connection
+                              text: str, 
+                              toy_config: Dict[str, Any],
+                              provider_override: Optional[TTSProvider] = None) -> None:
+        """Stream TTS audio to client over WebSocket"""
+        
+        # Determine which provider to use
+        provider_type = provider_override or TTSProvider(toy_config.get('ttsProvider', self.default_provider.value))
+        
+        try:
+            provider = TTSProviderFactory.get_provider(provider_type)
+            audio_format = provider.get_audio_format()
+            
+            logger.info(f"Streaming TTS using {provider_type.value} for text: '{text[:50]}...'")
+            
+            # Stream audio chunks to client
+            chunks_sent = 0
+            bytes_sent = 0
+            async for chunk in provider.stream_tts(text, toy_config):
+                if ws.closed:
+                    logger.warning("WebSocket closed during TTS streaming")
+                    break
+                
+                chunks_sent += 1
+                bytes_sent += len(chunk)
+                
+                # Send audio chunk to client
+                response_message = {
+                    "type": "audio_response",
+                    "payload": {
+                        "data": chunk.hex(),
+                        "metadata": {
+                            "format": audio_format,            # 'pcm16'
+                            "endian": "le",                   # little-endian
+                            "channels": 1,                    # mono
+                            "provider": provider_type.value,
+                            "sampleRate": getattr(provider, 'sample_rate', 16000),
+                            "isFinal": False
+                        }
+                    }
+                }
+                await ws.send_str(json.dumps(response_message))
+                logger.debug(f"Sent audio chunk #{chunks_sent}: {len(chunk)} bytes")
+            
+            logger.info(f"TTS streaming stats: sent {chunks_sent} chunks, {bytes_sent} bytes total")
+            
+            # Send final marker
+            if not ws.closed:
+                await ws.send_str(json.dumps({
+                    "type": "audio_response",
+                    "payload": {
+                        "data": "",
+                        "metadata": {
+                            "format": audio_format,
+                            "endian": "le",
+                            "channels": 1,
+                            "provider": provider_type.value,
+                            "sampleRate": getattr(provider, 'sample_rate', 16000),
+                            "isFinal": True
+                        }
+                    }
+                }))
+                
+        except Exception as e:
+            logger.error(f"TTS streaming error with {provider_type.value}: {e}")
+            
+            # Try fallback provider if available
+            if provider_type != self.default_provider:
+                logger.info(f"Attempting fallback to {self.default_provider.value}")
+                await self.stream_to_client(ws, text, toy_config, self.default_provider)
+            else:
+                # Send error to client
+                if not ws.closed:
+                    await ws.send_str(json.dumps({
+                        "type": "error",
+                        "payload": {
+                            "error": "TTS_FAILED",
+                            "message": "Text-to-speech service unavailable"
+                        }
+                    }))
+</file>
+
+<file path=".gitignore">
+# Environment files (contain secrets)
+.env
+.env.local
+.env.production
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Docker
+docker-compose.override.yml
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# Old/deprecated files (to be deleted)
+server.py               # Old server with local AI
+requirements.txt       # Heavy dependencies
+Dockerfile            # Old Docker image
+Dockerfile.relay      # Replaced by Dockerfile.production
+test_*.py            # Move to tests/ directory
+
+# Production files to keep
+!.env.example
+!requirements_relay.txt
+!server_relay_with_tts.py
+!tts_providers.py
+!Dockerfile.production
+!fly.toml
+!prepare_production.sh
+</file>
+
+</files>

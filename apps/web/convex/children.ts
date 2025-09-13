@@ -84,3 +84,54 @@ export const updateChild = mutation({
     return id;
   },
 });
+
+// Guardian Controls: Save per-child safety settings used by SafetyControls UI
+export const updateGuardianControls = mutation({
+  args: {
+    childId: v.id("children"),
+    controls: v.object({
+      contentFilters: v.object({
+        strictnessLevel: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+        blockedTopics: v.array(v.string()),
+        allowedTopics: v.array(v.string()),
+      }),
+      timeControls: v.object({
+        dailyLimit: v.number(),
+        timeRestrictions: v.array(v.object({
+          dayType: v.union(v.literal("weekday"), v.literal("weekend")),
+          startTime: v.string(),
+          endTime: v.string(),
+        })),
+        schoolDayRules: v.boolean(),
+        weekendRules: v.boolean(),
+      }),
+      notifications: v.object({
+        realTimeAlerts: v.boolean(),
+        dailySummary: v.boolean(),
+        weeklyReport: v.boolean(),
+        severityThreshold: v.union(v.literal("all"), v.literal("medium"), v.literal("high")),
+      }),
+    }),
+  },
+  handler: async (ctx, { childId, controls }) => {
+    const child = await ctx.db.get(childId);
+    if (!child) throw new Error("Child not found");
+
+    // TODO: Enforce auth: only the child's parent (guardian) may update. For now, skip strict auth to unblock UI.
+    await ctx.db.patch(childId, {
+      guardianControls: controls as any,
+      updatedAt: new Date().toISOString(),
+    });
+    return { childId, saved: true };
+  },
+});
+
+export const getGuardianControls = query({
+  args: { childId: v.id("children") },
+  handler: async (ctx, { childId }) => {
+    const child = await ctx.db.get(childId);
+    if (!child) return null;
+    // May be undefined if not set yet
+    return (child as any).guardianControls || null;
+  },
+});

@@ -94,76 +94,28 @@ export const generateAIResponse = action({
     const toy = conversation.toy;
     
     try {
-
-      // Step 3: Generate response with context
-      // Get recent conversation history for context
-      const recentMessages = conversation.messages?.slice(-10) || []; // Last 10 messages
-      
-      // Build detailed system prompt with toy personality
-      const traits = toy.personalityTraits || {};
-      const systemPrompt = `You are ${toy.name}, a ${toy.type} AI toy companion.
-
-PERSONALITY:
-${toy.personalityPrompt || "Friendly and helpful"}
-
-TRAITS:
-- Main traits: ${traits.traits?.join(", ") || "friendly, curious, helpful"}
-- Speaking style: ${traits.speakingStyle?.vocabulary || "moderate"} vocabulary, ${traits.speakingStyle?.sentenceLength || "medium"} sentences
-${traits.speakingStyle?.usesSoundEffects ? "- Use fun sound effects and expressions!" : ""}
-${traits.speakingStyle?.catchPhrases?.length ? `- Catchphrases: ${traits.speakingStyle.catchPhrases.join(", ")}` : ""}
-
-INTERESTS:
-${traits.interests?.join(", ") || "games, stories, learning, adventures"}
-
-BEHAVIOR:
-${traits.behavior?.encouragesQuestions ? "- Encourage questions and curiosity" : ""}
-${traits.behavior?.tellsStories ? "- Love telling stories and adventures" : ""}
-${traits.behavior?.playsGames ? "- Enjoy playing games and activities" : ""}
-- Educational focus: ${traits.behavior?.educationalFocus || 5}/10
-- Imagination level: ${traits.behavior?.imaginationLevel || 7}/10
-
-${toy.isForKids ? `CHILD SAFETY MODE:
-- You are talking to a ${toy.ageGroup || "young"} child
-- Use simple, age-appropriate language
-- Be positive, educational, and encouraging
-- Never discuss violence, scary topics, or adult themes
-- If asked about inappropriate topics, redirect to fun activities` : ``}
-
-RULES:
-- Keep responses short and conversational (2-3 sentences max)
-- Be warm, friendly, and engaging
-- Stay in character as ${toy.name}
-- Use vocabulary appropriate for ${toy.isForKids ? "children" : "general audience"}
-- Encourage learning and creativity`;
-
-      // Build message history for context
-      const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-        { role: "system", content: systemPrompt }
-      ];
-      
-      // Add recent conversation history for context (if any)
-      recentMessages.forEach(msg => {
-        if (msg.role === "user") {
-          messages.push({ role: "user", content: msg.content });
-        } else if (msg.role === "toy") {
-          messages.push({ role: "assistant", content: msg.content });
-        }
-      });
-      
-      // Add current user message
-      messages.push({ role: "user", content: args.userMessage });
-
-      // Call OpenRouter for response generation
-      const aiResponse = await ctx.runAction(api.aiServices.generateResponse, {
-        messages,
-        model: "openai/gpt-oss-120b", // Use OSS model
-        temperature: traits.behavior?.imaginationLevel 
-          ? traits.behavior.imaginationLevel / 10 
-          : 0.7,
-        maxTokens: toy.isForKids ? 150 : 300,
+      // Step 1: Get or create the canonical agent thread for this toy
+      const { threadId } = await ctx.runMutation(api.agents.getOrCreateToyThread, {
+        toyId: toy._id,
+        userId: toy.creatorId,
       });
 
-      const responseText = aiResponse.content || "I'm having trouble understanding. Can you try asking in a different way?";
+      // Step 2: Save the user's message to the agent thread
+      const { messageId } = await ctx.runMutation(api.agents.saveAudioMessage, {
+        threadId,
+        transcript: args.userMessage,
+      });
+
+      // Step 3: Generate response using the unified Agent approach
+      // Only pass promptMessageId since we already saved the message
+      const agentResult = await ctx.runAction(internal.agents.generateToyResponse, {
+        threadId,
+        toyId: toy._id,
+        promptMessageId: messageId,
+        // Don't pass prompt - the Agent will get it from promptMessageId
+      });
+
+      const responseText = agentResult.text || "I'm having trouble understanding. Can you try asking in a different way?";
       
       // Step 4: Apply safety check for kids' toys
       let finalText = responseText;
@@ -191,11 +143,15 @@ RULES:
       let format: string | undefined;
       let duration: number | undefined;
 
-      if (args.includeAudio !== false) { // Default to including audio
+      // Skip audio generation for web chat to avoid TTS issues
+      // Audio is primarily for physical toys, not web interface
+      const skipAudio = true; // Disable audio for now
+      
+      if (!skipAudio && args.includeAudio !== false) {
         try {
           const audioResponse = await ctx.runAction(api.aiServices.synthesizeSpeech, {
             text: finalText,
-            voiceId: toy.voiceId || "JBFqnCBsd6RMkjVDRZzb", // Default voice
+            voiceId: toy.voiceId || "JBFqnCBsd6RMkjVDRZzb",
             voiceSettings: {
               stability: 0.5,
               similarityBoost: 0.75,
@@ -209,8 +165,8 @@ RULES:
           format = audioResponse.format;
           duration = audioResponse.duration;
         } catch (audioError) {
-          console.error("Failed to generate audio:", audioError);
-          // Continue without audio
+          console.log("TTS skipped due to error:", audioError);
+          // Continue without audio - this is fine for web chat
         }
       }
 
@@ -238,7 +194,9 @@ RULES:
       let audioData: string | undefined;
       let format: string | undefined;
       
-      if (args.includeAudio !== false) {
+      // Skip audio for fallback as well
+      const skipAudio = true;
+      if (!skipAudio && args.includeAudio !== false) {
         try {
           const audioResponse = await ctx.runAction(api.aiServices.synthesizeSpeech, {
             text: fallbackText,
@@ -248,7 +206,7 @@ RULES:
           audioData = audioResponse.audioData;
           format = audioResponse.format;
         } catch (audioError) {
-          console.error("Failed to generate fallback audio:", audioError);
+          console.log("Fallback TTS skipped:", audioError);
         }
       }
       

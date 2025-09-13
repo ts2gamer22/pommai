@@ -38,6 +38,7 @@ interface Voice {
   isPremium?: boolean;
   tags: string[];
   uploadedBy?: string;
+  externalVoiceId?: string;
 }
 
 interface VoiceGalleryProps {
@@ -61,15 +62,17 @@ export function VoiceGallery({
   const [audioElements, setAudioElements] = useState<Map<string, HTMLAudioElement>>(new Map());
 
   // Fetch voices based on whether it's for kids
+  const queryArgs = genderFilter !== "all" || languageFilter !== "all" || ageGroupFilter !== "all"
+    ? {
+        gender: genderFilter !== "all" ? (genderFilter as 'male' | 'female' | 'neutral') : undefined,
+        language: languageFilter !== "all" ? languageFilter : undefined,
+        ageGroup: ageGroupFilter !== "all" ? ageGroupFilter : undefined,
+      }
+    : {};
+    
   const publicVoices = useQuery(
     isForKids ? api.voices.getKidsFriendlyVoices : api.voices.getPublicVoices,
-    genderFilter !== "all" || languageFilter !== "all" || ageGroupFilter !== "all"
-      ? {
-          gender: genderFilter !== "all" ? (genderFilter as 'male' | 'female' | 'neutral') : undefined,
-          language: languageFilter !== "all" ? languageFilter : undefined,
-          ageGroup: ageGroupFilter !== "all" ? ageGroupFilter : undefined,
-        }
-      : {}
+    queryArgs
   ) as Voice[] | undefined;
 
   const myVoices = useQuery(api.voices.getMyVoices) as Voice[] | undefined;

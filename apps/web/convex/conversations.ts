@@ -162,9 +162,70 @@ export const getActiveConversations = query({
       .filter(conv => {
         // Consider a conversation active if it had messages in the last hour
         const oneHourAgo = Date.now() - (60 * 60 * 1000);
-        const lastActivity = parseInt((conv as any).lastMessageAt || (conv as any).startedAt || "0");
+        const lastActivity = parseInt((conv as any).lastMessageAt || (conv as any).startedAt || (conv as any).startTime || "0");
         return lastActivity > oneHourAgo;
       });
+  },
+});
+
+// Toggle pause/resume for a conversation (Guardian control)
+export const togglePauseConversation = mutation({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, { conversationId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const conversation = await ctx.db.get(conversationId);
+    if (!conversation) throw new Error("Conversation not found");
+
+    // Only toy creator or guardian can pause
+    const toy = await ctx.db.get(conversation.toyId);
+    if (!toy) throw new Error("Toy not found");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", identity.email!))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    if (toy.creatorId !== user._id && toy.guardianId !== user._id) {
+      throw new Error("Access denied");
+    }
+
+    const isPaused = (conversation as any).isPaused === true ? false : true;
+    await ctx.db.patch(conversationId, { isPaused });
+
+    // TODO: Integrate with gateway to signal pause/resume for live device sessions.
+    return { conversationId, isPaused };
+  },
+});
+
+// Toggle monitoring visibility for a conversation (UI-only control for now)
+export const toggleMonitoring = mutation({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, { conversationId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthorized");
+
+    const conversation = await ctx.db.get(conversationId);
+    if (!conversation) throw new Error("Conversation not found");
+
+    const toy = await ctx.db.get(conversation.toyId);
+    if (!toy) throw new Error("Toy not found");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", identity.email!))
+      .first();
+    if (!user) throw new Error("User not found");
+
+    if (toy.creatorId !== user._id && toy.guardianId !== user._id) {
+      throw new Error("Access denied");
+    }
+
+    const isMonitored = (conversation as any).isMonitored === true ? false : true;
+    await ctx.db.patch(conversationId, { isMonitored });
+    return { conversationId, isMonitored };
   },
 });
 

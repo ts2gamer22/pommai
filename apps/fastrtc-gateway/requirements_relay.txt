@@ -13,6 +13,7 @@ python-dotenv==1.0.0
 # Pin loosely to avoid breakage; adjust as needed
 ElevenLabs
 requests==2.31.0
+prometheus-client==0.20.0
 
 # Optional: For development and testing
 pytest==7.4.3

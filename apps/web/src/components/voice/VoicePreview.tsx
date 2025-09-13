@@ -141,34 +141,54 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
       });
 
       if (audioResponse?.audioData) {
-        // Generate unique ID for this audio
-        const audioId = `voice-preview-${Date.now()}`;
-        currentAudioId.current = audioId;
-        
-        // Play the audio using our utility
-        await playAudio(audioResponse.audioData, {
-          id: audioId,
-          volume: volume[0] / 100,
-          cache: true,
-          onEnded: () => {
+        // Check if this is mock data
+        if (audioResponse.isMock) {
+          setError("Using mock audio (no API key configured). Configure ElevenLabs API key for real voice synthesis.");
+          // Don't try to play mock audio, just simulate
+          setIsPlaying(true);
+          setTimeout(() => {
             setIsPlaying(false);
-            currentAudioId.current = null;
-          },
-          onError: (error) => {
-            console.error("Audio playback error:", error);
-            setError("Failed to play audio. Please try again.");
-            setIsPlaying(false);
-            currentAudioId.current = null;
-          },
-        });
-        
-        setIsPlaying(true);
+          }, 2000);
+        } else {
+          // Generate unique ID for this audio
+          const audioId = `voice-preview-${Date.now()}`;
+          currentAudioId.current = audioId;
+          
+          // Play the audio using our utility
+          await playAudio(audioResponse.audioData, {
+            id: audioId,
+            volume: volume[0] / 100,
+            cache: true,
+            onEnded: () => {
+              setIsPlaying(false);
+              currentAudioId.current = null;
+            },
+            onError: (error) => {
+              console.error("Audio playback error:", error);
+              setError("Failed to play audio. Please try again.");
+              setIsPlaying(false);
+              currentAudioId.current = null;
+            },
+          });
+          
+          setIsPlaying(true);
+        }
       } else {
         throw new Error("No audio data received from TTS service");
       }
     } catch (error) {
       console.error("Error synthesizing speech:", error);
-      setError(error instanceof Error ? error.message : "Failed to generate speech. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to generate speech";
+      
+      // Provide more helpful error messages
+      if (errorMessage.includes("ELEVENLABS_API_KEY")) {
+        setError("Voice synthesis requires ElevenLabs API key. Using mock mode for testing.");
+      } else if (errorMessage.includes("Server Error")) {
+        setError("Voice service temporarily unavailable. Please try again later.");
+      } else {
+        setError(errorMessage + ". Please try again.");
+      }
+      
       setIsPlaying(false);
     } finally {
       setIsLoading(false);

@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import { Card, Button, Input } from "@pommai/ui";
 import {
   Select,
@@ -34,6 +37,16 @@ interface TimeRestriction {
 }
 
 export function SafetyControls({ childId }: SafetyControlsProps) {
+  // Load existing guardian controls (if any)
+  // Heuristic: only query Convex if childId looks like a real Convex Id (avoid mock IDs like "child-1")
+  const looksLikeConvexId = typeof childId === 'string' && (childId.includes(":") || childId.length > 15);
+  const existingControls = useQuery(
+    api.children.getGuardianControls,
+    looksLikeConvexId ? { childId: childId as Id<"children"> } : "skip"
+  );
+  const saveControls = useMutation(api.children.updateGuardianControls);
+  const [saving, setSaving] = useState(false);
+
   // Content Filtering State
   const [strictnessLevel, setStrictnessLevel] = useState<"low" | "medium" | "high">("medium");
   const [blockedTopics, setBlockedTopics] = useState<string[]>([
@@ -65,6 +78,37 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
   const [weeklyReport, setWeeklyReport] = useState(false);
   const [severityThreshold, setSeverityThreshold] = useState<"all" | "medium" | "high">("medium");
 
+  // Hydrate from backend if available
+  useEffect(() => {
+    if (existingControls) {
+      const c = existingControls as any;
+      if (c.contentFilters) {
+        setStrictnessLevel(c.contentFilters.strictnessLevel);
+        setBlockedTopics(c.contentFilters.blockedTopics || []);
+        setAllowedTopics(c.contentFilters.allowedTopics || []);
+      }
+      if (c.timeControls) {
+        setDailyLimit([c.timeControls.dailyLimit || 90]);
+        // Map timeRestrictions to include id field if missing
+        const trs = (c.timeControls.timeRestrictions || []).map((tr: any, idx: number) => ({
+          id: String(idx + 1),
+          dayType: tr.dayType,
+          startTime: tr.startTime,
+          endTime: tr.endTime,
+        }));
+        setTimeRestrictions(trs);
+        setSchoolDayRules(!!c.timeControls.schoolDayRules);
+        setWeekendRules(!!c.timeControls.weekendRules);
+      }
+      if (c.notifications) {
+        setRealTimeAlerts(!!c.notifications.realTimeAlerts);
+        setDailySummary(!!c.notifications.dailySummary);
+        setWeeklyReport(!!c.notifications.weeklyReport);
+        setSeverityThreshold(c.notifications.severityThreshold || "medium");
+      }
+    }
+  }, [existingControls]);
+
   const handleAddBlockedTopic = () => {
     if (newBlockedTopic.trim()) {
       setBlockedTopics([...blockedTopics, newBlockedTopic.trim()]);
@@ -87,13 +131,27 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
     setAllowedTopics(allowedTopics.filter(t => t !== topic));
   };
 
-  const handleSaveSettings = () => {
-    console.log("Saving safety settings:", {
-      contentFilters: { strictnessLevel, blockedTopics, allowedTopics },
-      timeControls: { dailyLimit: dailyLimit[0], timeRestrictions, schoolDayRules, weekendRules },
-      notifications: { realTimeAlerts, dailySummary, weeklyReport, severityThreshold },
-    });
-    // In production, this would save to Convex
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    try {
+      await saveControls({
+        childId: childId as Id<"children">,
+        controls: {
+          contentFilters: { strictnessLevel, blockedTopics, allowedTopics },
+          timeControls: {
+            dailyLimit: dailyLimit[0],
+            timeRestrictions: timeRestrictions.map(tr => ({ dayType: tr.dayType, startTime: tr.startTime, endTime: tr.endTime })),
+            schoolDayRules,
+            weekendRules,
+          },
+          notifications: { realTimeAlerts, dailySummary, weeklyReport, severityThreshold },
+        },
+      });
+    } catch (e) {
+      console.error("Failed to save guardian controls", e);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -425,10 +483,11 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
           borderColor="black"
           shadow="#76a83a"
           onClick={handleSaveSettings}
+          disabled={saving || !looksLikeConvexId}
           className="py-2 px-4 font-bold uppercase tracking-wider hover-lift flex items-center gap-2"
         >
           <Save className="w-4 h-4" />
-          Save Settings
+          {looksLikeConvexId ? (saving ? "Saving..." : "Save Settings") : "Connect a Child Profile"}
         </Button>
       </div>
 

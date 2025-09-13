@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Card, Button } from "@pommai/ui";
@@ -69,14 +69,23 @@ export function LiveMonitoring({ childId }: LiveMonitoringProps) {
     }
   }, [selectedConversationMessages, autoScroll]);
 
+  const togglePause = useMutation(api.conversations.togglePauseConversation);
+  const toggleMonitoring = useMutation(api.conversations.toggleMonitoring);
+
   const handlePauseConversation = async (conversationId: string) => {
-    // TODO: Implement pause functionality via Convex mutation
-    console.log("Pause conversation:", conversationId);
+    try {
+      await togglePause({ conversationId: conversationId as Id<"conversations"> });
+    } catch (e) {
+      console.error("Failed to toggle pause:", e);
+    }
   };
 
   const handleToggleMonitoring = async (conversationId: string) => {
-    // TODO: Implement monitoring toggle via Convex mutation
-    console.log("Toggle monitoring:", conversationId);
+    try {
+      await toggleMonitoring({ conversationId: conversationId as Id<"conversations"> });
+    } catch (e) {
+      console.error("Failed to toggle monitoring:", e);
+    }
   };
 
   const getSafetyBadge = (score?: number) => {
@@ -127,7 +136,7 @@ export function LiveMonitoring({ childId }: LiveMonitoringProps) {
                   <p className={`text-xs sm:text-sm font-bold uppercase tracking-wide truncate ${
                     selectedConversationId === conversation._id ? "text-white opacity-90" : "text-gray-600"
                   }`}>
-                    Started {formatDistanceToNow(new Date(parseInt(conversation.startedAt || "0")), { addSuffix: true })}
+                    Started {formatDistanceToNow(new Date(parseInt((conversation as any).startedAt || conversation.startTime || "0")), { addSuffix: true })}
                   </p>
                 </div>
                 <div className="flex flex-col gap-1 items-end flex-shrink-0">
