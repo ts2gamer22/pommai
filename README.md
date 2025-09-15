@@ -1,9 +1,6 @@
-# 🧸 Pommai - AI-Powered Companions for Children : Submission for Devpost OpenAI Open Model Hackathon
+# 🧸 Pommai - AI-Powered Companions for Children : Submission for Devpost Kiro Hackathon
 
 
-<p align="center">
-  <img src="public/pommai-logo.png" alt="Pommai Logo" width="200"/>
-</p>
 
 <p align="center">
   <strong>Where Physical Toys Meet Generative AI - Safely</strong>
@@ -143,7 +140,6 @@ A key architectural decision was to build our AI pipeline around powerful **Open
 
 #### Language Models & AI
 - **LLM Gateway**: **OpenRouter** for accessing state-of-the-art OSS models
-- **Primary Model**: Configurable LLM selection (GPT-4, Claude, open models)
 - **AI Orchestration**: `@convex-dev/agent` for conversation and RAG management
 
 #### Speech Processing
