@@ -5,11 +5,11 @@ import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { Button, Input, Card, Badge, Avatar, AvatarFallback, Tooltip, TooltipTrigger, TooltipContent } from '@pommai/ui';
-import { 
-  Send, 
-  Mic, 
-  MicOff, 
-  Volume2, 
+import {
+  Send,
+  Mic,
+  MicOff,
+  Volume2,
   VolumeX,
   AlertCircle,
   Loader2,
@@ -87,7 +87,7 @@ export function ChatInterface({ toyId, toy, isGuardianMode: _isGuardianMode = fa
     stopAllAudio();
     currentRequestIdRef.current++;
     return () => {
-      try { stopAllAudio(); } catch {}
+      try { stopAllAudio(); } catch { }
     };
   }, [toyId]);
 
@@ -162,7 +162,7 @@ export function ChatInterface({ toyId, toy, isGuardianMode: _isGuardianMode = fa
     if (!message.trim() || !isConvReady) return;
 
     // Stop any ongoing audio from previous replies to avoid overlap
-    try { stopAllAudio(); } catch {}
+    try { stopAllAudio(); } catch { }
 
     const userMessage = message.trim();
     setMessage('');
@@ -172,14 +172,14 @@ export function ChatInterface({ toyId, toy, isGuardianMode: _isGuardianMode = fa
     try {
       // Send user message
       await sendMessage({
-        conversationId: activeConversation._id,
+        conversationId: activeConversation!._id,
         content: userMessage,
         role: 'user',
       });
 
       // Generate AI response and optionally audio
       const response = await generateResponse({
-        conversationId: activeConversation._id,
+        conversationId: activeConversation!._id,
         userMessage,
         includeAudio: !isMuted,
         sessionId: `web-${Date.now()}`,
@@ -269,10 +269,10 @@ export function ChatInterface({ toyId, toy, isGuardianMode: _isGuardianMode = fa
                   content: transcript,
                   role: 'user',
                 });
-              } catch {}
+              } catch { }
 
               // Stop any ongoing audio before playing next reply
-              try { stopAllAudio(); } catch {}
+              try { stopAllAudio(); } catch { }
 
               const response = await generateResponse({
                 conversationId: activeConversation._id,
@@ -319,7 +319,7 @@ export function ChatInterface({ toyId, toy, isGuardianMode: _isGuardianMode = fa
     setIsMuted(next);
     if (next) {
       // Immediately stop any ongoing audio when muting
-      try { stopAllAudio(); } catch {}
+      try { stopAllAudio(); } catch { }
     }
   };
 
@@ -381,23 +381,22 @@ export function ChatInterface({ toyId, toy, isGuardianMode: _isGuardianMode = fa
                       {msg.role === 'user' ? <User className="w-4 h-4" /> : getToyAvatar()}
                     </AvatarFallback>
                   </Avatar>
-                  
+
                   <div className="space-y-1">
                     <div
-                      className={`rounded-lg px-4 py-2 ${
-                        msg.role === 'user'
+                      className={`rounded-lg px-4 py-2 ${msg.role === 'user'
                           ? 'bg-blue-500 text-white'
                           : 'bg-gray-100 text-gray-900'
-                      }`}
+                        }`}
                     >
                       <p className="text-sm">{msg.content}</p>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <span>
-                        {msg.timestamp && !isNaN(new Date(msg.timestamp).getTime()) 
+                        {msg.timestamp && !isNaN(new Date(msg.timestamp).getTime())
                           ? format(new Date(msg.timestamp), 'HH:mm')
-                          : msg._creationTime 
+                          : msg._creationTime
                             ? format(new Date(msg._creationTime), 'HH:mm')
                             : 'now'
                         }
@@ -414,7 +413,7 @@ export function ChatInterface({ toyId, toy, isGuardianMode: _isGuardianMode = fa
               </motion.div>
             </AnimatePresence>
           ))}
-          
+
           {isTyping && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -499,7 +498,7 @@ export function ChatInterface({ toyId, toy, isGuardianMode: _isGuardianMode = fa
             )}
           </Button>
         </div>
-        
+
         {toy?.isForKids && (
           <p className="text-xs text-gray-500 mt-2 text-center">
             Guardian Mode is active. All conversations are monitored for safety.
@@ -508,3 +507,4 @@ export function ChatInterface({ toyId, toy, isGuardianMode: _isGuardianMode = fa
       </div>
     </Card>
   );
+}
