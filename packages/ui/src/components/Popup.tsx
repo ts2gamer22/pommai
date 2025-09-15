@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 export interface PopupProps {
@@ -46,7 +46,13 @@ export const Popup = ({
   textColor,
   borderColor,
 }: PopupProps) => {
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   const svgString = useMemo(() => {
     const color = borderColor || "currentColor";
@@ -102,7 +108,8 @@ export const Popup = ({
   );
 
   // Render in a portal to avoid stacking-context and overflow issues
-  if (typeof document !== "undefined") {
+  // Only use portal after component is mounted to avoid hydration issues
+  if (typeof document !== "undefined" && mounted) {
     return createPortal(content, document.body);
   }
   return content;

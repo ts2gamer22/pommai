@@ -11,6 +11,7 @@
 import type * as agents from "../agents.js";
 import type * as aiPipeline from "../aiPipeline.js";
 import type * as aiServices from "../aiServices.js";
+import type * as alerts from "../alerts.js";
 import type * as auth from "../auth.js";
 import type * as children from "../children.js";
 import type * as conversations from "../conversations.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   agents: typeof agents;
   aiPipeline: typeof aiPipeline;
   aiServices: typeof aiServices;
+  alerts: typeof alerts;
   auth: typeof auth;
   children: typeof children;
   conversations: typeof conversations;

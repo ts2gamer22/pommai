@@ -277,14 +277,14 @@ export function DeviceStep() {
                 </p>
               </div>
 
-              <Card
+      <Card
                 bg="#ffffff"
                 borderColor="black"
                 shadowColor="#c381b5"
                 className="p-4"
               >
                 <p className="text-sm font-black text-black mb-3 uppercase tracking-wider">💻 SSH Setup:</p>
-                <div className="bg-black text-green-400 p-3 rounded font-mono text-xs overflow-x-auto">
+                <div className="bg-black text-green-400 p-3 rounded font-mono text-xs overflow-x-auto max-w-full">
                   <p># 1. SSH into your Raspberry Pi</p>
                   <p>$ ssh pi@raspberrypi.local</p>
                   <p className="text-gray-500"># Default password: raspberry</p>

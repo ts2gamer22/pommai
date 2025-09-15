@@ -191,6 +191,7 @@ const schema = defineSchema({
       sentiment: v.optional(v.string()),
       safetyScore: v.optional(v.number()),
       flagged: v.optional(v.boolean()),
+      resolved: v.optional(v.boolean()),
       topics: v.optional(v.array(v.string())),
       educationalValue: v.optional(v.number()),
       emotionalTone: v.optional(v.string()),

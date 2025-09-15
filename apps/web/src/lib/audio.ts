@@ -113,11 +113,18 @@ export async function playAudio(
     // Set up event handlers
     audio.addEventListener('ended', () => {
       activeAudioElements.delete(id);
+      // Revoke object URL for non-cached playback to avoid leaks
+      if (!cache) {
+        try { URL.revokeObjectURL(audio.src); } catch {}
+      }
       onEnded?.();
     });
     
     audio.addEventListener('error', (e) => {
       activeAudioElements.delete(id);
+      if (!cache) {
+        try { URL.revokeObjectURL(audio.src); } catch {}
+      }
       const error = new Error(`Audio playback failed: ${e.message || 'Unknown error'}`);
       console.error('Audio playback error:', error);
       onError?.(error);

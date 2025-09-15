@@ -94,29 +94,67 @@ export const generateAIResponse = action({
     const toy = conversation.toy;
     
     try {
-      // Step 1: Get or create the canonical agent thread for this toy
-      const { threadId } = await ctx.runMutation(api.agents.getOrCreateToyThread, {
-        toyId: toy._id,
-        userId: toy.creatorId,
+      // For web chat: direct stateless LLM call (simpler, avoids agent pipeline races)
+      // Compose a lightweight system prompt from toy profile
+      let systemPrompt = `You are ${toy.name}, a friendly AI toy companion.
+Personality: ${toy.personalityPrompt || "friendly and helpful"}`;
+
+      // Add speaking style and traits if available
+      const traits = (toy as any).personalityTraits as {
+        traits?: string[];
+        speakingStyle?: {
+          vocabulary?: string;
+          sentenceLength?: string;
+          usesSoundEffects?: boolean;
+          catchPhrases?: string[];
+        };
+        interests?: string[];
+        favoriteTopics?: string[];
+      } | undefined;
+
+      if (traits?.speakingStyle) {
+        const s = traits.speakingStyle;
+        const parts: string[] = [];
+        if (s.vocabulary) parts.push(`${s.vocabulary} vocabulary`);
+        if (s.sentenceLength) parts.push(`${s.sentenceLength} sentences`);
+        if (s.usesSoundEffects) parts.push(`occasionally add fun sound effects`);
+        const styleLine = parts.length ? `Style: ${parts.join(", ")}.` : "";
+        const catchLine = s.catchPhrases && s.catchPhrases.length
+          ? ` Catchphrases: ${s.catchPhrases.join(", ")}.`
+          : "";
+        systemPrompt += `\n${styleLine}${catchLine}`;
+      }
+      if (traits?.traits && traits.traits.length) {
+        systemPrompt += `\nTraits: ${traits.traits.join(", ")}`;
+      }
+
+      if (toy.isForKids) {
+        systemPrompt += `
+
+IMPORTANT RULES FOR CHILDREN:
+- Use simple, age-appropriate language
+- Keep responses short (2-3 sentences maximum)
+- Be positive, encouraging, and educational
+- Never discuss inappropriate topics
+- Redirect to fun activities if asked about adult topics
+- Use excitement and wonder in your responses`;
+      }
+      if (traits?.interests && traits.interests.length > 0) {
+        systemPrompt += `
+Interests: ${traits.interests.join(", ")}`;
+      }
+
+      const llmResp = await ctx.runAction(api.aiServices.generateResponse, {
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: args.userMessage },
+        ],
+        model: "openai/gpt-oss-120b",
+        temperature: 0.7,
+        maxTokens: toy.isForKids ? 150 : 500,
       });
 
-      // Step 2: Save the user's message to the agent thread
-      const { messageId } = await ctx.runMutation(api.agents.saveAudioMessage, {
-        threadId,
-        transcript: args.userMessage,
-      });
-
-      // Step 3: Generate response using the unified Agent approach
-      // Only pass promptMessageId since we already saved the message
-      const agentResult = await ctx.runAction(internal.agents.generateToyResponse, {
-        threadId,
-        toyId: toy._id,
-        promptMessageId: messageId,
-        includeKnowledge: true,
-        // Don't pass prompt - the Agent will get it from promptMessageId
-      });
-
-      const responseText = agentResult.text || "I'm having trouble understanding. Can you try asking in a different way?";
+      const responseText = (llmResp && (llmResp as any).content) || "I'm having trouble understanding. Can you try asking in a different way?";
       
       // Step 4: Apply safety check for kids' toys
       let finalText = responseText;
@@ -144,11 +182,10 @@ export const generateAIResponse = action({
       let format: string | undefined;
       let duration: number | undefined;
 
-      // Skip audio generation for web chat to avoid TTS issues
-      // Audio is primarily for physical toys, not web interface
-      const skipAudio = true; // Disable audio for now
+      // Generate audio only when explicitly requested by the client
+      const generateAudio = args.includeAudio === true;
       
-      if (!skipAudio && args.includeAudio !== false) {
+      if (generateAudio) {
         try {
           const audioResponse = await ctx.runAction(api.aiServices.synthesizeSpeech, {
             text: finalText,
@@ -167,7 +204,7 @@ export const generateAIResponse = action({
           duration = audioResponse.duration;
         } catch (audioError) {
           console.log("TTS skipped due to error:", audioError);
-          // Continue without audio - this is fine for web chat
+          // Continue without audio
         }
       }
 

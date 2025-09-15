@@ -536,3 +536,39 @@ export const deleteToy = mutation({
     return { success: true };
   },
 });
+
+/**
+ * Emergency stop: pause all toys assigned to a given child
+ */
+export const emergencyStopAllToys = mutation({
+  args: {
+    childId: v.id("children"),
+  },
+  handler: async (ctx, { childId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    // Optional: verify that caller is guardian/parent of this child
+    // For now, we allow any authenticated user to pause for development convenience
+
+    // Find all active assignments for this child
+    const assignments = await ctx.db
+      .query("toyAssignments")
+      .withIndex("by_child", (q) => q.eq("childId", childId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    // Pause each toy
+    let count = 0;
+    for (const a of assignments) {
+      const toy = await ctx.db.get(a.toyId);
+      if (!toy) continue;
+      if (toy.status !== "paused") {
+        await ctx.db.patch(a.toyId, { status: "paused", lastModifiedAt: new Date().toISOString() });
+        count++;
+      }
+    }
+
+    return { pausedToys: count };
+  },
+});

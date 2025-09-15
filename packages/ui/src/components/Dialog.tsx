@@ -117,12 +117,17 @@ export const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps
   ...props
 }, ref) => {
   const context = React.useContext(DialogContext);
+  const [mounted, setMounted] = React.useState(false);
   
   if (!context) {
     throw new Error("DialogContent must be used within a Dialog");
   }
 
   const { open, onOpenChange } = context;
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const svgString = useMemo(() => {
     const color = borderColor || "#000000";
@@ -172,7 +177,7 @@ export const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const content = (
     <div
@@ -211,7 +216,8 @@ export const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps
   );
 
   // Render in a portal to avoid stacking-context issues
-  if (typeof document !== "undefined") {
+  // Only use portal after component is mounted to avoid hydration issues
+  if (typeof document !== "undefined" && mounted) {
     return createPortal(content, document.body);
   }
   return content;

@@ -45,19 +45,7 @@ export default function DashboardPage() {
                 <span className="font-geo text-black font-bold text-xs sm:text-sm uppercase tracking-wider">Welcome!</span>
               </div>
               <div className="flex items-center gap-2 sm:gap-3">
-                <Button
-                  bg="#c381b5"
-                  textColor="white"
-                  borderColor="black"
-                  shadow="#8b5fa3"
-                  className="py-2 px-2 sm:px-4 text-xs sm:text-sm font-minecraft font-black uppercase tracking-wider hover-lift"
-                  onClick={() => router.push('/dashboard/history')}
-                >
-                  <span className="flex items-center gap-1 sm:gap-2">
-                    <span>📜</span>
-                    <span className="hidden sm:inline">History</span>
-                  </span>
-                </Button>
+
                 <Button 
                   bg="#ff6b6b"
                   textColor="white"
@@ -282,20 +270,7 @@ export default function DashboardPage() {
             </TabsContent>
           )}
 
-          <TabsContent value="history">
-            <Card 
-              bg="#ffffff" 
-              borderColor="black" 
-              shadowColor="#c381b5"
-              className="p-6"
-            >
-              <h2 className="font-minecraft text-xl sm:text-2xl font-black mb-6">Interaction History</h2>
-              <div className="text-center py-12 text-gray-500">
-                <p className="font-geo">No interactions recorded yet.</p>
-                <p className="font-geo mt-2">Voice interactions will appear here once your child starts using Pommai.</p>
-              </div>
-            </Card>
-          </TabsContent>
+
 
           <TabsContent value="settings">
             <div className="max-w-5xl mx-auto space-y-8">

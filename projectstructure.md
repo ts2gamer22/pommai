@@ -71,8 +71,6 @@ C:/Users/Admin/Desktop/pommai
 │   │   │   ├── dashboard
 │   │   │   │   ├── chat
 │   │   │   │   │   └── page.tsx
-│   │   │   │   ├── history
-│   │   │   │   │   └── page.tsx
 │   │   │   │   └── page.tsx
 │   │   │   ├── demo
 │   │   │   │   └── page.tsx
@@ -106,11 +104,7 @@ C:/Users/Admin/Desktop/pommai
 │       │   │   │   │   └── WelcomeStep.tsx
 │       │   │   │   ├── MyToysGrid.tsx
 │       │   │   │   └── ToyWizard.tsx
-│       │   │   ├── history
-│       │   │   │   ├── ConversationViewer.tsx
-│       │   │   │   ├── ConversationList.tsx
-│       │   │   │   ├── ConversationAnalytics.tsx
-│       │   │   │   └── ConversationDetails.tsx
+
 │       │   │   ├── guardian
 │       │   │   │   ├── GuardianDashboard.tsx
 │       │   │   │   ├── SafetyControls.tsx
@@ -154,8 +148,7 @@ C:/Users/Admin/Desktop/pommai
 │       │   │       └── protocol.ts
 │       │   ├── stores
 │       │   │   └── toyWizardStore.ts
-│       │   ├── types
-│       │   │   └── history.ts
+
 │       │   └── middleware.ts
 │       ├── .gitignore
 │       ├── eslint.config.mjs

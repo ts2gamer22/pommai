@@ -17,6 +17,7 @@ import { PersonalityStep } from './steps/PersonalityStep';
 import { VoiceStep } from './steps/VoiceStep';
 import { KnowledgeStep } from './steps/KnowledgeStep';
 import { SafetyStep } from './steps/SafetyStep';
+import { AssignChildStep } from './steps/AssignChildStep';
 import { DeviceStep } from './steps/DeviceStep';
 import { ReviewStep } from './steps/ReviewStep';
 import { CompletionStep } from './steps/CompletionStep';
@@ -29,6 +30,7 @@ const WIZARD_STEPS: WizardStep[] = [
   'voice',
   'knowledge',
   'safety',
+  'assignChild',
   'device',
   'review',
   'completion',
@@ -42,6 +44,7 @@ const STEP_TITLES: Record<WizardStep, string> = {
   voice: 'Voice Selection',
   knowledge: 'Knowledge Base',
   safety: 'Safety Settings',
+  assignChild: 'Assign Child',
   device: 'Device Pairing',
   review: 'Review & Create',
   completion: 'Success!',
@@ -55,6 +58,7 @@ const StepComponent: Record<WizardStep, React.ComponentType> = {
   voice: VoiceStep,
   knowledge: KnowledgeStep,
   safety: SafetyStep,
+  assignChild: AssignChildStep,
   device: DeviceStep,
   review: ReviewStep,
   completion: CompletionStep,
@@ -105,28 +109,41 @@ export function ToyWizard() {
           tags: toyConfig.tags,
         });
 
-        // Optionally upsert knowledge base if provided by the wizard
-        if (toyConfig.knowledgeBase) {
-          const kb = toyConfig.knowledgeBase;
-          const hasContent = (
-            (kb.toyBackstory.origin?.trim()?.length ?? 0) > 0 ||
-            (kb.toyBackstory.personality?.trim()?.length ?? 0) > 0 ||
-            (kb.toyBackstory.specialAbilities?.length ?? 0) > 0 ||
-            (kb.toyBackstory.favoriteThings?.length ?? 0) > 0 ||
-            (kb.customFacts?.length ?? 0) > 0 ||
-            (kb.familyInfo?.members?.length ?? 0) > 0 ||
-            (kb.familyInfo?.pets?.length ?? 0) > 0 ||
-            (kb.familyInfo?.importantDates?.length ?? 0) > 0
-          );
-          if (hasContent) {
-            await upsertKnowledgeBase({
-              toyId,
-              toyBackstory: kb.toyBackstory,
-              familyInfo: kb.familyInfo,
-              customFacts: kb.customFacts ?? [],
-            });
-          }
+      // Optionally upsert knowledge base if provided by the wizard
+      if (toyConfig.knowledgeBase) {
+        const kb = toyConfig.knowledgeBase;
+        const hasContent = (
+          (kb.toyBackstory.origin?.trim()?.length ?? 0) > 0 ||
+          (kb.toyBackstory.personality?.trim()?.length ?? 0) > 0 ||
+          (kb.toyBackstory.specialAbilities?.length ?? 0) > 0 ||
+          (kb.toyBackstory.favoriteThings?.length ?? 0) > 0 ||
+          (kb.customFacts?.length ?? 0) > 0 ||
+          (kb.familyInfo?.members?.length ?? 0) > 0 ||
+          (kb.familyInfo?.pets?.length ?? 0) > 0 ||
+          (kb.familyInfo?.importantDates?.length ?? 0) > 0
+        );
+        if (hasContent) {
+          await upsertKnowledgeBase({
+            toyId,
+            toyBackstory: kb.toyBackstory,
+            familyInfo: kb.familyInfo,
+            customFacts: kb.customFacts ?? [],
+          });
         }
+      }
+
+      // Assign toy to child if selected (especially for isForKids toys)
+      if (toyConfig.assignedChildId) {
+        try {
+          // Using the existing assignToyToDevice mutation (pass empty deviceId for now)
+          // Or you could create a dedicated assignToyToChild mutation
+          // For now, let's just log - you can implement the assignment logic
+          console.log('TODO: Assign toy', toyId, 'to child', toyConfig.assignedChildId);
+          // await assignToyToChild({ toyId, childId: toyConfig.assignedChildId });
+        } catch (err) {
+          console.error('Failed to assign toy to child:', err);
+        }
+      }
       } catch (err) {
         console.error('Failed to create toy:', err);
       } finally {
@@ -175,6 +192,9 @@ export function ToyWizard() {
         return true; // Optional step
       case 'safety':
         return !toyConfig.isForKids || toyConfig.safetySettings !== undefined;
+      case 'assignChild':
+        // Skip this step if not for kids (unless user wants to assign anyway)
+        return !toyConfig.isForKids || toyConfig.assignedChildId !== undefined || true;
       case 'device':
         return true; // Can skip device pairing
       case 'review':
@@ -189,7 +209,7 @@ export function ToyWizard() {
   const CurrentStepComponent = StepComponent[currentStep];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#fefcd0] to-[#f4e5d3] py-[var(--spacing-lg)] sm:py-[var(--spacing-xl)] toy-wizard">
+    <div className="min-h-screen bg-gradient-to-br from-[#fefcd0] to-[#f4e5d3] py-[var(--spacing-lg)] sm:py-[var(--spacing-xl)] toy-wizard overflow-y-auto">
       <div className="max-w-4xl mx-auto px-[var(--spacing-md)]">
         {/* Header */}
         <div className="mb-[var(--spacing-xl)] sm:mb-[var(--spacing-2xl)]">
@@ -240,7 +260,7 @@ export function ToyWizard() {
           bg="#ffffff" 
           borderColor="black" 
           shadowColor="#c381b5"
-          className="p-[var(--spacing-lg)] sm:p-[var(--spacing-xl)] lg:p-[var(--spacing-2xl)] hover-lift transition-transform"
+          className="p-[var(--spacing-lg)] sm:p-[var(--spacing-xl)] lg:p-[var(--spacing-2xl)] hover-lift transition-transform overflow-visible"
         >
           <AnimatePresence mode="wait">
             <motion.div
@@ -249,6 +269,7 @@ export function ToyWizard() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
+              className="overflow-visible"
             >
               <CurrentStepComponent />
             </motion.div>

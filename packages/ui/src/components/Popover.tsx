@@ -129,12 +129,17 @@ export const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentPro
   const context = React.useContext(PopoverContext);
   const contentRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [mounted, setMounted] = useState(false);
   
   if (!context) {
     throw new Error("PopoverContent must be used within a Popover");
   }
 
   const { open, onOpenChange, triggerRef } = context;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const svgString = useMemo(() => {
     const color = borderColor || "#000000";
@@ -257,7 +262,7 @@ export const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentPro
     };
   }, [open, onOpenChange, onPointerDownOutside, onEscapeKeyDown]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const customStyle = {
     "--popover-bg": bg,
@@ -298,7 +303,8 @@ export const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentPro
   );
 
   // Render in a portal for proper stacking
-  if (typeof document !== "undefined") {
+  // Only use portal after component is mounted to avoid hydration issues
+  if (typeof document !== "undefined" && mounted) {
     return createPortal(content, document.body);
   }
   return content;

@@ -140,6 +140,7 @@ function ChatPageInner() {
                 
                 <TabsContent value="chat" className="mt-4">
                   <ChatInterface
+                    key={selectedToy._id}
                     toyId={selectedToy._id}
                     toy={selectedToy}
                     isGuardianMode={selectedToy.isForKids}

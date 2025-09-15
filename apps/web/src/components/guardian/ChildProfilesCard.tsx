@@ -1,7 +1,9 @@
 'use client';
 
-import { Card, ProgressBar } from '@pommai/ui';
-import { Users } from 'lucide-react';
+import { useState } from 'react';
+import { Card, ProgressBar, Button } from '@pommai/ui';
+import { Users, Plus } from 'lucide-react';
+import { CreateChildDialog } from './CreateChildDialog';
 
 interface ChildProfile {
   id: string;
@@ -24,6 +26,7 @@ export function ChildProfilesCard({
   selectedChildId, 
   onChildSelect 
 }: ChildProfilesCardProps) {
+  const [showCreate, setShowCreate] = useState(false);
   const selectedChild = profiles.find(c => c.id === selectedChildId) || profiles[0];
 
   return (
@@ -33,10 +36,23 @@ export function ChildProfilesCard({
       shadowColor="#c381b5"
       className="p-4 sm:p-6 hover-lift transition-transform"
     >
-      <h2 className="text-xl font-black mb-4 uppercase tracking-wider text-black flex items-center gap-2">
-        <Users className="w-5 h-5" />
-        👨‍👩‍👧‍👦 Your Children
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-black uppercase tracking-wider text-black flex items-center gap-2">
+          <Users className="w-5 h-5" />
+          👨‍👩‍👧‍👦 Your Children
+        </h2>
+        <Button
+          bg="#92cd41"
+          textColor="white"
+          borderColor="black"
+          shadow="#76a83a"
+          onClick={() => setShowCreate(true)}
+          className="py-2 px-3 font-black uppercase tracking-wider hover-lift text-xs sm:text-sm flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Add Child
+        </Button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {profiles.map((child) => (
           <Card
@@ -98,6 +114,16 @@ export function ChildProfilesCard({
           </Card>
         ))}
       </div>
+
+      {/* Create Child Dialog */}
+      <CreateChildDialog
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={(id) => {
+          onChildSelect(id);
+          setShowCreate(false);
+        }}
+      />
     </Card>
   );
 }

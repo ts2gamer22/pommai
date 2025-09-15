@@ -190,6 +190,10 @@
 }
 */
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -197,6 +201,8 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  min-height: 100vh;
 }
 
 /* Typography System */
@@ -476,4 +482,38 @@ body {
 
 .tab-pixel[data-state="active"]::after {
   transform: scaleX(1);
+}
+
+/* Custom scrollbar styles for better visibility */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--pommai-cream);
+  border: 2px solid var(--pommai-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--pommai-purple);
+  border: 2px solid var(--pommai-black);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--pommai-green);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pommai-purple) var(--pommai-cream);
+}
+
+/* Ensure wizard steps can scroll */
+.toy-wizard {
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
 }

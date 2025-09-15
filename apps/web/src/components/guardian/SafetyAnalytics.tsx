@@ -100,14 +100,6 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
 
   const { avgMinutes, totalConversations, totalMessages, flaggedCount, sentiment, activityData, topicsDistribution } = calculatedData;
 
-  // Mock emotional insights for now (since it's not in the backend yet)
-  const emotionalInsights = [
-    { emotion: "Happy", percentage: 65 },
-    { emotion: "Curious", percentage: 20 },
-    { emotion: "Neutral", percentage: 10 },
-    { emotion: "Frustrated", percentage: 5 },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Header with filters */}
@@ -296,38 +288,13 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
             <Heart className="w-5 h-5 text-pink-600" />
             💖 Emotional Well-being Insights
           </h4>
-          <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-green-600 bg-green-100 text-green-600">
-            Healthy
+          <span className="px-2 py-1 text-xs font-black uppercase tracking-wider border border-gray-600 bg-gray-100 text-gray-800">
+            Coming Soon
           </span>
         </div>
-        <div className="space-y-4">
-          {emotionalInsights.map((emotion: { emotion: string; percentage: number }) => (
-            <div key={emotion.emotion}>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-black uppercase tracking-wider text-black">{emotion.emotion}</span>
-                <span className="text-sm font-bold text-gray-700">{emotion.percentage}%</span>
-              </div>
-              <ProgressBar 
-                progress={emotion.percentage} 
-                color="#c381b5"
-                borderColor="black"
-                className="h-2 shadow-[0_2px_0_1px_rgba(0,0,0,0.3)]"
-              />
-            </div>
-          ))}
+        <div className="text-sm font-bold uppercase tracking-wide text-gray-700">
+          This dashboard section will show AI-derived emotional insights from recent conversations.
         </div>
-        <Card
-          bg="#e1f5fe"
-          borderColor="blue"
-          shadowColor="#2196f3"
-          className="mt-4 p-4"
-        >
-          <p className="text-sm font-bold text-blue-800">
-            <strong>🤖 AI Insight:</strong> Your child shows healthy emotional patterns with
-            predominantly positive interactions. The curiosity level indicates good engagement
-            with educational content.
-          </p>
-        </Card>
       </Card>
 
       {/* Learning Progress */}

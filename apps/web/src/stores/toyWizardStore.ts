@@ -12,6 +12,7 @@ export type WizardStep =
   | 'voice'
   | 'knowledge'
   | 'safety'
+  | 'assignChild'
   | 'device'
   | 'review'
   | 'completion';
@@ -92,6 +93,9 @@ interface ToyConfig {
   type: string;
   isForKids: boolean;
   ageGroup?: '3-5' | '6-8' | '9-12';
+  
+  // Assignment (optional)
+  assignedChildId?: string;
   
   // Voice
   voiceId: string;
@@ -188,7 +192,8 @@ const stepDependencies: Record<WizardStep, WizardStep[]> = {
   voice: ['personality'],
   knowledge: ['voice'],
   safety: ['knowledge'],
-  device: ['safety'],
+  assignChild: ['safety'],
+  device: ['assignChild'],
   review: ['device'],
   completion: ['review'],
 };
