@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 3000",
-    "build": "next build && mkdir -p apps/web/.next && cp .next/routes-manifest.json apps/web/.next/ 2>/dev/null || true",
+    "build": "next build",
     "start": "next start -p 3000",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
