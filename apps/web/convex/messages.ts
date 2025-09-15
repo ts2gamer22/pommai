@@ -112,6 +112,7 @@ export const generateAIResponse = action({
         threadId,
         toyId: toy._id,
         promptMessageId: messageId,
+        includeKnowledge: true,
         // Don't pass prompt - the Agent will get it from promptMessageId
       });
 

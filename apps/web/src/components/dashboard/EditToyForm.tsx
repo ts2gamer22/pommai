@@ -2,7 +2,7 @@
 
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { type Doc } from '../../../convex/_generated/dataModel';
 import { Button, Card, Popup } from '@pommai/ui';
@@ -25,7 +25,7 @@ interface EditToyFormProps {
 
 export function EditToyForm({ toy }: EditToyFormProps) {
   const router = useRouter();
-  const { toyConfig, setToyConfig, resetWizard } = useToyWizardStore();
+  const { toyConfig, setToyConfig, resetWizard, updateToyConfig } = useToyWizardStore();
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +33,12 @@ export function EditToyForm({ toy }: EditToyFormProps) {
   
   const updateToyMutation = useMutation(api.toys.updateToy);
   const deleteToyMutation = useMutation(api.toys.deleteToy);
+
+  // Fetch the toy's knowledge base document if it exists
+  const knowledgeBaseDoc = useQuery(
+    api.knowledgeBase.getKnowledgeBase,
+    toy.knowledgeBaseId ? { toyId: toy._id } : 'skip'
+  );
 
   // When the component mounts, populate the wizard's store with the toy's data
   useEffect(() => {
@@ -71,7 +77,6 @@ export function EditToyForm({ toy }: EditToyFormProps) {
           customBlockedTopics: [],
         },
       } : undefined,
-      knowledgeBase: (toy as any).knowledgeBase,
       isPublic: toy.isPublic,
       tags: toy.tags || [],
     });
@@ -81,6 +86,36 @@ export function EditToyForm({ toy }: EditToyFormProps) {
       resetWizard();
     };
   }, [toy, setToyConfig, resetWizard]);
+
+  // Synchronize the store's knowledgeBase with the fetched document
+  useEffect(() => {
+    // If the toy has no associated knowledge base, ensure the store reflects that
+    if (!toy.knowledgeBaseId) {
+      updateToyConfig('knowledgeBase', undefined);
+      return;
+    }
+
+    // When the query is skipped or still loading, do nothing yet
+    if (knowledgeBaseDoc === undefined) return;
+
+    // No KB found for this toy
+    if (knowledgeBaseDoc === null) {
+      updateToyConfig('knowledgeBase', undefined);
+      return;
+    }
+
+    // Map the Convex KB doc to the store's KnowledgeBase shape (omit non-UI fields)
+    updateToyConfig('knowledgeBase', {
+      toyBackstory: {
+        origin: knowledgeBaseDoc.toyBackstory.origin,
+        personality: knowledgeBaseDoc.toyBackstory.personality,
+        specialAbilities: knowledgeBaseDoc.toyBackstory.specialAbilities,
+        favoriteThings: knowledgeBaseDoc.toyBackstory.favoriteThings,
+      },
+      familyInfo: knowledgeBaseDoc.familyInfo,
+      customFacts: knowledgeBaseDoc.customFacts,
+    });
+  }, [toy.knowledgeBaseId, knowledgeBaseDoc, updateToyConfig]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -168,7 +203,18 @@ export function EditToyForm({ toy }: EditToyFormProps) {
           <span className="text-2xl">🎤</span>
           Voice Settings
         </h2>
-        <VoiceStep />
+        <VoiceStep
+          toyId={toy._id as any}
+          onConfirmVoice={async (voiceId: string, voiceName?: string) => {
+            try {
+              await updateToyMutation({ toyId: toy._id as any, voiceId });
+              updateToyConfig('voiceId', voiceId);
+              if (voiceName) updateToyConfig('voiceName', voiceName);
+            } catch (e) {
+              console.warn('Failed to persist voice selection:', e);
+            }
+          }}
+        />
       </Card>
 
       {/* Knowledge Base */}

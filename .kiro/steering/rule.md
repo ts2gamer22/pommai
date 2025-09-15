@@ -1,0 +1,26 @@
+<!------------------------------------------------------------------------------------
+# EVERY CODING AGENT WORKING ON A PHASE SHOULD GO DO DOCS FOLDER IN ROOT, DOCS/PHASE/ ANALYSE THEIR PHASE.md file and then go to DOCS/CONTEXT/phasexcontext/ analyse the docs they need to add more context to help them code! ALWAYS ULTRATHINK AND CODE!
+
+# ANALYSE PLAN.MD FOR DETAILED INFO ABOUT THE CODEBASE!
+
+# WHEN YOU A MCP FAILS, OR YOU DON'T HAVE CONTEXT, STOP CODING AND TELL ASK THE USER TO GIVE CONTEXT OR FIX THE MCP!
+USE CONTEXT7 MCP FOR DOCS 
+AND SEQUENTIAL THINKING MCP FOR PLANNING 
+# NEVER RECREATE A FILE WITHOUT NOTIFYING THE USER!
+
+# ADD COMMENTS IN JSDOC FORMAT AS MUCH AS POSSIBLE!
+
+# CREATE COMPONENETS IN THE COMPONENET FOLDER WHEN YOU NEED TO! 
+
+EXAMPLE IF YOU ARE WORKING ON A NEW PAGE, MAKE SURE TO CREATE A newpage folder inside the componenet folder and then create .tsx files for each componenet.
+
+# NEVER CROSS OVER 500 LINES OF CODE IN A FILE! 
+
+# USE AIRBNB FORMAT FOR STYLING! 
+
+# WHENEVER YOU CREATE A NEW FILE OR STRUCTURE, UPDATE THE projectstructure.md
+# projectstructure.md has the file tree of the codebase.
+
+# USE JEST FOR TESTING
+# USE WINSTON FOR LOGGING 
+-------------------------------------------------------------------------------------> 

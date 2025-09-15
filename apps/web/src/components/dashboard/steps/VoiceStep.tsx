@@ -12,7 +12,12 @@ import { api } from '../../../../convex/_generated/api';
 
 type ViewMode = 'selection' | 'upload' | 'preview';
 
-export function VoiceStep() {
+interface VoiceStepProps {
+  toyId?: string;
+  onConfirmVoice?: (voiceId: string, voiceName?: string) => Promise<void> | void;
+}
+
+export function VoiceStep({ toyId, onConfirmVoice }: VoiceStepProps) {
   const { toyConfig, updateToyConfig } = useToyWizardStore();
   const [selectedVoice, setSelectedVoice] = useState<{ 
     _id?: string; 
@@ -305,9 +310,16 @@ export function VoiceStep() {
                   textColor="white"
                   borderColor="black"
                   shadow="#76a83a"
-                  onClick={() => {
-                    // Voice is already saved, just show confirmation
-                    setViewMode('selection');
+                  onClick={async () => {
+                    try {
+                      if (onConfirmVoice && selectedVoice?.externalVoiceId) {
+                        await onConfirmVoice(selectedVoice.externalVoiceId, selectedVoice.name);
+                      }
+                    } catch (e) {
+                      console.warn('Persisting voice failed (non-blocking):', e);
+                    } finally {
+                      setViewMode('selection');
+                    }
                   }}
                 >
                   <Volume2 className="w-4 h-4 mr-2" />

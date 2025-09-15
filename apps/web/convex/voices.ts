@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { betterAuthComponent } from "./auth";
 
 /**
  * Get all public voices available in the library
@@ -52,9 +53,15 @@ export const getMyVoices = query({
       return [];
     }
 
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
+      return [];
+    }
+
     const voices = await ctx.db
       .query("voices")
-      .withIndex("by_uploader", (q) => q.eq("uploadedBy", identity.subject as any))
+      .withIndex("by_uploader", (q) => q.eq("uploadedBy", userId as any))
       .collect();
 
     return voices;
@@ -76,7 +83,12 @@ export const getVoice = query({
     // Check access permissions
     if (!voice.isPublic) {
       const identity = await ctx.auth.getUserIdentity();
-      if (!identity || voice.uploadedBy !== identity.subject) {
+      if (!identity) {
+        throw new Error("Access denied");
+      }
+      
+      const userId = await betterAuthComponent.getAuthUserId(ctx);
+      if (!userId || voice.uploadedBy !== userId) {
         throw new Error("Access denied");
       }
     }
@@ -107,6 +119,12 @@ export const createCustomVoice = mutation({
       throw new Error("Not authenticated");
     }
 
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
     const voiceId = await ctx.db.insert("voices", {
       name: args.name,
       description: args.description,
@@ -120,7 +138,7 @@ export const createCustomVoice = mutation({
       tags: args.tags,
       isPremium: false,
       isPublic: args.isPublic,
-      uploadedBy: identity.subject as any,
+      uploadedBy: userId as any,
       usageCount: 0,
       averageRating: 0,
       createdAt: new Date().toISOString(),
@@ -154,8 +172,14 @@ export const updateVoice = mutation({
       throw new Error("Not authenticated");
     }
 
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
     // Only the uploader can update their voice
-    if (voice.uploadedBy !== identity.subject) {
+    if (voice.uploadedBy !== userId) {
       throw new Error("Only the voice owner can update it");
     }
 
@@ -183,8 +207,14 @@ export const deleteVoice = mutation({
       throw new Error("Not authenticated");
     }
 
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
     // Only the uploader can delete their voice
-    if (voice.uploadedBy !== identity.subject) {
+    if (voice.uploadedBy !== userId) {
       throw new Error("Only the voice owner can delete it");
     }
 

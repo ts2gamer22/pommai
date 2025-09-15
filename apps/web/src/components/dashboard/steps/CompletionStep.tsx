@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useToyWizardStore } from '@/stores/toyWizardStore';
-import { useToysStore, ToyType } from '@/stores/useToysStore';
 import { Button, Card } from '@pommai/ui';
 import { 
   CheckCircle2, 
@@ -27,32 +26,9 @@ import confetti from 'canvas-confetti';
 export function CompletionStep() {
   const router = useRouter();
   const { toyConfig, resetWizard } = useToyWizardStore();
-  const { addToy } = useToysStore();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    // Add the newly created toy to the toys store
-      const newToy = {
-      _id: `toy_${Date.now()}`, // Generate a temporary ID
-      name: toyConfig.name,
-      type: toyConfig.type as unknown as ToyType,
-      status: 'active' as const,
-      isForKids: toyConfig.isForKids,
-      voiceId: toyConfig.voiceId,
-      voiceName: toyConfig.voiceName,
-      personalityPrompt: toyConfig.personalityPrompt,
-      isPublic: toyConfig.isPublic,
-      tags: toyConfig.tags,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      conversationCount: 0,
-      messageCount: 0,
-      lastActiveAt: undefined,
-      deviceId: undefined,
-    };
-    
-    addToy(newToy);
-    
     // Trigger confetti animation
     const duration = 3 * 1000;
     const animationEnd = Date.now() + duration;

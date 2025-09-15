@@ -44,8 +44,8 @@ export const DropdownMenu = ({
   borderColor,
   shadowColor,
   style,
-  ...props
-}: DropdownMenuProps): JSX.Element => {
+...props
+}: DropdownMenuProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [triggerWidth, setTriggerWidth] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -107,6 +107,7 @@ export interface DropdownMenuTriggerProps
   textColor?: string;
   shadow?: string;
   borderColor?: string;
+  asChild?: boolean;
 }
 
 export const DropdownMenuTrigger = ({
@@ -117,8 +118,9 @@ export const DropdownMenuTrigger = ({
   shadow,
   borderColor,
   style,
-  ...props
-}: DropdownMenuTriggerProps): JSX.Element => {
+  asChild = false,
+...props
+}: DropdownMenuTriggerProps) => {
   const context = useContext(DropdownContext);
 
   const handleClick = () => {
@@ -146,6 +148,24 @@ export const DropdownMenuTrigger = ({
     "--button-custom-border": borderColor,
     borderImageSource: svgString,
   } as CSSProperties;
+
+  // If asChild is true, clone the child element with the required props
+  if (asChild && React.isValidElement(children)) {
+    const childProps = children.props as any;
+return React.cloneElement(children as React.ReactElement, {
+      ...childProps,
+ref: context?.setTriggerRef as any,
+      onClick: (e: React.MouseEvent) => {
+        handleClick();
+        if (childProps.onClick) {
+          childProps.onClick(e);
+        }
+      },
+      className: `${childProps.className || ''} dropdown-menu-trigger ${className}`,
+style: { ...(childProps.style || {}), ...customStyle },
+      ...props,
+    });
+  }
 
   return (
     <button
@@ -187,8 +207,8 @@ export const DropdownMenuContent = ({
   borderColor,
   shadowColor,
   style,
-  ...props
-}: DropdownMenuContentProps): JSX.Element | null => {
+...props
+}: DropdownMenuContentProps) => {
   const context = useContext(DropdownContext);
 
   const borderSvg = useMemo(() => {
@@ -226,7 +246,7 @@ export const DropdownMenuLabel = ({
 }: {
   children: React.ReactNode;
   className?: string;
-}): JSX.Element => (
+}) => (
   <div className={`dropdown-menu-label ${className}`}>{children}</div>
 );
 
@@ -236,7 +256,7 @@ export const DropdownMenuItem = ({
 }: {
   children: React.ReactNode;
   className?: string;
-}): JSX.Element => (
+}) => (
   <div className={`dropdown-menu-item ${className}`}>{children}</div>
 );
 
@@ -244,6 +264,6 @@ export const DropdownMenuSeparator = ({
   className = "",
 }: {
   className?: string;
-}): JSX.Element => (
+}) => (
   <div className={`dropdown-menu-separator ${className}`} />
 );

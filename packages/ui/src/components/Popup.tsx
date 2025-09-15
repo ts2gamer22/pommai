@@ -45,7 +45,7 @@ export const Popup = ({
   overlayBg,
   textColor,
   borderColor,
-}: PopupProps): JSX.Element | null => {
+}: PopupProps) => {
   if (!isOpen) return null;
 
   const svgString = useMemo(() => {

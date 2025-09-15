@@ -42,6 +42,62 @@ function getOpenRouter() {
   return openrouter;
 }
 
+// Cache for ElevenLabs voice existence checks to avoid extra API calls
+const VOICE_CHECK_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const voiceExistenceCache = new Map<string, number>();
+
+async function preflightElevenVoice(voiceId: string, apiKey: string): Promise<void> {
+  const now = Date.now();
+  const cachedAt = voiceExistenceCache.get(voiceId);
+  if (cachedAt && (now - cachedAt) < VOICE_CHECK_TTL_MS) {
+    return; // Recently verified
+  }
+  const res = await fetch(`https://api.elevenlabs.io/v1/voices/${voiceId}`, {
+    headers: {
+      'xi-api-key': apiKey,
+      'Accept': 'application/json',
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    if (res.status === 401) {
+      throw new Error("ElevenLabs API key is invalid. Please check ELEVENLABS_API_KEY.");
+    } else if (res.status === 403) {
+      throw new Error(`You do not have access to voice '${voiceId}'. Check your plan/permissions. Details: ${text}`);
+    } else if (res.status === 404) {
+      throw new Error(`Voice '${voiceId}' not found on ElevenLabs. Please select a valid voice.`);
+    } else if (res.status === 429) {
+      throw new Error(`Rate limit exceeded while validating voice '${voiceId}'. Please retry shortly.`);
+    } else {
+      throw new Error(`Failed to validate voice '${voiceId}': ${res.status} ${res.statusText} ${text}`);
+    }
+  }
+  voiceExistenceCache.set(voiceId, now);
+}
+
+async function fetchAllElevenVoices(apiKey: string): Promise<any[]> {
+  const res = await fetch('https://api.elevenlabs.io/v1/voices', {
+    headers: { 'xi-api-key': apiKey, 'Accept': 'application/json' },
+  });
+  if (!res.ok) return [];
+  const data: any = await res.json().catch(() => ({}));
+  const voices: any[] = data?.voices || data || [];
+  return Array.isArray(voices) ? voices : [];
+}
+
+function createUniqueName(baseName: string, existingLowerNames: Set<string>): string {
+  const base = baseName.trim();
+  if (!existingLowerNames.has(base.toLowerCase())) return base;
+  let i = 2;
+  while (i < 1000) {
+    const candidate = `${base} (${i})`;
+    if (!existingLowerNames.has(candidate.toLowerCase())) return candidate;
+    i++;
+  }
+  // Fallback with timestamp if too many duplicates
+  return `${base} (${Date.now()})`;
+}
+
 // Speech-to-Text with Whisper
 // Internal helper to perform Whisper transcription from a buffer
 async function transcribeWithOpenAI(audioBuffer: Buffer, language?: string, prompt?: string) {
@@ -193,8 +249,7 @@ export const synthesizeSpeech = action({
         // ElevenLabs TTS implementation (default)
         const apiKey = process.env.ELEVENLABS_API_KEY || "";
         
-        console.log("ElevenLabs API Key present:", !!apiKey);
-        console.log("API Key length:", apiKey.length);
+        console.log("ElevenLabs API Key present:", Boolean(apiKey));
         
         // Return mock data in development if no API key
         if (!apiKey) {
@@ -210,36 +265,35 @@ export const synthesizeSpeech = action({
           };
         }
         
-        // Use settings compatible with free plan
-        const body = {
+        // Compose TTS request body
+        const body: any = {
           text: args.text,
-          model_id: args.modelId || "eleven_monolingual_v1", // Use basic model for free plan
+          model_id: args.modelId || "eleven_flash_v2_5",
           voice_settings: {
             stability: args.voiceSettings?.stability ?? 0.5,
             similarity_boost: args.voiceSettings?.similarityBoost ?? 0.75,
+            ...(args.voiceSettings?.style !== undefined ? { style: args.voiceSettings.style } : {}),
+            ...(args.voiceSettings?.useSpeakerBoost !== undefined ? { use_speaker_boost: args.voiceSettings.useSpeakerBoost } : {}),
           },
         };
+        if (args.outputFormat) {
+          body.output_format = args.outputFormat;
+        }
         
         console.log(`Calling ElevenLabs TTS with voice: ${args.voiceId}`);
         
-        // For free plan, ensure we're using free voices
-        const freeVoiceIds = [
-          "21m00Tcm4TlvDq8ikWAM", // Rachel
-          "2EiwWnXFnvU5JabPnv8n", // Clyde  
-          "CwhRBWXzGAHq8TQ4Fs17", // Roger
-          "ErXwobaYiN019PkySvjV", // Antoni
-          "MF3mGyEYCl7XYWbV9V6O", // Elli
-          "TxGEqnHWrfWFTfGW9XjX", // Josh
-          "VR6AewLTigWG4xSOukaG", // Arnold
-          "pNInz6obpgDQGcFmaJgB", // Adam
-          "yoZ06aMxZJJ28mfd3POQ", // Sam
-        ];
-        
-        // Check if the voice is a free voice or use a default free voice
+        // Determine voice to use
         let voiceIdToUse = args.voiceId;
-        if (!freeVoiceIds.includes(args.voiceId) && !args.voiceId.startsWith("mock-")) {
-          console.warn(`Voice ${args.voiceId} may not be available on free plan, using default Rachel voice`);
-          voiceIdToUse = "21m00Tcm4TlvDq8ikWAM"; // Default to Rachel
+        // If a mock voice was selected, fall back to a known public voice ID
+        if (voiceIdToUse.startsWith("mock-")) {
+          voiceIdToUse = "21m00Tcm4TlvDq8ikWAM"; // Rachel (public)
+        }
+        
+        // Preflight: verify voice exists and is accessible
+        try {
+          await preflightElevenVoice(voiceIdToUse, apiKey);
+        } catch (pfErr) {
+          throw pfErr instanceof Error ? pfErr : new Error(String(pfErr));
         }
         
         // Make the API call with proper error handling
@@ -267,10 +321,14 @@ export const synthesizeSpeech = action({
           // Check for common errors
           if (resp.status === 401) {
             throw new Error("ElevenLabs API key is invalid. Please check your API key.");
+          } else if (resp.status === 403) {
+            throw new Error(`Access denied for the requested voice/model. This often indicates plan restrictions or missing permissions. Details: ${text}`);
           } else if (resp.status === 404) {
             throw new Error(`Voice ID '${args.voiceId}' not found. Please use a valid voice ID.`);
           } else if (resp.status === 422) {
             throw new Error(`Invalid request parameters: ${text}`);
+          } else if (resp.status === 429) {
+            throw new Error(`Rate limit exceeded by ElevenLabs. Please retry after a short delay. Details: ${text}`);
           } else {
             throw new Error(`ElevenLabs TTS failed: ${resp.status} ${resp.statusText} - ${text}`);
           }
@@ -454,18 +512,27 @@ export const streamSpeech = action({
     voiceSettings: v.optional(v.object({
       stability: v.number(),
       similarityBoost: v.number(),
+      style: v.optional(v.number()),
+      useSpeakerBoost: v.optional(v.boolean()),
     })),
     optimizeStreamingLatency: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     try {
+      // Preflight: verify voice exists and is accessible (if API key present)
+      const apiKey = process.env.ELEVENLABS_API_KEY || "";
+      if (apiKey) {
+        await preflightElevenVoice(args.voiceId, apiKey);
+      }
       const audioStream = await getElevenLabs().generate({
         voice: args.voiceId,
         text: args.text,
-        model_id: args.modelId || "eleven_turbo_v2",
+        model_id: args.modelId || "eleven_flash_v2_5",
         voice_settings: {
           stability: args.voiceSettings?.stability || 0.5,
           similarity_boost: args.voiceSettings?.similarityBoost || 0.75,
+          ...(args.voiceSettings?.style !== undefined ? { style: args.voiceSettings.style } : {}),
+          ...(args.voiceSettings?.useSpeakerBoost !== undefined ? { use_speaker_boost: args.voiceSettings.useSpeakerBoost } : {}),
         },
         optimize_streaming_latency: args.optimizeStreamingLatency || 3,
         output_format: "pcm_24000" as any, // PCM for lowest latency
@@ -827,6 +894,92 @@ export const syncDefaultVoices = action({
 });
 
 /**
+ * Sync voices from ElevenLabs (remote) into the local Convex voices table.
+ * - Pulls all voices accessible by the API key
+ * - Upserts new or changed voices by externalVoiceId
+ * - Marks premade voices public; cloned/generated voices private by default
+ */
+export const syncRemoteVoices = action({
+  args: {
+    categories: v.optional(v.array(v.string())), // e.g., ["premade", "cloned", "generated"]
+    makePremadePublic: v.optional(v.boolean()), // default true
+  },
+  handler: async (ctx, args) => {
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
+      console.warn("ELEVENLABS_API_KEY not configured, cannot sync remote voices");
+      return { inserted: 0, updated: 0, skipped: 0 };
+    }
+
+    const voices = await fetchAllElevenVoices(apiKey);
+    const includeCats = args.categories && args.categories.length > 0 ? new Set(args.categories.map(c => c.toLowerCase())) : undefined;
+    const makePremadePublic = args.makePremadePublic ?? true;
+
+    let inserted = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const vInfo of voices) {
+      try {
+        const category = String(vInfo?.category || vInfo?.labels?.category || "").toLowerCase();
+        if (includeCats && !includeCats.has(category)) {
+          skipped++;
+          continue;
+        }
+
+        const externalVoiceId = String(vInfo?.voice_id || vInfo?.voiceId || vInfo?.id || "");
+        const name = String(vInfo?.name || "ElevenLabs Voice");
+        const description = String(vInfo?.description || "Voice from ElevenLabs");
+        const previewUrl = vInfo?.preview_url || vInfo?.preview?.url || (vInfo?.samples?.[0]?.preview_url) || "";
+        const gender = (vInfo?.gender === "male" || vInfo?.gender === "female") ? vInfo.gender : "neutral";
+
+        // Build tags from labels and category
+        const tags: string[] = [];
+        try {
+          if (Array.isArray(vInfo?.labels)) {
+            tags.push(...vInfo.labels.map((x: any) => String(x)));
+          } else if (vInfo?.labels && typeof vInfo.labels === 'object') {
+            tags.push(...Object.values(vInfo.labels).map((x: any) => String(x)));
+          }
+        } catch {}
+        if (category) tags.push(`category:${category}`);
+        tags.push("11labs");
+
+        // Determine visibility policy
+        const isPremade = category === "premade";
+        const isPublic = isPremade ? makePremadePublic : false;
+
+        // See if exists locally
+        const existing = await ctx.runQuery(api.voices.getByExternalVoiceId, { externalVoiceId });
+
+        await ctx.runMutation(api.voices.upsertProviderVoice, {
+          name,
+          description,
+          language: "en",
+          accent: undefined as any,
+          ageGroup: existing?.ageGroup || (isPremade ? "adult" : "adult"),
+          gender,
+          previewUrl: previewUrl || existing?.previewUrl || "",
+          provider: "11labs",
+          externalVoiceId,
+          tags,
+          isPremium: existing?.isPremium ?? false,
+          isPublic,
+          // Do not set uploadedBy here; preserve ownership if it already exists
+        } as any);
+
+        if (existing) updated++; else inserted++;
+      } catch (e) {
+        console.error("syncRemoteVoices item error:", e);
+        skipped++;
+      }
+    }
+
+    return { inserted, updated, skipped };
+  },
+});
+
+/**
  * Clone a new ElevenLabs voice from a base64-encoded audio file and store it in the voices table.
  * Returns the external voice_id for use in TTS, and the created DB document id.
  */
@@ -882,24 +1035,61 @@ export const cloneElevenVoiceFromBase64 = action({
     const bytes = base64ToUint8Array(args.fileBase64);
     const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
     const blob = new Blob([buf], { type: args.mimeType || 'audio/webm' });
-    const form = new FormData();
-    form.append('name', args.name);
-    form.append('files', blob, 'voice_sample.webm');
-    if (args.description) form.append('description', args.description);
+
+    // Pre-check for duplicate names and make a unique one if needed
+    const existingVoices = await fetchAllElevenVoices(apiKey);
+    const existingNamesLower = new Set(
+      existingVoices.map(v => String(v?.name || '').toLowerCase()).filter(Boolean)
+    );
+    let nameToUse = createUniqueName(args.name, existingNamesLower);
+
+    const buildForm = (nm: string) => {
+      const f = new FormData();
+      f.append('name', nm);
+      f.append('files', blob, 'voice_sample.webm');
+      if (args.description) f.append('description', args.description);
+      return f;
+    };
 
     // Call ElevenLabs Voice Cloning API
     // Note: Free plan has limited voice cloning (only 3 custom voices)
-    const res = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+    let res = await fetch('https://api.elevenlabs.io/v1/voices/add', {
       method: 'POST',
       headers: {
         'xi-api-key': apiKey,
       },
-      body: form as any,
+      body: buildForm(nameToUse) as any,
     } as any);
+
+    // If conflict due to name, retry once with a new unique name
+    if (!res.ok && res.status === 409) {
+      const refreshed = await fetchAllElevenVoices(apiKey);
+      const refreshedNames = new Set(
+        refreshed.map((v: any) => String(v?.name || '').toLowerCase()).filter(Boolean)
+      );
+      nameToUse = createUniqueName(args.name, refreshedNames);
+      res = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+        method: 'POST',
+        headers: { 'xi-api-key': apiKey },
+        body: buildForm(nameToUse) as any,
+      } as any);
+    }
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
-      throw new Error(`ElevenLabs clone failed: ${res.status} ${res.statusText} ${errText}`);
+      if (res.status === 401) {
+        throw new Error("ElevenLabs API key is invalid. Please verify ELEVENLABS_API_KEY.");
+      } else if (res.status === 403) {
+        throw new Error(`ElevenLabs denied voice cloning. This may be due to plan restrictions or insufficient quota. Details: ${errText}`);
+      } else if (res.status === 422) {
+        throw new Error(`Invalid audio sample or parameters for voice cloning: ${errText}`);
+      } else if (res.status === 429) {
+        throw new Error(`ElevenLabs rate limit exceeded. Please wait and retry. Details: ${errText}`);
+      } else if (res.status === 409) {
+        throw new Error(`A voice with this name already exists. Please choose a different name.`);
+      } else {
+        throw new Error(`ElevenLabs clone failed: ${res.status} ${res.statusText} ${errText}`);
+      }
     }
 
     const data: any = await res.json();
@@ -922,7 +1112,7 @@ export const cloneElevenVoiceFromBase64 = action({
 
     // Store in DB via mutation
     const insertedId = await ctx.runMutation(api.voices.upsertProviderVoice, {
-      name: args.name,
+      name: nameToUse,
       description: args.description,
       language: args.language || "en",
       accent: args.accent,

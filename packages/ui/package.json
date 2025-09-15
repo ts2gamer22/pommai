@@ -1,6 +1,6 @@
 {
   "name": "@pommai/ui",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
@@ -10,12 +10,41 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./styles": {
+      "default": "./src/styles/retroui.css"
+    },
     "./src/styles/retroui.css": "./src/styles/retroui.css",
-    "./styles": "./src/styles/retroui.css"
+    "./theme": {
+      "types": "./src/theme/index.ts",
+      "default": "./src/theme/index.ts"
+    },
+    "./types": {
+      "types": "./src/types/index.ts",
+      "default": "./src/types/index.ts"
+    },
+    "./components/*": {
+      "types": "./src/components/*.ts",
+      "default": "./src/components/*.ts"
+    }
   },
+  "files": [
+    "src/**/*",
+    "README.md",
+    "package.json"
+  ],
   "scripts": {
     "type-check": "tsc --noEmit",
-    "lint": "eslint . --fix"
+    "lint": "eslint . --fix",
+    "build": "tsc --noEmit",
+    "dev": "tsc --noEmit --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:all": "ts-node src/test/test-runner.ts",
+    "test:visual": "jest --testNamePattern=\"Visual Regression\"",
+    "test:a11y": "jest --testNamePattern=\"Accessibility\"",
+    "test:perf": "jest --testNamePattern=\"Performance\"",
+    "test:integration": "jest --testNamePattern=\"Integration\""
   },
   "dependencies": {
     "react": "19.1.0",
@@ -24,10 +53,45 @@
   "devDependencies": {
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "typescript": "^5"
+    "typescript": "^5",
+    "eslint": "^9",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/user-event": "^14.5.2",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "@types/jest": "^29.5.14",
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-react": "^7.26.3",
+    "@babel/preset-typescript": "^7.26.0",
+    "babel-jest": "^29.7.0",
+    "ts-node": "^10.9.2"
   },
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
-  }
+  },
+  "keywords": [
+    "react",
+    "ui",
+    "components",
+    "design-system",
+    "retro",
+    "pixel-art",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pommai/pommai.git",
+    "directory": "packages/ui"
+  },
+  "bugs": {
+    "url": "https://github.com/pommai/pommai/issues"
+  },
+  "homepage": "https://github.com/pommai/pommai#readme",
+  "author": "Pommai Team",
+  "license": "MIT",
+  "sideEffects": [
+    "**/*.css"
+  ]
 }

@@ -4,13 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Card, Button, ProgressBar } from "@pommai/ui";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@pommai/ui";
 import {
   BarChart3,
   TrendingUp,
@@ -49,13 +43,18 @@ interface SafetyAnalyticsProps {
 
 export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
   const [range, setRange] = useState<"today" | "week" | "month" | "year">("week");
-  const now = Date.now();
-  const dateFrom = useMemo(() => {
-    if (range === "today") return new Date(new Date().toDateString()).getTime();
-    if (range === "week") return now - 7 * 24 * 60 * 60 * 1000;
-    if (range === "month") return now - 30 * 24 * 60 * 60 * 1000;
-    if (range === "year") return now - 365 * 24 * 60 * 60 * 1000;
-    return undefined;
+  
+  const { now, dateFrom } = useMemo(() => {
+    const currentTime = Date.now();
+    let fromTime;
+    
+    if (range === "today") fromTime = new Date(new Date().toDateString()).getTime();
+    else if (range === "week") fromTime = currentTime - 7 * 24 * 60 * 60 * 1000;
+    else if (range === "month") fromTime = currentTime - 30 * 24 * 60 * 60 * 1000;
+    else if (range === "year") fromTime = currentTime - 365 * 24 * 60 * 60 * 1000;
+    else fromTime = undefined;
+    
+    return { now: currentTime, dateFrom: fromTime };
   }, [range]);
 
   const analytics = useQuery(api.conversations.getConversationAnalytics, {
@@ -64,27 +63,42 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
     dateTo: now,
   });
 
-  const avgMinutes = (analytics?.averageDuration || 0) / 60;
-  const totalConversations = analytics?.totalConversations || 0;
-  const totalMessages = analytics?.totalMessages || 0;
-  const flaggedCount = analytics?.flaggedMessageCount || 0;
-  const sentiment = analytics?.sentimentBreakdown || { positive: 0, neutral: 0, negative: 0 };
+  // Memoize calculated values to prevent unnecessary recalculations
+  const calculatedData = useMemo(() => {
+    const avgMinutes = (analytics?.averageDuration || 0) / 60;
+    const totalConversations = analytics?.totalConversations || 0;
+    const totalMessages = analytics?.totalMessages || 0;
+    const flaggedCount = analytics?.flaggedMessageCount || 0;
+    const sentiment = analytics?.sentimentBreakdown || { positive: 0, neutral: 0, negative: 0 };
 
-  // Derive activity data from conversationsByDay, estimate messages/minutes per conv
-  const estimatedMsgsPerConv = totalConversations > 0 ? totalMessages / totalConversations : 0;
-  const conversationsByDay = analytics?.conversationsByDay || [];
-  const activityData = conversationsByDay.map((d: any) => ({
-    day: d.date.slice(5), // MM-DD
-    minutes: Math.round((avgMinutes || 0) * d.count),
-    messages: Math.round(estimatedMsgsPerConv * d.count),
-    count: d.count,
-  }));
+    // Derive activity data from conversationsByDay, estimate messages/minutes per conv
+    const estimatedMsgsPerConv = totalConversations > 0 ? totalMessages / totalConversations : 0;
+    const conversationsByDay = analytics?.conversationsByDay || [];
+    const activityData = conversationsByDay.map((d: any) => ({
+      day: d?.date?.slice(5) || '', // MM-DD
+      minutes: Math.round((avgMinutes || 0) * (d?.count || 0)),
+      messages: Math.round(estimatedMsgsPerConv * (d?.count || 0)),
+      count: d?.count || 0,
+    }));
 
-  const topicsDistribution = (analytics?.topTopics || []).slice(0, 5).map((t: any, idx: number) => ({
-    name: t.topic || `Topic ${idx + 1}`,
-    value: t.count || 0,
-    color: ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#6B7280"][idx % 5],
-  }));
+    const topicsDistribution = (analytics?.topTopics || []).slice(0, 5).map((t: any, idx: number) => ({
+      name: t?.topic || `Topic ${idx + 1}`,
+      value: t?.count || 0,
+      color: ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#6B7280"][idx % 5],
+    }));
+
+    return {
+      avgMinutes,
+      totalConversations,
+      totalMessages,
+      flaggedCount,
+      sentiment,
+      activityData,
+      topicsDistribution,
+    };
+  }, [analytics]);
+
+  const { avgMinutes, totalConversations, totalMessages, flaggedCount, sentiment, activityData, topicsDistribution } = calculatedData;
 
   // Mock emotional insights for now (since it's not in the backend yet)
   const emotionalInsights = [
@@ -104,9 +118,8 @@ export function SafetyAnalytics({ childId }: SafetyAnalyticsProps) {
         </h3>
         <div className="flex items-center gap-2">
           <Select value={range} onValueChange={(v) => setRange(v as any)}>
-            <SelectTrigger className="w-[140px] border-2 border-black font-bold">
-              <Calendar className="w-4 h-4 mr-2" />
-              <SelectValue />
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Range" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="today">Today</SelectItem>

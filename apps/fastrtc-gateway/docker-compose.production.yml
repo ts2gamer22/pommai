@@ -10,8 +10,8 @@ services:
       - "8080:8080"
     environment:
       # Convex Configuration
-      - CONVEX_URL=https://warmhearted-snail-998.convex.cloud
-      - CONVEX_DEPLOY_KEY=prod:warmhearted-snail-998|eyJ2MiI6ImQzMDYzMjQ5ODk5MDQzODZhZDU1NmY2MThkZGMzZmQwIn0=
+      - CONVEX_URL=${CONVEX_URL:-https://warmhearted-snail-998.convex.cloud}
+      - CONVEX_DEPLOY_KEY=${CONVEX_DEPLOY_KEY:-}
       
       # Server Configuration
       - PORT=8080

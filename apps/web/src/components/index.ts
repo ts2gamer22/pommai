@@ -2,7 +2,7 @@ export {
   Button,
   Card,
   Input,
-  TextArea,
+  Textarea,
   ProgressBar,
   Popup,
   DropdownMenu,

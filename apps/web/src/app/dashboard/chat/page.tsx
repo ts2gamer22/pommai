@@ -5,8 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 import { ChatInterface } from '@/components/chat/ChatInterface';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Button, Card } from '@pommai/ui';
 import { ArrowLeft, Bot, MessageSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@pommai/ui';
 

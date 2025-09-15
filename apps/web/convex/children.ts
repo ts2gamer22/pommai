@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { betterAuthComponent } from "./auth";
 
 export const createChild = mutation({
   args: {
@@ -21,12 +22,19 @@ export const createChild = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    // TODO: Get authenticated user ID from BetterAuth session
-    // For now, we'll require a parentId to be passed
-    const parentId = "users:placeholder" as Id<"users">;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    // Get authenticated user ID from BetterAuth
+    const parentId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!parentId) {
+      throw new Error("User not authenticated");
+    }
     
     const childId = await ctx.db.insert("children", {
-      parentId,
+      parentId: parentId as any,
       name: args.name,
       birthDate: args.birthDate,
       voiceProfile: args.voiceProfile,
@@ -43,9 +51,23 @@ export const createChild = mutation({
 export const listChildren = query({
   args: {},
   handler: async (ctx) => {
-    // TODO: Get authenticated user ID from BetterAuth session
-    // For now, return empty array
-    return [];
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return [];
+    }
+
+    // Get authenticated user ID from BetterAuth
+    const parentId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!parentId) {
+      return [];
+    }
+
+    const children = await ctx.db
+      .query("children")
+      .withIndex("parentId", (q) => q.eq("parentId", parentId as any))
+      .collect();
+
+    return children;
   },
 });
 

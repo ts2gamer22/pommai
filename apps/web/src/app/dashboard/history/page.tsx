@@ -1,7 +1,7 @@
 'use client';
 
 import { ConversationViewer } from '@/components/history/ConversationViewer';
-import { Button } from '@/components/ui/button';
+import { Button } from '@pommai/ui';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 

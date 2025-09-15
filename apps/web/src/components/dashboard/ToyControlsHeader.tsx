@@ -2,7 +2,7 @@
 
 import type { ChangeEvent } from 'react';
 import { Button, Input } from '@pommai/ui';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@pommai/ui';
 import { 
   Grid3X3,
   List,

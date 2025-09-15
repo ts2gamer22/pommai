@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { betterAuthComponent } from "./auth";
 
 /**
  * Create a new toy
@@ -63,26 +64,22 @@ export const createToy = mutation({
 
     const now = new Date().toISOString();
 
-    // Get user from auth
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-    
-    if (!user) {
-      throw new Error("User not found");
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User not authenticated");
     }
 
     const toyId = await ctx.db.insert("toys", {
       name: args.name,
       type: args.type,
-      creatorId: user._id,
+      creatorId: userId as any,
       isForKids: args.isForKids,
       ageGroup: args.ageGroup,
       voiceId: args.voiceId,
       personalityPrompt: args.personalityPrompt,
       personalityTraits: args.personalityTraits,
-      guardianId: args.isForKids ? user._id : undefined,
+      guardianId: args.isForKids ? (userId as any) : undefined,
       safetyLevel: args.safetyLevel,
       contentFilters: args.contentFilters,
       assignedDevices: [],
@@ -166,19 +163,15 @@ export const getMyToys = query({
       return [];
     }
 
-    // Get user from auth
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-    
-    if (!user) {
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
       return [];
     }
 
     const toys = await ctx.db
       .query("toys")
-      .withIndex("by_creator", (q) => q.eq("creatorId", user._id))
+      .withIndex("by_creator", (q) => q.eq("creatorId", userId as any))
       .collect();
 
     return toys;
@@ -195,19 +188,15 @@ export const getGuardianToys = query({
       return [];
     }
 
-    // Get user from auth
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-    
-    if (!user) {
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
       return [];
     }
 
     const toys = await ctx.db
       .query("toys")
-      .withIndex("by_guardian", (q) => q.eq("guardianId", user._id))
+      .withIndex("by_guardian", (q) => q.eq("guardianId", userId as any))
       .collect();
 
     return toys;
@@ -232,17 +221,13 @@ export const getToy = query({
       throw new Error("Not authenticated");
     }
 
-    // Get user from auth
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-    
-    if (!user) {
-      throw new Error("User not found");
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User not authenticated");
     }
 
-    if (toy.creatorId !== user._id && toy.guardianId !== user._id && !toy.isPublic) {
+    if (toy.creatorId !== userId && toy.guardianId !== userId && !toy.isPublic) {
       throw new Error("Access denied");
     }
 
@@ -300,17 +285,13 @@ export const updateToy = mutation({
       throw new Error("Not authenticated");
     }
 
-    // Get user from auth
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-    
-    if (!user) {
-      throw new Error("User not found");
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User not authenticated");
     }
 
-    if (toy.creatorId !== user._id && toy.guardianId !== user._id) {
+    if (toy.creatorId !== userId && toy.guardianId !== userId) {
       throw new Error("Only the creator or guardian can update this toy");
     }
 
@@ -348,17 +329,13 @@ export const updateToyStatus = mutation({
       throw new Error("Not authenticated");
     }
 
-    // Get user from auth
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-    
-    if (!user) {
-      throw new Error("User not found");
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User not authenticated");
     }
 
-    if (toy.creatorId !== user._id && toy.guardianId !== user._id) {
+    if (toy.creatorId !== userId && toy.guardianId !== userId) {
       throw new Error("Only the creator or guardian can update toy status");
     }
 
@@ -390,17 +367,13 @@ export const assignToyToDevice = mutation({
       throw new Error("Not authenticated");
     }
 
-    // Get user from auth
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-    
-    if (!user) {
-      throw new Error("User not found");
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User not authenticated");
     }
 
-    if (toy.creatorId !== user._id && toy.guardianId !== user._id) {
+    if (toy.creatorId !== userId && toy.guardianId !== userId) {
       throw new Error("Only the creator or guardian can assign devices");
     }
 
@@ -418,7 +391,7 @@ export const assignToyToDevice = mutation({
         deviceId: args.deviceId,
         childId: undefined,
         assignedAt: new Date().toISOString(),
-        assignedBy: user._id,
+        assignedBy: userId as any,
         isActive: true,
       });
     }
@@ -446,16 +419,13 @@ export const duplicateToy = mutation({
       throw new Error("Not authenticated");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-
-    if (!user) {
-      throw new Error("User not found");
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User not authenticated");
     }
 
-    if (originalToy.creatorId !== user._id && !originalToy.isPublic) {
+    if (originalToy.creatorId !== userId && !originalToy.isPublic) {
       throw new Error("Can only duplicate your own toys or public toys");
     }
 
@@ -465,8 +435,8 @@ export const duplicateToy = mutation({
     const newToyId = await ctx.db.insert("toys", {
       ...toyData,
       name: args.newName,
-      creatorId: user._id,
-      guardianId: originalToy.isForKids ? user._id : undefined,
+      creatorId: userId as any,
+      guardianId: originalToy.isForKids ? (userId as any) : undefined,
       assignedDevices: [],
       usageCount: 0,
       status: "active",
@@ -502,17 +472,13 @@ export const removeToyFromDevice = mutation({
       throw new Error("Not authenticated");
     }
 
-    // Get user from auth
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-    
-    if (!user) {
-      throw new Error("User not found");
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User not authenticated");
     }
 
-    if (toy.creatorId !== user._id && toy.guardianId !== user._id) {
+    if (toy.creatorId !== userId && toy.guardianId !== userId) {
       throw new Error("Only the creator or guardian can manage device assignments");
     }
 
@@ -556,17 +522,13 @@ export const deleteToy = mutation({
     const toy = await ctx.db.get(args.toyId);
     if (!toy) throw new Error("Toy not found");
 
-    // Get user from auth
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-    
-    if (!user) {
-      throw new Error("User not found");
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("User not authenticated");
     }
 
-    if (toy.creatorId !== user._id && toy.guardianId !== user._id) {
+    if (toy.creatorId !== userId && toy.guardianId !== userId) {
       throw new Error("Only the creator or guardian can delete this toy");
     }
 

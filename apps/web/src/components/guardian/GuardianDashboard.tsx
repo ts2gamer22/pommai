@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, Button } from "@pommai/ui";
 import { SafetyControls } from "./SafetyControls";
 import { LiveMonitoring } from "./LiveMonitoring";
@@ -32,9 +32,6 @@ interface SafetyAlert {
 }
 
 export function GuardianDashboard() {
-  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
-
   // Mock data - in production, these would come from Convex queries
   const childrenProfiles: ChildProfile[] = [
     {
@@ -56,6 +53,13 @@ export function GuardianDashboard() {
       avatar: "👦",
     },
   ];
+
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(() => {
+    // Initialize with first child's ID to prevent null issues
+    return childrenProfiles.length > 0 ? childrenProfiles[0].id : null;
+  });
+  const [activeTab, setActiveTab] = useState("overview");
+
 
   const safetyAlerts: SafetyAlert[] = [
     {
@@ -91,9 +95,18 @@ export function GuardianDashboard() {
     // In production, this would mark the alert as resolved
   };
 
-  const selectedChild = childrenProfiles.find(c => c.id === selectedChildId) || childrenProfiles[0];
-  const activeAlerts = safetyAlerts.filter(a => !a.resolved);
-  const childAlerts = safetyAlerts.filter(a => a.childId === selectedChild.id);
+  // Use useMemo to prevent recalculation on every render
+  const selectedChild = useMemo(() => {
+    return childrenProfiles.find(c => c.id === selectedChildId) || childrenProfiles[0];
+  }, [childrenProfiles, selectedChildId]);
+  
+  const activeAlerts = useMemo(() => {
+    return safetyAlerts.filter(a => !a.resolved);
+  }, [safetyAlerts]);
+  
+  const childAlerts = useMemo(() => {
+    return safetyAlerts.filter(a => a.childId === selectedChild?.id);
+  }, [safetyAlerts, selectedChild]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fefcd0] to-[#f4e5d3]">
@@ -165,7 +178,7 @@ export function GuardianDashboard() {
           </Card>
 
           {/* Tab Content */}
-          {activeTab === "overview" && (
+          {activeTab === "overview" && selectedChild && (
             <OverviewTab 
               selectedChild={selectedChild}
               childAlerts={childAlerts}
@@ -173,15 +186,15 @@ export function GuardianDashboard() {
             />
           )}
 
-          {activeTab === "monitoring" && (
+          {activeTab === "monitoring" && selectedChild && (
             <LiveMonitoring childId={selectedChild.id} />
           )}
 
-          {activeTab === "controls" && (
+          {activeTab === "controls" && selectedChild && (
             <SafetyControls childId={selectedChild.id} />
           )}
 
-          {activeTab === "analytics" && (
+          {activeTab === "analytics" && selectedChild && (
             <SafetyAnalytics childId={selectedChild.id} />
           )}
         </div>

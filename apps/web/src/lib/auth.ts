@@ -1,5 +1,5 @@
 import { convexAdapter } from "@convex-dev/better-auth";
-import { convex } from "@convex-dev/better-auth/plugins";
+import { convex, crossDomain } from "@convex-dev/better-auth/plugins";
 import { requireEnv } from "@convex-dev/better-auth/utils";
 import { betterAuth } from "better-auth";
 import { betterAuthComponent } from "../../convex/auth";

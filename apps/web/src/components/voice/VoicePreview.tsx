@@ -3,17 +3,7 @@
 import { useState, useRef, useEffect, type ChangeEvent } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button, Card, Textarea, Slider, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@pommai/ui";
 import {
   Play,
   Pause,
@@ -82,9 +72,9 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
   const [selectedPhrase, setSelectedPhrase] = useState("");
   const [customText, setCustomText] = useState("");
   const [phraseCategory, setPhraseCategory] = useState(isForKids ? "kids" : "general");
-  const [volume, setVolume] = useState([75]);
-  const [speed, setSpeed] = useState([100]);
-  const [pitch, setPitch] = useState([100]);
+  const [volume, setVolume] = useState(75);
+  const [speed, setSpeed] = useState(100);
+  const [pitch, setPitch] = useState(100);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const currentAudioId = useRef<string | null>(null);
   
@@ -128,13 +118,14 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
 
     try {
       // Call ElevenLabs TTS via Convex action
+      const chosenVoiceId = voice.externalVoiceId || voice.voiceId || "JBFqnCBsd6RMkjVDRZzb";
       const audioResponse = await synthesizeSpeech({
         text: textToSpeak,
-        voiceId: voice.externalVoiceId || voice.voiceId || "JBFqnCBsd6RMkjVDRZzb", // Fallback to default voice
+        voiceId: chosenVoiceId, // Fallback to default voice
         voiceSettings: {
           stability: 0.5,
           similarityBoost: 0.75,
-          style: pitch[0] / 100, // Map pitch to style for effect
+          style: pitch / 100, // Map pitch to style for effect
           useSpeakerBoost: true,
         },
         outputFormat: "mp3_44100_128",
@@ -157,7 +148,7 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
           // Play the audio using our utility
           await playAudio(audioResponse.audioData, {
             id: audioId,
-            volume: volume[0] / 100,
+            volume: volume / 100,
             cache: true,
             onEnded: () => {
               setIsPlaying(false);
@@ -220,6 +211,7 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
           <div>
             <h3 className="retro-h3 text-base sm:text-lg">{voice.name}</h3>
             <p className="text-sm text-gray-500">{voice.description}</p>
+            <p className="text-xs text-gray-500 mt-1">Voice ID: {voice.externalVoiceId || voice.voiceId || 'default'}</p>
           </div>
         </div>
         <Button
@@ -298,7 +290,7 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Volume</label>
-              <span className="text-sm text-gray-700">{volume[0]}%</span>
+          <span className="text-sm text-gray-700">{volume}%</span>
             </div>
             <Slider
               value={volume}
@@ -313,7 +305,7 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Speed</label>
-              <span className="text-sm text-gray-700">{speed[0]}%</span>
+          <span className="text-sm text-gray-700">{speed}%</span>
             </div>
             <Slider
               value={speed}
@@ -328,7 +320,7 @@ export function VoicePreview({ voice, isForKids = false }: VoicePreviewProps) {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Pitch</label>
-              <span className="text-sm text-gray-700">{pitch[0]}%</span>
+          <span className="text-sm text-gray-700">{pitch}%</span>
             </div>
             <Slider
               value={pitch}

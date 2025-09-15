@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToyWizardStore, type WizardStep } from '@/stores/toyWizardStore';
-import { useToysStore } from '@/stores/useToysStore';
 import { Button, ProgressBar, Card, Popup } from '@pommai/ui';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
 import { useMutation } from 'convex/react';

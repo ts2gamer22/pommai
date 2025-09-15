@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, action, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
+import { betterAuthComponent } from "./auth";
 
 // Create a new conversation
 export const createConversation = mutation({
@@ -15,17 +16,14 @@ export const createConversation = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthorized");
 
-    // Get user from auth
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
 
     const conversationId = await ctx.db.insert("conversations", {
       toyId: args.toyId,
       sessionId: args.sessionId,
       startTime: new Date().toISOString(),
-      userId: user?._id,
+      userId: userId as any,
       duration: 0,
       messageCount: 0,
       flaggedMessages: 0,
@@ -182,13 +180,11 @@ export const togglePauseConversation = mutation({
     const toy = await ctx.db.get(conversation.toyId);
     if (!toy) throw new Error("Toy not found");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-    if (!user) throw new Error("User not found");
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) throw new Error("User not authenticated");
 
-    if (toy.creatorId !== user._id && toy.guardianId !== user._id) {
+    if (toy.creatorId !== userId && toy.guardianId !== userId) {
       throw new Error("Access denied");
     }
 
@@ -213,13 +209,11 @@ export const toggleMonitoring = mutation({
     const toy = await ctx.db.get(conversation.toyId);
     if (!toy) throw new Error("Toy not found");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-    if (!user) throw new Error("User not found");
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) throw new Error("User not authenticated");
 
-    if (toy.creatorId !== user._id && toy.guardianId !== user._id) {
+    if (toy.creatorId !== userId && toy.guardianId !== userId) {
       throw new Error("Access denied");
     }
 
@@ -470,18 +464,14 @@ export const getActiveConversation = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    // Find the app user record from auth identity.
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .first();
-
-    if (!user) return null;
+    // Get authenticated user ID from BetterAuth
+    const userId = await betterAuthComponent.getAuthUserId(ctx);
+    if (!userId) return null;
 
     // Get latest conversation for this user and toy.
     const conversations = await ctx.db
       .query("conversations")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .withIndex("by_user", (q) => q.eq("userId", userId as any))
       .order("desc")
       .collect();
 

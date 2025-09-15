@@ -12,6 +12,7 @@ import { ToyControlsHeader } from './ToyControlsHeader';
 import { ToyGridItem } from './ToyGridItem';
 import { ToyListItem } from './ToyListItem';
 import { ToyDialogs } from './ToyDialogs';
+import { useToysStore } from '@/stores/useToysStore';
 
 interface MyToysGridProps {
   onCreateToy?: () => void;
@@ -19,9 +20,7 @@ interface MyToysGridProps {
 
 export function MyToysGrid({ onCreateToy }: MyToysGridProps) {
   const router = useRouter();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'paused' | 'archived'>('all');
+  const { viewMode, setViewMode, filters, updateFilters } = useToysStore();
   const [selectedToy, setSelectedToy] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
@@ -34,11 +33,14 @@ export function MyToysGrid({ onCreateToy }: MyToysGridProps) {
   const deleteToy = useMutation(api.toys.deleteToy);
 
   interface Toy { _id: string; name: string; type: string; status: 'active' | 'paused' | 'archived'; }
-  // Filter toys
+  // Filter toys using UI store filters
+  const q = (filters.search ?? '').trim().toLowerCase();
+  const s = filters.status ?? 'all';
   const filteredToys = toys?.filter((toy: Toy) => {
-    const matchesSearch = toy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         toy.type.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || toy.status === filterStatus;
+    const matchesSearch = q.length === 0 ||
+      toy.name.toLowerCase().includes(q) ||
+      toy.type.toLowerCase().includes(q);
+    const matchesStatus = s === 'all' || toy.status === s;
     return matchesSearch && matchesStatus;
   });
 
@@ -129,10 +131,10 @@ export function MyToysGrid({ onCreateToy }: MyToysGridProps) {
   return (
     <div className="space-y-4">
       <ToyControlsHeader 
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        filterStatus={filterStatus}
-        onFilterChange={setFilterStatus}
+        searchQuery={filters.search}
+        onSearchChange={(value) => updateFilters({ search: value })}
+        filterStatus={filters.status}
+        onFilterChange={(value) => updateFilters({ status: value })}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         onCreateToy={onCreateToy}

@@ -5,15 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Card, Button, Input } from "@pommai/ui";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
+import { Select, Switch, Slider, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@pommai/ui";
 import {
   Shield,
   Clock,
@@ -176,29 +168,14 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
             <label className="block text-sm font-black uppercase tracking-wider text-black mb-2">
               Content Filter Strictness
             </label>
-            <Select value={strictnessLevel} onValueChange={(value) => setStrictnessLevel(value as "low" | "medium" | "high")}>
-              <SelectTrigger className="w-full border-2 border-black font-bold">
-                <SelectValue />
+            <Select value={strictnessLevel} onValueChange={(value) => setStrictnessLevel(value as "low" | "medium" | "high")}> 
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select strictness" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="low">
-                  <div>
-                    <p className="font-bold text-black">Low</p>
-                    <p className="text-sm text-gray-500">Basic filtering for obvious inappropriate content</p>
-                  </div>
-                </SelectItem>
-                <SelectItem value="medium">
-                  <div>
-                    <p className="font-bold text-black">Medium</p>
-                    <p className="text-sm text-gray-500">Balanced filtering for age-appropriate content</p>
-                  </div>
-                </SelectItem>
-                <SelectItem value="high">
-                  <div>
-                    <p className="font-bold text-black">High</p>
-                    <p className="text-sm text-gray-500">Strict filtering with maximum protection</p>
-                  </div>
-                </SelectItem>
+                <SelectItem value="low">Low - Basic filtering for obvious inappropriate content</SelectItem>
+                <SelectItem value="medium">Medium - Balanced filtering for age-appropriate content</SelectItem>
+                <SelectItem value="high">High - Strict filtering with maximum protection</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -311,8 +288,8 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
               <span className="text-sm font-black text-black">{dailyLimit[0]} minutes</span>
             </div>
             <Slider
-              value={dailyLimit}
-              onValueChange={setDailyLimit}
+              value={dailyLimit[0]}
+              onValueChange={(value) => setDailyLimit([value])}
               min={30}
               max={240}
               step={15}
@@ -337,7 +314,7 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
             <Switch
               id="school-rules"
               checked={schoolDayRules}
-              onCheckedChange={setSchoolDayRules}
+              onChange={(e) => setSchoolDayRules(e.target.checked)}
             />
           </div>
 
@@ -354,7 +331,7 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
             <Switch
               id="weekend-rules"
               checked={weekendRules}
-              onCheckedChange={setWeekendRules}
+              onChange={(e) => setWeekendRules(e.target.checked)}
             />
           </div>
 
@@ -412,7 +389,7 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
             <Switch
               id="real-time"
               checked={realTimeAlerts}
-              onCheckedChange={setRealTimeAlerts}
+              onChange={(e) => setRealTimeAlerts(e.target.checked)}
             />
           </div>
 
@@ -428,7 +405,7 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
             <Switch
               id="daily-summary"
               checked={dailySummary}
-              onCheckedChange={setDailySummary}
+              onChange={(e) => setDailySummary(e.target.checked)}
             />
           </div>
 
@@ -444,7 +421,7 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
             <Switch
               id="weekly-report"
               checked={weeklyReport}
-              onCheckedChange={setWeeklyReport}
+              onChange={(e) => setWeeklyReport(e.target.checked)}
             />
           </div>
 
@@ -453,8 +430,8 @@ export function SafetyControls({ childId }: SafetyControlsProps) {
               🎯 Alert Severity Threshold
             </label>
             <Select value={severityThreshold} onValueChange={(value) => setSeverityThreshold(value as "all" | "medium" | "high")}>
-              <SelectTrigger className="border-2 border-black font-bold">
-                <SelectValue />
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select threshold" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Alerts</SelectItem>

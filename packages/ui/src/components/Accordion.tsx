@@ -49,7 +49,7 @@ export const Accordion = ({
   shadowColor,
   style,
   ...props
-}: AccordionProps): JSX.Element => {
+}: AccordionProps) => {
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [activeItems, setActiveItems] = useState<string[]>([]);
 
@@ -108,7 +108,7 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   const context = useContext(AccordionContext);
   const isActive = context?.collapsible
     ? context.activeItem === value
-    : context?.activeItems.includes(value);
+    : (context?.activeItems.indexOf(value) !== -1);
 
   const borderSvg = useMemo(() => {
     const color = borderColor || context?.borderColor || "currentColor";
@@ -148,7 +148,7 @@ export const AccordionTrigger: React.FC<AccordionTriggerProps> = ({
 
   const isActive = context?.collapsible
     ? context.activeItem === item.value
-    : context?.activeItems.includes(item.value);
+    : (context?.activeItems.indexOf(item.value) !== -1);
 
   const handleClick = () => {
     if (!context) return;
@@ -161,7 +161,7 @@ export const AccordionTrigger: React.FC<AccordionTriggerProps> = ({
     } else {
       // Multiple items mode
       context.setActiveItems((prev) => {
-        if (prev.includes(item.value)) {
+if (prev.indexOf(item.value) !== -1) {
           // Remove this item
           return prev.filter((i) => i !== item.value);
         } else {
@@ -209,7 +209,7 @@ export const AccordionContent: React.FC<AccordionContentProps> = ({
 
   const isActive = context?.collapsible
     ? context.activeItem === item.value
-    : context?.activeItems.includes(item.value);
+    : (context?.activeItems.indexOf(item.value) !== -1);
 
   return (
     <div

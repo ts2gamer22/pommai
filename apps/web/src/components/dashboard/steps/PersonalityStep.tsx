@@ -2,7 +2,7 @@
 
 import { useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useToyWizardStore } from '@/stores/toyWizardStore';
-import { TextArea, Button, Input, Card } from '@pommai/ui';
+import { Textarea, Button, Input, Card } from '@pommai/ui';
 import { 
   Plus, 
   X, 
@@ -116,7 +116,7 @@ export function PersonalityStep() {
           Personality Description
           <span className="text-red-500 ml-1">*</span>
         </label>
-        <TextArea
+        <Textarea
           value={toyConfig.personalityPrompt}
           onChange={(e: ChangeEvent<HTMLTextAreaElement>) => handlePersonalityPromptChange(e.target.value)}
           placeholder={`Describe ${toyConfig.name}'s personality in detail. For example: "${toyConfig.name} is a cheerful and curious companion who loves to tell stories about space adventures..."`}

@@ -1,43 +1,103 @@
-import { TextareaHTMLAttributes, forwardRef, useMemo } from "react";
+/**
+ * Textarea component for multi-line text input
+ * Provides accessible text area with RetroUI styling
+ */
 
-export interface TextAreaProps
-  extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+import React from 'react';
+import { cn } from '../utils/cn';
+
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  /**
+   * Size variant of the textarea
+   */
+  size?: 'sm' | 'default' | 'lg';
+  /**
+   * Whether the textarea has an error state
+   */
+  error?: boolean;
+  /**
+   * Whether the textarea should resize
+   */
+  resize?: 'none' | 'vertical' | 'horizontal' | 'both';
+  /**
+   * RetroUI theming props
+   */
   bg?: string;
   textColor?: string;
   borderColor?: string;
+  shadow?: string;
 }
 
 /**
- * TextArea
- *
- * Pixel-styled multi-line input.
- * - No font is forced; apply font-geo via className.
+ * Textarea component with RetroUI styling
+ * 
+ * @example
+ * ```tsx
+ * <Textarea 
+ *   placeholder="Enter your message..."
+ *   rows={4}
+ * />
+ * ```
  */
-export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  ({ className = "", bg, textColor, borderColor, style, ...props }, ref) => {
-    const svgString = useMemo(() => {
-      const color = borderColor || "currentColor";
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><path d="M3 1h1v1h-1zM4 1h1v1h-1zM2 2h1v1h-1zM5 2h1v1h-1zM1 3h1v1h-1zM6 3h1v1h-1zM1 4h1v1h-1zM6 4h1v1h-1zM2 5h1v1h-1zM5 5h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1z" fill="${color}"/></svg>`;
-      return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-    }, [borderColor]);
-
+export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
+  ({ className, size = 'default', error, resize = 'vertical', bg, textColor, borderColor, shadow, ...props }, ref) => {
     const customStyle = {
-      ...style,
-      "--textarea-custom-bg": bg,
-      "--textarea-custom-text": textColor,
-      "--textarea-custom-border": borderColor,
-      borderImageSource: svgString,
-    };
+      '--textarea-custom-bg': bg,
+      '--textarea-custom-text': textColor,
+      '--textarea-custom-border': borderColor,
+      '--textarea-custom-shadow': shadow,
+    } as React.CSSProperties;
 
     return (
       <textarea
         ref={ref}
-        className={`pixel-textarea ${className}`}
         style={customStyle}
+        className={cn(
+          // Base styles
+          'retro-textarea',
+          'flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
+          'placeholder:text-muted-foreground',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+          
+          // RetroUI pixel styling
+          'pixel-border pixel-shadow',
+          'transition-all duration-200',
+          
+          // Size variants
+          {
+['retro-textarea-sm text-xs px-2 py-1']: size === 'sm' ? true : false,
+            'retro-textarea-default text-sm px-3 py-2': size === 'default',
+            'retro-textarea-lg text-base px-4 py-3': size === 'lg',
+          },
+          
+          // Error state
+          {
+            'retro-textarea-error border-red-500 focus-visible:ring-red-500': error,
+          },
+          
+          // Resize behavior
+          {
+            'resize-none': resize === 'none',
+            'resize-y': resize === 'vertical',
+            'resize-x': resize === 'horizontal',
+            'resize': resize === 'both',
+          },
+          
+          // Hover and focus states
+          'hover:pixel-hover',
+          'focus:pixel-focus',
+          
+          // Disabled state
+          'disabled:retro-textarea-disabled',
+          
+          className
+        )}
+        aria-invalid={error ? 'true' : undefined}
         {...props}
       />
     );
   }
 );
 
-TextArea.displayName = "TextArea";
+Textarea.displayName = 'Textarea';

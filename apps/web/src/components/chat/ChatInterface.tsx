@@ -4,12 +4,7 @@ import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent } fro
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button, Input, Card, Badge, Avatar, AvatarFallback } from '@pommai/ui';
 import { 
   Send, 
   Mic, 
@@ -159,7 +154,7 @@ export function ChatInterface({ toyId, toy, isGuardianMode: _isGuardianMode = fa
       </div>
 
       {/* Messages Area */}
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+      <div className="flex-1 p-4 overflow-y-auto" ref={scrollAreaRef}>
         <div className="space-y-4">
           {messages?.map((msg) => (
             <AnimatePresence key={msg._id}>
@@ -229,7 +224,7 @@ export function ChatInterface({ toyId, toy, isGuardianMode: _isGuardianMode = fa
             </motion.div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Input Area */}
       <div className="border-t p-4">

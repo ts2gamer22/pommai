@@ -191,6 +191,7 @@ export const processVoiceInteraction = action({
           threadId,
           toyId: args.toyId,
           prompt: transcription.text,
+          includeKnowledge: true,
         });
         generatedText = agentResult.text || "Sorry, I couldn't generate a response.";
       }

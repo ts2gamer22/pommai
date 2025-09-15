@@ -1,6 +1,6 @@
 // Using built-in fetch (Node 18+)
 
-const ELEVENLABS_API_KEY = "sk_5c10eb2b6c46788bf8c18464f9b2efff27f4b091163e8738";
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || "";
 
 async function testElevenLabsDirectly() {
   console.log("Testing ElevenLabs API directly...\n");
@@ -8,6 +8,10 @@ async function testElevenLabsDirectly() {
   // Test 1: Get user info
   console.log("1. Testing user subscription info...");
   try {
+    if (!ELEVENLABS_API_KEY) {
+      console.error("   ✗ ELEVENLABS_API_KEY not set in environment. Aborting direct test.");
+      return;
+    }
     const userResponse = await fetch('https://api.elevenlabs.io/v1/user', {
       headers: {
         'xi-api-key': ELEVENLABS_API_KEY,

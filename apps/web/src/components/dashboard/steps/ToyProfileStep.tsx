@@ -2,7 +2,7 @@
 
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { useToyWizardStore } from '@/stores/toyWizardStore';
-import { Input, TextArea, Card } from '@pommai/ui';
+import { Input, Textarea, Card } from '@pommai/ui';
 import { 
   Baby,
   Rabbit, 

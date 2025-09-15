@@ -4,18 +4,8 @@ import { useState, useMemo, type ChangeEvent, type MouseEvent } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button, Input, Card, Badge, Skeleton } from "@pommai/ui";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@pommai/ui";
 import {
   Play,
   Pause,
@@ -102,6 +92,11 @@ export function VoiceGallery({
   }, [publicVoices, myVoices, searchResults, searchTerm]);
 
   const handlePlayPreview = (voice: Voice) => {
+    // Prevent preview for mock voices (created without API key)
+    if (voice.externalVoiceId && voice.externalVoiceId.startsWith('mock-')) {
+      return; // silently no-op; button is disabled in UI
+    }
+
     // Stop any currently playing audio
     if (playingVoiceId) {
       const currentAudio = audioElements.get(playingVoiceId);
@@ -199,48 +194,7 @@ export function VoiceGallery({
           )}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Select value={genderFilter} onValueChange={setGenderFilter}>
-            <SelectTrigger className="w-[140px]">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Gender" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Genders</SelectItem>
-              <SelectItem value="male">Male</SelectItem>
-              <SelectItem value="female">Female</SelectItem>
-              <SelectItem value="neutral">Neutral</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={languageFilter} onValueChange={setLanguageFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Language" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Languages</SelectItem>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="es">Spanish</SelectItem>
-              <SelectItem value="fr">French</SelectItem>
-              <SelectItem value="de">German</SelectItem>
-              <SelectItem value="ja">Japanese</SelectItem>
-              <SelectItem value="zh">Chinese</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={ageGroupFilter} onValueChange={setAgeGroupFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Age Group" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Ages</SelectItem>
-              <SelectItem value="child">Child</SelectItem>
-              <SelectItem value="teen">Teen</SelectItem>
-              <SelectItem value="adult">Adult</SelectItem>
-              <SelectItem value="senior">Senior</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Simplified: remove extra filters to reduce clutter */}
       </div>
 
       {/* Custom Voices Section */}
@@ -267,12 +221,17 @@ export function VoiceGallery({
                 </div>
 
                 <div className="flex items-center gap-2 mb-3">
-                  <Badge variant="secondary">{voice.gender}</Badge>
-                  <Badge variant="secondary">{voice.language}</Badge>
+                  {voice.gender && <Badge variant="secondary">{voice.gender}</Badge>}
+                  {voice.language && <Badge variant="secondary">{voice.language}</Badge>}
                   {voice.accent && <Badge variant="secondary">{voice.accent}</Badge>}
-                  <Badge variant="outline" className="text-purple-600">
-                    Custom
-                  </Badge>
+                  {/* Provider badge */}
+                  {voice.externalVoiceId?.startsWith('mock-') ? (
+                    <Badge variant="outline" className="text-gray-600">Mock</Badge>
+                  ) : voice.provider === '11labs' ? (
+                    <Badge variant="outline" className="text-purple-600">11labs</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-purple-600">Custom</Badge>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -283,18 +242,19 @@ export function VoiceGallery({
                         e.stopPropagation();
                         handlePlayPreview(voice);
                       }}
+                      disabled={Boolean(voice.externalVoiceId?.startsWith('mock-'))}
                     >
                       {playingVoiceId === voice._id ? (
                         <Pause className="w-4 h-4 mr-1" />
                       ) : (
                         <Play className="w-4 h-4 mr-1" />
                       )}
-                      Preview
+                      {voice.externalVoiceId?.startsWith('mock-') ? 'Unavailable' : 'Preview'}
                     </Button>
                     {voice.uploadedBy && (
                       <Button
                         size="sm"
-onClick={(e: MouseEvent) => handleDeleteVoice(voice, e)}
+                        onClick={(e: MouseEvent) => handleDeleteVoice(voice, e)}
                       >
                         Delete
                       </Button>
@@ -332,15 +292,21 @@ onClick={(e: MouseEvent) => handleDeleteVoice(voice, e)}
               </div>
 
               <div className="flex items-center gap-2 mb-3">
-                <Badge variant="secondary">{voice.gender}</Badge>
-                <Badge variant="secondary">{voice.language}</Badge>
+                {voice.gender && <Badge variant="secondary">{voice.gender}</Badge>}
+                {voice.language && <Badge variant="secondary">{voice.language}</Badge>}
                 {voice.accent && <Badge variant="secondary">{voice.accent}</Badge>}
+                {/* Provider badge */}
+                {voice.externalVoiceId?.startsWith('mock-') ? (
+                  <Badge variant="outline" className="text-gray-600">Mock</Badge>
+                ) : voice.provider === '11labs' ? (
+                  <Badge variant="outline" className="text-purple-600">11labs</Badge>
+                ) : null}
                 {voice.isPremium && (
                   <Badge variant="default" className="bg-yellow-500">
                     Premium
                   </Badge>
                 )}
-                {voice.tags.includes("kids-friendly") && (
+                {voice.tags?.includes("kids-friendly") && (
                   <Badge variant="default" className="bg-green-500">
                     Kids Safe
                   </Badge>

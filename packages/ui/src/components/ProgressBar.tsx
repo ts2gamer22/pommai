@@ -21,7 +21,7 @@ export const ProgressBar = ({
   size = "md",
   color,
   borderColor,
-}: ProgressBarProps): JSX.Element => {
+}: ProgressBarProps) => {
   const raw = typeof value === 'number' ? value : (progress ?? 0);
   const clampedProgress = Math.min(Math.max(raw, 0), 100);
 

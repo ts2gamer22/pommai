@@ -6,18 +6,25 @@ export interface ButtonProps
   textColor?: string;
   shadow?: string;
   borderColor?: string;
-  // Accept common size variants used in app wrappers
+  // Enhanced size variants
   size?: "sm" | "md" | "lg" | "icon" | "small";
-  // Allow variant for compatibility with other UI APIs (ignored by styling)
-  variant?: string;
+  // Enhanced variant system with proper RetroUI styling
+  variant?: "default" | "secondary" | "destructive" | "outline" | "ghost";
+  // Enhanced states
+  loading?: boolean;
+  disabled?: boolean;
+  // Icon support
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 /**
  * Button
  *
- * Retro pixel-styled button.
+ * Enhanced retro pixel-styled button with variants, states, and icon support.
  * - Does not enforce any font; pass font-minecraft or font-geo via className as needed.
  * - Colors can be customized via props (bg, textColor, shadow, borderColor) or CSS variables.
+ * - Supports loading states, variants, and left/right icons.
  */
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   children,
@@ -27,9 +34,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   shadow,
   borderColor,
   style,
-  // variant and size are accepted for compatibility; not used directly here
-  variant,
-  size,
+  variant = "default",
+  size = "md",
+  loading = false,
+  disabled = false,
+  leftIcon,
+  rightIcon,
   ...props
 }, ref) => {
   const svgString = useMemo(() => {
@@ -38,23 +48,99 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
     return `url(\"data:image/svg+xml,${encodeURIComponent(svg)}\")`;
   }, [borderColor]);
 
+  // Generate variant-specific styles
+  const getVariantStyles = () => {
+    switch (variant) {
+      case "secondary":
+        return {
+          "--button-custom-bg": bg || "#e5e5e5",
+          "--button-custom-text": textColor || "#000000",
+          "--button-custom-shadow": shadow || "#c0c0c0",
+        };
+      case "destructive":
+        return {
+          "--button-custom-bg": bg || "#ff4444",
+          "--button-custom-text": textColor || "#ffffff",
+          "--button-custom-shadow": shadow || "#cc0000",
+        };
+      case "outline":
+        return {
+          "--button-custom-bg": bg || "transparent",
+          "--button-custom-text": textColor || "#000000",
+          "--button-custom-shadow": shadow || "transparent",
+        };
+      case "ghost":
+        return {
+          "--button-custom-bg": bg || "transparent",
+          "--button-custom-text": textColor || "#000000",
+          "--button-custom-shadow": shadow || "transparent",
+        };
+      default:
+        return {
+          "--button-custom-bg": bg,
+          "--button-custom-text": textColor,
+          "--button-custom-shadow": shadow,
+        };
+    }
+  };
+
+  // Generate size-specific classes
+  const getSizeClasses = () => {
+    switch (size) {
+      case "sm":
+      case "small":
+        return "pixel-button--sm";
+      case "lg":
+        return "pixel-button--lg";
+      case "icon":
+        return "pixel-button--icon";
+      default:
+        return "";
+    }
+  };
+
   const customStyle = {
     ...style,
-    "--button-custom-bg": bg,
-    "--button-custom-text": textColor,
-    "--button-custom-shadow": shadow,
+    ...getVariantStyles(),
     "--button-custom-border": borderColor,
     borderImageSource: svgString,
   } as React.CSSProperties;
 
+  const buttonClasses = [
+    "pixel-button",
+    getSizeClasses(),
+    variant !== "default" ? `pixel-button--${variant}` : "",
+    loading ? "pixel-button--loading" : "",
+    disabled ? "pixel-button--disabled" : "",
+    className
+  ].filter(Boolean).join(" ");
+
   return (
     <button
       ref={ref}
-      className={`pixel-button ${className}`}
+      className={buttonClasses}
       style={customStyle}
+      disabled={disabled || loading}
       {...props}
     >
-      {children}
+      {loading && (
+        <span className="pixel-button__spinner" aria-hidden="true">
+          ⟳
+        </span>
+      )}
+      {leftIcon && !loading && (
+        <span className="pixel-button__left-icon" aria-hidden="true">
+          {leftIcon}
+        </span>
+      )}
+      <span className="pixel-button__content">
+        {children}
+      </span>
+      {rightIcon && !loading && (
+        <span className="pixel-button__right-icon" aria-hidden="true">
+          {rightIcon}
+        </span>
+      )}
     </button>
   );
 });

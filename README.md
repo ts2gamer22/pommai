@@ -35,6 +35,19 @@ Guardian Mode offers a suite of robust safety features, including real-time conv
 ### How It Works
 At its heart, Pommai uses a physical device—a **Raspberry Pi** housed within a toy—to capture a child's voice, processes it through a sophisticated and safe cloud-based AI pipeline, and delivers a real-time, context-aware response, bringing the toy to life.
 
+## 🎨 UI System
+
+Pommai features a unified **RetroUI** design system built with React and TypeScript:
+
+- **@pommai/ui Package**: Comprehensive component library with 25+ components
+- **Pixel Art Aesthetic**: Consistent retro styling with pixel borders and shadows
+- **Accessibility First**: WCAG compliant with proper ARIA attributes
+- **TypeScript Support**: Full type safety with excellent IntelliSense
+- **Testing Suite**: Comprehensive tests including visual regression, accessibility, and performance
+- **Theme System**: Customizable CSS custom properties for consistent theming
+
+All components follow the RetroUI design language while maintaining modern functionality and accessibility standards.
+
 ## ✨ Key Features
 
 ### 🎨 Toy Creation & Personalization

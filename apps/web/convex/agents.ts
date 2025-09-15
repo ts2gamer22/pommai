@@ -212,7 +212,7 @@ function createAgentWithContext(ctx: any, toy: any) {
 export const createToyThread = mutation({
   args: {
     toyId: v.id("toys"),
-    userId: v.optional(v.id("users")),
+    userId: v.optional(v.id("_users")),
     deviceId: v.optional(v.string()),
   },
   handler: async (ctx, { toyId, userId, deviceId }) => {
@@ -319,7 +319,7 @@ export const saveAudioMessage = mutation({
       userId: userId?.toString(),
       prompt: transcript,
       metadata: {},
-      skipEmbeddings: true, // Will be generated in action
+      skipEmbeddings: false, // Embed user transcripts for retrieval
     });
 
     return { messageId };
@@ -333,8 +333,9 @@ export const generateToyResponse = internalAction({
     toyId: v.id("toys"),
     promptMessageId: v.optional(v.string()),
     prompt: v.optional(v.string()),
+    includeKnowledge: v.optional(v.boolean()),
   },
-  handler: async (ctx, { threadId, toyId, promptMessageId, prompt }): Promise<{
+  handler: async (ctx, { threadId, toyId, promptMessageId, prompt, includeKnowledge = true }): Promise<{
     text: string;
     messageId: string | undefined;
     usage?: any;
@@ -484,7 +485,7 @@ export const generateToyResponse = internalAction({
             searchOptions: {
               limit: 5,
               textSearch: true,
-              vectorSearch: false, // Disable for now to avoid embedding costs
+              vectorSearch: false, // Disabled until a textEmbeddingModel is configured on the Agent
               messageRange: { before: 2, after: 1 },
             },
             searchOtherThreads: false,
@@ -1117,6 +1118,7 @@ export const saveKnowledgeMessage = mutation({
 });
 
 // Enhanced generate response with knowledge retrieval
+/*
 export const generateToyResponseWithKnowledge = internalAction({
   args: {
     threadId: v.string(),
@@ -1190,12 +1192,12 @@ CRITICAL SAFETY RULES FOR CHILDREN:
     };
   },
 });
+*/
 
 // Internal helpers (not exposed to client)
 export const internalAgents = {
   agents: {
     generateToyResponse,
-    generateToyResponseWithKnowledge,
     streamToyResponse,
     quizGenerate,
     quizGrade,

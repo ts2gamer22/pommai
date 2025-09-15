@@ -2,7 +2,7 @@
 
 import { useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useToyWizardStore } from '@/stores/toyWizardStore';
-import { Input, TextArea, Button, Card } from '@pommai/ui';
+import { Input, Textarea, Button, Card } from '@pommai/ui';
 import { 
   Plus, 
   X, 
@@ -141,7 +141,7 @@ export function KnowledgeStep() {
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="block text-sm font-black uppercase tracking-wider text-black">Origin Story</label>
-              <TextArea
+              <Textarea
                 value={toyConfig.knowledgeBase?.toyBackstory?.origin || ''}
                 onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
                   initializeKnowledgeBase();
@@ -163,7 +163,7 @@ export function KnowledgeStep() {
 
             <div className="space-y-2">
               <label className="block text-sm font-black uppercase tracking-wider text-black">Personality Background</label>
-              <TextArea
+              <Textarea
                 value={toyConfig.knowledgeBase?.toyBackstory?.personality || ''}
                 onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
                   initializeKnowledgeBase();
@@ -312,7 +312,7 @@ export function KnowledgeStep() {
             
             <div className="space-y-2">
               <label className="block text-sm font-black uppercase tracking-wider text-black">Fact</label>
-              <TextArea
+              <Textarea
                 value={newCustomFact.fact}
                 onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setNewCustomFact({ ...newCustomFact, fact: e.target.value })}
                 placeholder="What should your toy know or remember?"

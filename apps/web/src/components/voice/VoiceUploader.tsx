@@ -4,20 +4,7 @@ import { useState, useRef, type ChangeEvent } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button, Card, Input, Label, Textarea, Progress, Switch } from "@pommai/ui";
 import {
   AlertCircle,
   Upload,
@@ -70,6 +57,7 @@ export function VoiceUploader({ onComplete, onCancel, isForKids = false }: Voice
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [uploadedDuration, setUploadedDuration] = useState<number | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [voiceData, setVoiceData] = useState({
     name: "",
@@ -90,6 +78,9 @@ export function VoiceUploader({ onComplete, onCancel, isForKids = false }: Voice
 const cloneVoice = useAction(api.aiServices.cloneElevenVoiceFromBase64);
 const [isProcessing, setIsProcessing] = useState(false);
 const [error, setError] = useState<string | null>(null);
+
+  // Minimum duration in seconds required to proceed (docs recommend 3–5 minutes)
+  const MIN_DURATION = 60;
 
   const startRecording = async () => {
     try {
@@ -144,14 +135,35 @@ const [error, setError] = useState<string | null>(null);
         alert("File too large. Please upload a file smaller than 50MB.");
         return;
       }
-      
+      const objectUrl = URL.createObjectURL(file);
       setAudioBlob(file);
-      setAudioUrl(URL.createObjectURL(file));
+      setAudioUrl(objectUrl);
+      // Measure duration for minimum-length check
+      const audio = document.createElement('audio');
+      audio.preload = 'metadata';
+      audio.onloadedmetadata = () => {
+        setUploadedDuration(audio.duration || 0);
+      };
+      audio.src = objectUrl;
     }
   };
 
   const processVoice = async () => {
     if (!audioBlob) return;
+
+    // Enforce minimum duration: 60s (recommend 3–5 minutes)
+    const durationSec = uploadedDuration && uploadedDuration > 0 ? uploadedDuration : recordingTime;
+    if (!durationSec || durationSec < MIN_DURATION) {
+      setError("Please record or upload at least 60 seconds of clear speech (3–5 minutes recommended) for good cloning quality.");
+      return;
+    }
+
+    // Optional guidance for file type quality
+    const preferredTypes = ["audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3", "audio/mp4", "audio/m4a"];
+    if (audioBlob && audioBlob.type && !preferredTypes.includes(audioBlob.type)) {
+      // Not an error, just a warning message
+      console.warn("Using a non-preferred audio format. WAV/MP3/M4A recommended for best results.");
+    }
     
     setStep("processing");
     setProcessingProgress(20);
@@ -160,11 +172,11 @@ const [error, setError] = useState<string | null>(null);
     try {
       // For now, we'll go directly to the preview step
       // The actual voice cloning happens when saving
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 800));
       setProcessingProgress(50);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 800));
       setProcessingProgress(100);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       setStep("preview");
     } catch (error) {
@@ -288,6 +300,11 @@ const [error, setError] = useState<string | null>(null);
               <p className="text-gray-600">
                 Choose to record directly or upload an existing audio file.
               </p>
+              {error && (
+                <div className="mt-3 p-3 bg-red-50 border-2 border-red-500 text-red-700 rounded">
+                  <p className="text-sm font-medium">{error}</p>
+                </div>
+              )}
             </div>
             
             <div className="grid md:grid-cols-2 gap-4">
@@ -313,6 +330,7 @@ const [error, setError] = useState<string | null>(null);
                           <span className="font-medium">Recording... {formatTime(recordingTime)}</span>
                         </div>
                         <Progress value={(recordingTime / 300) * 100} className="h-2" />
+                        <p className="text-xs text-gray-500 text-center">Record at least {MIN_DURATION}s (3–5 minutes recommended)</p>
                         <Button 
                           bg="#ff6b6b"
                           textColor="white"
@@ -342,11 +360,11 @@ const [error, setError] = useState<string | null>(null);
                 </div>
                 
                 <div className="space-y-4">
-                  <div className="text-sm text-gray-600">
-                    <p>Supported formats: MP3, WAV, M4A, WEBM</p>
-                    <p>Maximum file size: 50MB</p>
-                    <p>Minimum duration: 3 minutes</p>
-                  </div>
+                <div className="text-sm text-gray-600">
+                  <p>Supported formats: WAV, MP3, M4A (WEBM works but may reduce quality)</p>
+                  <p>Minimum duration: 60 seconds (recommended 3–5 minutes)</p>
+                  <p>Maximum file size: 50MB</p>
+                </div>
                   
                   <input
                     ref={fileInputRef}
@@ -380,32 +398,41 @@ const [error, setError] = useState<string | null>(null);
                     <div>
                       <p className="font-medium">Audio ready for processing</p>
                       <p className="text-sm text-gray-600">
-                        Duration: {formatTime(recordingTime)}
+                        Duration: {uploadedDuration ? formatTime(Math.round(uploadedDuration)) : formatTime(recordingTime)}
                       </p>
                     </div>
                   </div>
                   <audio src={audioUrl!} controls className="max-w-xs" />
                 </div>
                 
-                <div className="flex gap-2">
-                  <Button
-                    bg="#f0f0f0"
-                    textColor="black"
-                    borderColor="black"
-                    shadow="#d0d0d0"
-                    onClick={() => {
-                      setAudioBlob(null);
-                      setAudioUrl(null);
-                      setRecordingTime(0);
-                    }}
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Remove
-                  </Button>
-                  <Button onClick={processVoice} className="flex-1">
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    Process Voice
-                  </Button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <Button
+                      bg="#f0f0f0"
+                      textColor="black"
+                      borderColor="black"
+                      shadow="#d0d0d0"
+                      onClick={() => {
+                        setAudioBlob(null);
+                        setAudioUrl(null);
+                        setUploadedDuration(null);
+                        setRecordingTime(0);
+                        setError(null);
+                      }}
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Remove
+                    </Button>
+                    <Button onClick={processVoice} className="flex-1" 
+                      disabled={((uploadedDuration ?? recordingTime) < MIN_DURATION)}
+                    >
+                      <Wand2 className="w-4 h-4 mr-2" />
+                      Process Voice
+                    </Button>
+                  </div>
+                  {((uploadedDuration ?? recordingTime) < MIN_DURATION) && (
+                    <p className="text-xs text-red-600">Need at least {MIN_DURATION} seconds of audio to proceed (3–5 minutes recommended).</p>
+                  )}
                 </div>
               </Card>
             )}
@@ -494,74 +521,7 @@ onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setVoiceData({ ...voiceData, 
                 />
               </div>
               
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="language">Language</Label>
-                  <Select
-                    value={voiceData.language}
-                    onValueChange={(value) => setVoiceData({ ...voiceData, language: value })}
-                  >
-                    <SelectTrigger id="language">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Spanish</SelectItem>
-                      <SelectItem value="fr">French</SelectItem>
-                      <SelectItem value="de">German</SelectItem>
-                      <SelectItem value="ja">Japanese</SelectItem>
-                      <SelectItem value="zh">Chinese</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="accent">Accent (Optional)</Label>
-                  <Input
-                    id="accent"
-                    value={voiceData.accent}
-onChange={(e: ChangeEvent<HTMLInputElement>) => setVoiceData({ ...voiceData, accent: e.target.value })}
-                    placeholder="e.g., British, Southern US"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="gender">Gender</Label>
-                  <Select
-                    value={voiceData.gender}
-                    onValueChange={(value) => setVoiceData({ ...voiceData, gender: value as 'male' | 'female' | 'neutral' })}
-                  >
-                    <SelectTrigger id="gender">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="neutral">Neutral</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="ageGroup">Age Group</Label>
-                  <Select
-                    value={voiceData.ageGroup}
-                    onValueChange={(value) => setVoiceData({ ...voiceData, ageGroup: value })}
-                  >
-                    <SelectTrigger id="ageGroup">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="child">Child</SelectItem>
-                      <SelectItem value="teen">Teen</SelectItem>
-                      <SelectItem value="adult">Adult</SelectItem>
-                      <SelectItem value="senior">Senior</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              {/* Keep it simple: we default language 'en', gender 'neutral', ageGroup 'adult' under the hood */}
               
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -573,7 +533,7 @@ onChange={(e: ChangeEvent<HTMLInputElement>) => setVoiceData({ ...voiceData, acc
                 <Switch
                   id="public"
                   checked={voiceData.isPublic}
-                  onCheckedChange={(checked) => setVoiceData({ ...voiceData, isPublic: checked })}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setVoiceData({ ...voiceData, isPublic: e.target.checked })}
                 />
               </div>
             </div>

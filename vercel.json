@@ -3,6 +3,5 @@
   "buildCommand": "turbo run build --filter=@pommai/web",
   "outputDirectory": "apps/web/.next",
   "installCommand": "pnpm install",
-  "framework": "nextjs",
-  "root": "apps/web"
+  "framework": "nextjs"
 }

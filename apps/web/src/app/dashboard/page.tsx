@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { ToyWizard } from '@/components/dashboard/ToyWizard';
 import { MyToysGrid } from '@/components/dashboard/MyToysGrid';
 import { GuardianDashboard } from '@/components/guardian/GuardianDashboard';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox } from '@pommai/ui';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
