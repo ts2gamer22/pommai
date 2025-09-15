@@ -570,7 +570,7 @@ async def health_check(request):
 # Metrics endpoint
 async def metrics(request):
     output = generate_latest()
-    return web.Response(body=output, content_type=CONTENT_TYPE_LATEST)
+    return web.Response(body=output, headers={'Content-Type': CONTENT_TYPE_LATEST})
 
 # Route configuration
 app.router.add_get('/health', health_check)

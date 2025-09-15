@@ -11,8 +11,10 @@
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
-      "env": [
-        "NEXT_PUBLIC_CONVEX_URL"
+"env": [
+        "NEXT_PUBLIC_CONVEX_URL",
+        "SITE_URL",
+        "BETTER_AUTH_SECRET"
       ]
     },
     "lint": {
@@ -24,8 +26,10 @@
     "dev": {
       "persistent": true,
       "cache": false,
-      "env": [
-        "NEXT_PUBLIC_CONVEX_URL"
+"env": [
+        "NEXT_PUBLIC_CONVEX_URL",
+        "SITE_URL",
+        "BETTER_AUTH_SECRET"
       ]
     },
     "clean": {

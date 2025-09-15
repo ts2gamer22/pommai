@@ -13,9 +13,11 @@ export const createAuth = (ctx: GenericCtx) => {
     ? requireVerificationEnv.toLowerCase() === 'true'
     : process.env.NODE_ENV === 'production';
 
-  return betterAuth({
+return betterAuth({
     baseURL: siteUrl,
     database: convexAdapter(ctx, betterAuthComponent),
+    // Trust your Next.js site origin(s) so Better Auth can mirror cookies across domains
+    trustedOrigins: [siteUrl, "http://localhost:3000"],
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: REQUIRE_EMAIL_VERIFICATION,
@@ -73,9 +75,13 @@ export const createAuth = (ctx: GenericCtx) => {
       },
     },
     secret: process.env.BETTER_AUTH_SECRET!,
-    plugins: [
+plugins: [
       // The Convex plugin is required
       convex(),
+      // Enable cross-domain cookie/header flow between Convex and your Next site
+      crossDomain({
+        siteUrl,
+      }),
     ],
   });
 };

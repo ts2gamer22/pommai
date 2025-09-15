@@ -6,8 +6,8 @@ import { resend } from './emails'
 
 const http = httpRouter()
 
-// Register BetterAuth routes
-betterAuthComponent.registerRoutes(http, createAuth)
+// Register BetterAuth routes with CORS enabled for cross-domain cookie flow
+betterAuthComponent.registerRoutes(http, createAuth, { cors: true })
 
 // Resend webhook route
 http.route({
